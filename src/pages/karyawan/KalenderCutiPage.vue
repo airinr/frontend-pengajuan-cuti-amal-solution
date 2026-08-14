@@ -102,10 +102,10 @@ const nextMonth = () => {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Kalender Cuti</h1>
+    <h1 class="text-xl lg:text-2xl font-bold text-gray-800 mb-4 lg:mb-6">Kalender Cuti</h1>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <div class="flex items-center justify-between mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
+      <div class="flex items-center justify-between mb-4 lg:mb-6">
         <button
           @click="prevMonth"
           class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
@@ -124,7 +124,7 @@ const nextMonth = () => {
             />
           </svg>
         </button>
-        <h2 class="text-lg font-semibold text-gray-800">
+        <h2 class="text-base lg:text-lg font-semibold text-gray-800">
           {{ monthNames[currentMonth] }} {{ currentYear }}
         </h2>
         <button
@@ -153,7 +153,7 @@ const nextMonth = () => {
         <div
           v-for="day in dayNames"
           :key="day"
-          class="bg-gray-50 p-3 text-center text-xs font-medium text-gray-500"
+          class="bg-gray-50 p-2 lg:p-3 text-center text-[10px] lg:text-xs font-medium text-gray-500"
         >
           {{ day }}
         </div>
@@ -162,7 +162,7 @@ const nextMonth = () => {
           v-for="(day, index) in calendarDays"
           :key="index"
           :class="[
-            'p-3 text-center text-sm',
+            'p-1 lg:p-3 text-center text-xs lg:text-sm',
             !day.currentMonth && 'bg-white text-gray-300',
             day.currentMonth && 'bg-white text-gray-700',
             day.currentMonth &&
@@ -180,18 +180,18 @@ const nextMonth = () => {
         </div>
       </div>
 
-      <div class="mt-6 flex items-center gap-6">
+      <div class="mt-4 lg:mt-6 flex flex-wrap items-center gap-3 lg:gap-6">
         <div class="flex items-center gap-2">
           <div class="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
-          <span class="text-sm text-gray-600">Cuti Anda</span>
+          <span class="text-xs lg:text-sm text-gray-600">Cuti Anda</span>
         </div>
         <div class="flex items-center gap-2">
           <div class="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
-          <span class="text-sm text-gray-600">Hari Libur</span>
+          <span class="text-xs lg:text-sm text-gray-600">Hari Libur</span>
         </div>
         <div class="flex items-center gap-2">
           <div class="w-3 h-3 bg-white border border-gray-300 rounded"></div>
-          <span class="text-sm text-gray-600">Hari Aktif</span>
+          <span class="text-xs lg:text-sm text-gray-600">Hari Aktif</span>
         </div>
       </div>
     </div>

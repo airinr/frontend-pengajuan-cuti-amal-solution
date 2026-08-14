@@ -66,16 +66,16 @@ const handleLogout = () => {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Profil Pengguna</h1>
+    <h1 class="text-xl lg:text-2xl font-bold text-gray-800 mb-4 lg:mb-6">Profil Pengguna</h1>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </div>
 
-    <div v-else-if="user" class="space-y-6">
-      <div class="flex gap-6">
+    <div v-else-if="user" class="space-y-4 lg:space-y-6">
+      <div class="flex flex-col lg:flex-row gap-4 lg:gap-6">
         <!-- Left Card - Avatar -->
-        <div class="w-72 bg-gradient-to-b from-blue-50 to-white rounded-xl shadow-sm border border-blue-100 p-6 flex flex-col items-center">
+        <div class="w-full lg:w-72 bg-gradient-to-b from-blue-50 to-white rounded-xl shadow-sm border border-blue-100 p-6 flex flex-col items-center">
           <div class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-4">
             {{ getInitials(user.nama) }}
           </div>
@@ -87,17 +87,17 @@ const handleLogout = () => {
         </div>
 
         <!-- Right Content -->
-        <div class="flex-1 space-y-6">
+        <div class="flex-1 space-y-4 lg:space-y-6">
           <!-- Informasi Akun -->
-          <div class="bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-sm border border-blue-100 p-6">
-            <div class="flex items-center gap-2 mb-6">
+          <div class="bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-sm border border-blue-100 p-4 lg:p-6">
+            <div class="flex items-center gap-2 mb-4 lg:mb-6">
               <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <h3 class="font-semibold text-gray-800">Informasi Akun</h3>
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
               <div>
                 <label class="block text-sm text-gray-500 mb-1">Email</label>
                 <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
@@ -138,8 +138,8 @@ const handleLogout = () => {
           </div>
 
           <!-- Keamanan & Preferensi -->
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center gap-2 mb-6">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
+            <div class="flex items-center gap-2 mb-4 lg:mb-6">
               <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -231,11 +231,11 @@ const handleLogout = () => {
         </div>
       </div>
 
-      <!-- Bottom Buttons - Right -->
-      <div class="flex justify-end gap-3">
+      <!-- Bottom Buttons -->
+      <div class="flex flex-col sm:flex-row justify-end gap-3">
         <button
           @click="handleLogout"
-          class="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+          class="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -243,7 +243,7 @@ const handleLogout = () => {
           Keluar Akun
         </button>
         <button
-          class="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          class="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />

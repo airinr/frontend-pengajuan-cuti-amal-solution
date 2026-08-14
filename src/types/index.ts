@@ -96,7 +96,6 @@ export interface ChangePasswordRequest {
 }
 
 export interface CreateKaryawanLeaveRequest {
-  jenis_cuti: string
   tanggal_mulai: string
   tanggal_selesai: string
   keterangan: string
