@@ -1,5 +1,5 @@
 import api from '../lib/api'
-import type { LeaveRequest, CreateLeaveRequest, ApiResponse, PaginatedResponse } from '../types'
+import type { LeaveRequest, CreateLeaveRequest, CreateKaryawanLeaveRequest, KaryawanLeaveResponse, ApiResponse, PaginatedResponse } from '../types'
 
 export const leaveApi = {
   getAll: (page = 1, limit = 10) =>
@@ -13,6 +13,9 @@ export const leaveApi = {
 
   create: (data: CreateLeaveRequest) =>
     api.post<ApiResponse<LeaveRequest>>('/leaves', data),
+
+  createKaryawan: (data: CreateKaryawanLeaveRequest) =>
+    api.post<KaryawanLeaveResponse>('/karyawan/cuti', data),
 
   approve: (id: string) =>
     api.put<ApiResponse<LeaveRequest>>(`/leaves/${id}/approve`),

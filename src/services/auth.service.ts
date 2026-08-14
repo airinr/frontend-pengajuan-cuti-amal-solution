@@ -1,5 +1,5 @@
 import api from '../lib/api'
-import type { AuthResponse, LoginRequest, RegisterRequest, RegisterResponse } from '../types'
+import type { AuthResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, RegisterResponse } from '../types'
 
 export const authApi = {
   login: (data: LoginRequest) => {
@@ -19,4 +19,7 @@ export const authApi = {
 
   me: () =>
     api.get('/auth/me'),
+
+  changePassword: (data: ChangePasswordRequest) =>
+    api.put('/auth/change-password', data),
 }

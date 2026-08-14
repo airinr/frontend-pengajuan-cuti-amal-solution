@@ -72,3 +72,50 @@ export interface PaginatedResponse<T> {
   page: number
   limit: number
 }
+
+export interface CurrentUser {
+  id_user: number
+  username: string
+  nama: string
+  role: string
+  id_departemen: number
+  id_pm: number | null
+  total_cuti: number
+  sisa_cuti: number
+  pm: {
+    id_user: number
+    username: string
+    nama: string
+  } | null
+}
+
+export interface ChangePasswordRequest {
+  password_lama: string
+  password_baru: string
+  konfirmasi_password_baru: string
+}
+
+export interface CreateKaryawanLeaveRequest {
+  jenis_cuti: string
+  tanggal_mulai: string
+  tanggal_selesai: string
+  keterangan: string
+  pengganti: number
+}
+
+export interface KaryawanLeaveResponse {
+  id_log_cuti: number
+  id_user: number
+  jenis_cuti: string
+  tanggal_mulai: string
+  tanggal_selesai: string
+  keterangan_cuti: string
+  status: string
+  alasan_penolakan: string | null
+  disetujui_pm: number | null
+  disetujui_hr: number | null
+  disetujui_direktur: number | null
+  approved_at_pm: string | null
+  approved_at_hr: string | null
+  approved_at_direktur: string | null
+}
