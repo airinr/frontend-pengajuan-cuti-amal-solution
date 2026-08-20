@@ -1,8 +1,10 @@
+export type UserRole = 'karyawan' | 'pm' | 'hr' | 'direktur'
+
 export interface User {
   id: string
   name: string
   email: string
-  role: 'admin' | 'karyawan'
+  role: UserRole
   department: string
 }
 

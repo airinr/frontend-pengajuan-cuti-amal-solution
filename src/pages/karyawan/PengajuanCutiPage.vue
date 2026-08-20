@@ -35,13 +35,13 @@ const selectedDates = ref<string[]>([]);
 
 const filteredUsers = computed(() => {
   if (!searchQuery.value) return users.value;
-  return users.value.filter(u =>
-    u.nama.toLowerCase().includes(searchQuery.value.toLowerCase())
+  return users.value.filter((u) =>
+    u.nama.toLowerCase().includes(searchQuery.value.toLowerCase()),
   );
 });
 
 const selectedUserName = computed(() => {
-  const found = users.value.find(u => u.id_user === form.value.pengganti);
+  const found = users.value.find((u) => u.id_user === form.value.pengganti);
   return found?.nama || "";
 });
 
@@ -404,11 +404,11 @@ const handleSubmit = async () => {
                   :class="[
                     'min-h-[80px] p-1 border-b border-r border-gray-200 text-sm transition-colors relative',
                     !day.currentMonth && 'text-gray-300',
-                    day.currentMonth && isToday(day.date) && 'bg-red-50',
+                    day.currentMonth && isToday(day.date) && 'bg-yellow-100',
                     day.currentMonth &&
                       isCutiBersama(day.date) &&
                       !isDateSelected(day.date) &&
-                      'bg-red-50',
+                      'bg-orange-50',
                     day.currentMonth &&
                       isHoliday(day.date) &&
                       !isCutiBersama(day.date) &&
@@ -454,7 +454,13 @@ const handleSubmit = async () => {
                 <div
                   class="w-3 h-3 bg-red-50 border border-red-300 rounded-full"
                 ></div>
-                <span>Hari tidak tersedia / Libur</span>
+                <span>Hari Libur</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div
+                  class="w-3 h-3 bg-orange-50 border border-orange-300 rounded-full"
+                ></div>
+                <span>Cuti Bersama</span>
               </div>
               <div class="flex items-center gap-2">
                 <div class="w-3 h-3 bg-blue-900 rounded-full"></div>

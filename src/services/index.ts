@@ -1,3 +1,6 @@
 export { authApi } from './auth.service'
 export { leaveApi } from './leave.service'
 export { departmentApi } from './department.service'
+export { calendarApi } from './calendar.service'
+export { pmApi } from './pm.service'
+export { hrApi } from './hr.service'
