@@ -593,37 +593,6 @@ const handleSimpan = () => {
                   <label
                     :class="[
                       'flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors',
-                      formJenis === 'konflik'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:bg-gray-50',
-                    ]"
-                  >
-                    <input
-                      type="radio"
-                      v-model="formJenis"
-                      value="konflik"
-                      class="sr-only"
-                    />
-                    <span
-                      class="w-3 h-3 rounded-full border-2 flex items-center justify-center"
-                      :class="
-                        formJenis === 'konflik'
-                          ? 'border-yellow-500'
-                          : 'border-gray-300'
-                      "
-                    >
-                      <span
-                        v-if="formJenis === 'konflik'"
-                        class="w-1.5 h-1.5 bg-yellow-500 rounded-full"
-                      ></span>
-                    </span>
-                    <span class="text-sm font-medium text-gray-700"
-                      >Konflik</span
-                    >
-                  </label>
-                  <label
-                    :class="[
-                      'flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors',
                       formJenis === 'cuti_bersama'
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:bg-gray-50',

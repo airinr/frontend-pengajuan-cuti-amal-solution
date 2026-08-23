@@ -24,6 +24,15 @@ import HrDataKaryawanPage from '../pages/hr/DataKaryawanPage.vue'
 import HrJatahCutiPage from '../pages/hr/JatahCutiPage.vue'
 import HrKalenderLiburPage from '../pages/hr/KalenderLiburPage.vue'
 
+import DirekturLayout from '../layouts/DirekturLayout.vue'
+import DirekturDashboardPage from '../pages/direktur/DashboardPage.vue'
+import DirekturPersetujuanPage from '../pages/direktur/PersetujuanPage.vue'
+import DirekturLogRekapCutiPage from '../pages/direktur/LogRekapCutiPage.vue'
+import DirekturDataKaryawanPage from '../pages/direktur/DataKaryawanPage.vue'
+import DirekturJatahCutiPage from '../pages/direktur/JatahCutiPage.vue'
+import DirekturKalenderLiburPage from '../pages/direktur/KalenderLiburPage.vue'
+import DirekturProfilPage from '../pages/direktur/ProfilPage.vue'
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -181,6 +190,62 @@ const routes: RouteRecordRaw[] = [
         path: 'profil',
         name: 'HrProfil',
         component: ProfilPage
+      }
+    ]
+  },
+  {
+    path: '/direktur',
+    component: DirekturLayout,
+    meta: { requiresAuth: true, role: 'direktur' },
+    children: [
+      {
+        path: '',
+        redirect: '/direktur/dashboard'
+      },
+      {
+        path: 'dashboard',
+        name: 'DirekturDashboard',
+        component: DirekturDashboardPage
+      },
+      {
+        path: 'persetujuan',
+        name: 'DirekturPersetujuan',
+        component: DirekturPersetujuanPage
+      },
+      {
+        path: 'log-rekap-cuti',
+        name: 'DirekturLogRekapCuti',
+        component: DirekturLogRekapCutiPage
+      },
+      {
+        path: 'data-karyawan',
+        name: 'DirekturDataKaryawan',
+        component: DirekturDataKaryawanPage
+      },
+      {
+        path: 'jatah-cuti',
+        name: 'DirekturJatahCuti',
+        component: DirekturJatahCutiPage
+      },
+      {
+        path: 'kalender-libur',
+        name: 'DirekturKalenderLibur',
+        component: DirekturKalenderLiburPage
+      },
+      {
+        path: 'pengajuan-cuti',
+        name: 'DirekturPengajuanCuti',
+        component: PengajuanCutiPage
+      },
+      {
+        path: 'riwayat-cuti',
+        name: 'DirekturRiwayatCuti',
+        component: RiwayatCutiPage
+      },
+      {
+        path: 'profil',
+        name: 'DirekturProfil',
+        component: DirekturProfilPage
       }
     ]
   }

@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { authApi } from "../services/auth.service";
-import type { CurrentUser } from "../types";
+import { authApi, type CurrentUser } from "../services/auth.service";
 
-defineProps<{
-  open: boolean;
+const props = defineProps<{
+  open?: boolean;
+  isOpen?: boolean;
 }>();
 
+const isSidebarOpen = computed(() => props.open ?? props.isOpen ?? false);
+
 const emit = defineEmits<{
-  close: [];
+  (e: "close"): void;
 }>();
 
 const route = useRoute();
@@ -17,19 +19,17 @@ const router = useRouter();
 
 const user = ref<CurrentUser | null>(null);
 
-const hrMenu = [
-  { label: "Dashboard", route: "/hr/dashboard" },
-  { label: "Persetujuan", route: "/hr/persetujuan" },
-  { label: "Log & Rekap Cuti", route: "/hr/log-rekap-cuti" },
-  { label: "Data Karyawan", route: "/hr/data-karyawan" },
-  { label: "Jatah Cuti", route: "/hr/jatah-cuti" },
-  { label: "Kalender & Libur", route: "/hr/kalender-libur" },
+const direkturMenu = [
+  { label: "Dashboard", route: "/direktur/dashboard" },
+  { label: "Persetujuan", route: "/direktur/persetujuan" },
+  { label: "Log & Rekap Cuti", route: "/direktur/log-rekap-cuti" },
+  { label: "Data Karyawan", route: "/direktur/data-karyawan" },
+  { label: "Jatah Cuti", route: "/direktur/jatah-cuti" },
+  { label: "Kalender & Libur", route: "/direktur/kalender-libur" },
 ];
 
 const personalMenu = [
-  { label: "Pengajuan Saya", route: "/hr/pengajuan-cuti" },
-  { label: "Riwayat Cuti", route: "/hr/riwayat-cuti" },
-  { label: "Profil", route: "/hr/profil" },
+  { label: "Profil", route: "/direktur/profil" },
 ];
 
 const isActive = (itemRoute: string) => {
@@ -64,7 +64,7 @@ onMounted(async () => {
   <div>
     <!-- Mobile Backdrop -->
     <div
-      v-if="open"
+      v-if="isSidebarOpen"
       @click="emit('close')"
       class="fixed inset-0 bg-black/40 z-40 lg:hidden transition-opacity duration-200"
     />
@@ -73,7 +73,7 @@ onMounted(async () => {
     <aside
       :class="[
         'fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r border-gray-100 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 lg:sticky lg:top-0 lg:shrink-0',
-        open ? 'translate-x-0' : '-translate-x-full',
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
       ]"
     >
       <!-- Logo Header -->
@@ -99,12 +99,12 @@ onMounted(async () => {
       </div>
 
       <nav class="flex-1 p-4 overflow-y-auto">
-        <!-- HR Admin -->
+        <!-- Direktur Admin -->
         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-3">
           HR ADMIN
         </p>
         <ul class="space-y-1 mb-6">
-          <li v-for="item in hrMenu" :key="item.route">
+          <li v-for="item in direkturMenu" :key="item.route">
             <button
               @click="navigateTo(item.route)"
               :class="[
@@ -146,14 +146,14 @@ onMounted(async () => {
           <div
             class="w-9 h-9 bg-[#0f4bb4] rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
           >
-            {{ user ? getInitials(user.nama) : "HR" }}
+            {{ user ? getInitials(user.nama) : "D" }}
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-xs font-bold text-gray-800 truncate">
-              {{ user?.nama || "HR Admin" }}
+              {{ user?.nama || "Direktur" }}
             </p>
             <p class="text-[10px] text-gray-400 truncate">
-              {{ user?.jabatan || "Human Resource" }}
+              {{ user?.jabatan || "Direktur" }}
             </p>
           </div>
         </div>

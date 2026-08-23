@@ -32,6 +32,8 @@ const handleSubmit = async (e: Event) => {
       router.push("/pm/dashboard");
     } else if (role === "hr") {
       router.push("/hr/dashboard");
+    } else if (role === "direktur") {
+      router.push("/direktur/dashboard");
     } else {
       router.push("/karyawan/dashboard");
     }
