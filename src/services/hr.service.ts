@@ -1,5 +1,4 @@
 import api from "../lib/api";
-import type { KalenderItem } from "./calendar.service";
 
 export interface DashboardStats {
   total_karyawan: number;
@@ -33,7 +32,7 @@ export interface PersetujuanItem {
 }
 
 export interface RingkasanPersetujuan {
-  menunggu: number;
+  total_menunggu: number;
   disetujui_bulan_ini: number;
   ditolak_bulan_ini: number;
 }
@@ -61,43 +60,50 @@ export interface LogCutiItem {
   hr_approver: string;
 }
 
-export interface KaryawanItem {
-  id_user: number;
-  id_karyawan: string;
+export interface CutiMendatangItem {
   nama: string;
-  email: string;
+  jenis_cuti: string;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  status: string;
+}
+
+export interface RingkasanKaryawan {
+  total_karyawan: number;
+  total_departemen: number;
+  total_project_manager: number;
+}
+
+export interface KaryawanItem {
+  nama: string;
   departemen: string;
   jabatan: string;
+  email: string;
   status: string;
-  nama_pm: string;
 }
 
 export interface DepartemenItem {
-  id_departemen: number;
   nama_departemen: string;
   jumlah_karyawan: number;
 }
 
-export interface CreateKaryawanPayload {
-  id_karyawan: string;
-  nama: string;
-  email: string;
-  id_departemen: number;
-  jabatan: string;
+export interface ManajemenJatahCuti {
+  total_karyawan_aktif: number;
+  total_karyawan_cuti: number;
 }
 
-export interface UpdateKaryawanPayload {
+export interface DaftarCutiKaryawan {
   nama: string;
-  email: string;
-  id_departemen: number;
-  jabatan: string;
-  status: string;
+  nama_departemen: string;
+  total_cuti: number;
+  cuti_terpakai: number;
+  sisa_cuti: number;
 }
 
 export const hrApi = {
   getDashboardStats: () => api.get<DashboardStats>("/hr/dashboard"),
 
-  getCutiMendatang: () => api.get<KalenderItem[]>("/hr/cuti-mendatang"),
+  getCutiMendatang: () => api.get<CutiMendatangItem[]>("/hr/list-cuti-mendatang"),
 
   getRecentActivity: () => api.get<ActivityItem[]>("/hr/activity"),
 
@@ -107,7 +113,7 @@ export const hrApi = {
   getApprovalHistory: () =>
     api.get<PersetujuanItem[]>("/hr/approvals/history"),
 
-  getRingkasan: () => api.get<RingkasanPersetujuan>("/hr/approvals/ringkasan"),
+  getRingkasan: () => api.get<RingkasanPersetujuan>("/hr/persetujuan"),
 
   approve: (id: number) => api.post(`/hr/approvals/${id}/approve`),
 
@@ -121,23 +127,17 @@ export const hrApi = {
     api.get<LogCutiItem[]>("/hr/log-rekap/log", { params }),
 
   getDataKaryawanSummary: () =>
-    api.get<{ total_karyawan: number; total_departemen: number; total_pm: number }>("/hr/data-karyawan/summary"),
+    api.get<RingkasanKaryawan>("/hr/ringkasan-karyawan"),
 
-  getDataKaryawan: (params?: { search?: string }) =>
-    api.get<KaryawanItem[]>("/hr/data-karyawan", { params }),
+  getDataKaryawan: () =>
+    api.get<KaryawanItem[]>("/hr/tabel-karyawan"),
 
-  createKaryawan: (data: CreateKaryawanPayload) =>
-    api.post("/hr/data-karyawan", data),
+  getDataDepartemen: () =>
+    api.get<DepartemenItem[]>("/hr/tabel-departemen"),
 
-  updateKaryawan: (id: number, data: UpdateKaryawanPayload) =>
-    api.put(`/hr/data-karyawan/${id}`, data),
+  getManajemenJatahCuti: () =>
+    api.get<ManajemenJatahCuti>("/hr/manajemen-jatah-cuti"),
 
-  getDataDepartemen: (params?: { search?: string }) =>
-    api.get<DepartemenItem[]>("/hr/data-departemen", { params }),
-
-  createDepartemen: (data: { nama_departemen: string }) =>
-    api.post("/hr/data-departemen", data),
-
-  updateDepartemen: (id: number, data: { nama_departemen: string }) =>
-    api.put(`/hr/data-departemen/${id}`, data),
+  getDaftarCutiKaryawan: () =>
+    api.get<DaftarCutiKaryawan[]>("/hr/daftar-cuti-karyawan"),
 };
