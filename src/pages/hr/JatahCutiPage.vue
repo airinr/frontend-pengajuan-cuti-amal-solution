@@ -1,64 +1,36 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import {
+  hrApi,
+  type ManajemenJatahCuti,
+  type DaftarCutiKaryawan,
+} from "../../services/hr.service";
 
 const searchQuery = ref("");
 const filterDepartemen = ref("semua");
 const currentPage = ref(1);
 const itemsPerPage = 10;
+const loading = ref(true);
 
-const mockData = ref([
-  {
-    id: 1,
-    id_karyawan: "010000",
-    nama: "Budi Santoso",
-    departemen: "Teknologi Informasi",
-    cuti_tahunan: 12,
-    cuti_terpakai: 0,
-    sisa_saldo: 12,
-  },
-  {
-    id: 2,
-    id_karyawan: "020000",
-    nama: "Siti Aminah",
-    departemen: "Sumber Daya Manusia",
-    cuti_tahunan: 12,
-    cuti_terpakai: 0,
-    sisa_saldo: 12,
-  },
-  {
-    id: 3,
-    id_karyawan: "030000",
-    nama: "Rizky Damansyah",
-    departemen: "Pemasaran",
-    cuti_tahunan: 12,
-    cuti_terpakai: 0,
-    sisa_saldo: 12,
-  },
-  {
-    id: 4,
-    id_karyawan: "040000",
-    nama: "Dewi Lestari",
-    departemen: "Operasional",
-    cuti_tahunan: 12,
-    cuti_terpakai: 0,
-    sisa_saldo: 12,
-  },
-]);
+const summary = ref<ManajemenJatahCuti>({
+  total_karyawan_aktif: 0,
+  total_karyawan_cuti: 0,
+});
+const daftarList = ref<DaftarCutiKaryawan[]>([]);
 
 const departemenList = computed(() => {
-  const depts = [...new Set(mockData.value.map((d) => d.departemen))];
+  const depts = [...new Set(daftarList.value.map((d) => d.nama_departemen))];
   return depts.sort();
 });
 
 const filteredData = computed(() => {
-  return mockData.value.filter((item) => {
+  return daftarList.value.filter((item) => {
     const matchSearch =
       !searchQuery.value ||
-      item.nama.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      item.id_karyawan.includes(searchQuery.value);
+      item.nama.toLowerCase().includes(searchQuery.value.toLowerCase());
     const matchDept =
       filterDepartemen.value === "semua" ||
-      item.departemen === filterDepartemen.value;
+      item.nama_departemen === filterDepartemen.value;
     return matchSearch && matchDept;
   });
 });
@@ -73,14 +45,6 @@ const currentData = computed(() => {
   return filteredData.value.slice(start, start + itemsPerPage);
 });
 
-const totalAktif = computed(() => mockData.value.length);
-const sedangCuti = computed(
-  () =>
-    mockData.value.filter(
-      (d) => d.cuti_terpakai > 0 && d.sisa_saldo < d.cuti_tahunan,
-    ).length,
-);
-
 const goToPage = (page: number) => {
   if (page < 1 || page > totalPages.value) return;
   currentPage.value = page;
@@ -93,8 +57,10 @@ const formTahun = ref(new Date().getFullYear());
 const formKuota = ref(12);
 
 const karyawanList = computed(() => {
-  if (formDepartemen.value === "semua") return mockData.value;
-  return mockData.value.filter((d) => d.departemen === formDepartemen.value);
+  if (formDepartemen.value === "semua") return daftarList.value;
+  return daftarList.value.filter(
+    (d) => d.nama_departemen === formDepartemen.value,
+  );
 });
 
 const years = computed(() => {
@@ -115,26 +81,30 @@ const closeModal = () => {
 };
 
 const handleApply = () => {
-  if (formKaryawan.value === "semua") {
-    const targets =
-      formDepartemen.value === "semua"
-        ? mockData.value
-        : mockData.value.filter((d) => d.departemen === formDepartemen.value);
-    targets.forEach((item) => {
-      item.cuti_tahunan = formKuota.value;
-      item.sisa_saldo = formKuota.value - item.cuti_terpakai;
-    });
-  } else {
-    const item = mockData.value.find(
-      (d) => d.id_karyawan === formKaryawan.value,
-    );
-    if (item) {
-      item.cuti_tahunan = formKuota.value;
-      item.sisa_saldo = formKuota.value - item.cuti_terpakai;
-    }
-  }
   closeModal();
 };
+
+const fetchData = async () => {
+  loading.value = true;
+  try {
+    const [summaryRes, daftarRes] = await Promise.allSettled([
+      hrApi.getManajemenJatahCuti(),
+      hrApi.getDaftarCutiKaryawan(),
+    ]);
+    if (summaryRes.status === "fulfilled")
+      summary.value = summaryRes.value.data;
+    if (daftarRes.status === "fulfilled")
+      daftarList.value = daftarRes.value.data || [];
+  } catch {
+    // silent fail
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchData();
+});
 </script>
 
 <template>
@@ -169,7 +139,7 @@ const handleApply = () => {
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Cari karyawan berdasarkan nama atau ID..."
+            placeholder="Cari karyawan berdasarkan nama..."
             class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-72"
           />
         </div>
@@ -190,198 +160,210 @@ const handleApply = () => {
               d="M12 6v6m0 0v6m0-6h6m-6 0H6"
             />
           </svg>
-          Tambah Jatah Cuti
+          Sesuaikan Kuota
         </button>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-      <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <p
-          class="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1"
-        >
-          Total Karyawan Aktif
-        </p>
-        <p class="text-2xl font-bold text-gray-800">
-          {{ totalAktif }}
-          <span class="text-sm font-normal text-gray-500">Orang</span>
-        </p>
-      </div>
-      <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <p
-          class="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1"
-        >
-          Karyawan Yang Sedang Cuti
-        </p>
-        <p class="text-2xl font-bold text-gray-800">
-          {{ sedangCuti }}
-          <span class="text-sm font-normal text-gray-500">Orang</span>
-        </p>
-      </div>
+    <div v-if="loading" class="flex justify-center items-center py-12">
+      <div
+        class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+      ></div>
     </div>
 
-    <div
-      class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
-    >
-      <div
-        class="p-4 border-b border-gray-100 flex items-center justify-between"
-      >
-        <h3 class="font-semibold text-gray-800">Daftar Jatah Cuti Karyawan</h3>
-        <select
-          v-model="filterDepartemen"
-          class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-        >
-          <option value="semua">Semua Departemen</option>
-          <option v-for="dept in departemenList" :key="dept" :value="dept">
-            {{ dept }}
-          </option>
-        </select>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="bg-gray-50 border-b border-gray-200">
-              <th
-                class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
-              >
-                ID Karyawan
-              </th>
-              <th
-                class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
-              >
-                Nama Karyawan
-              </th>
-              <th
-                class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
-              >
-                Departemen
-              </th>
-              <th
-                class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
-              >
-                Cuti Tahunan
-              </th>
-              <th
-                class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
-              >
-                Cuti Terpakai
-              </th>
-              <th
-                class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
-              >
-                Sisa Saldo
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-if="currentData.length === 0">
-              <td colspan="6" class="text-center py-8 text-gray-400 text-sm">
-                Tidak ada data
-              </td>
-            </tr>
-            <tr
-              v-for="item in currentData"
-              :key="item.id"
-              class="hover:bg-gray-50 transition-colors"
-            >
-              <td class="px-5 py-4 text-sm text-gray-600 font-mono">
-                {{ item.id_karyawan }}
-              </td>
-              <td class="px-5 py-4 text-sm font-medium text-gray-800">
-                {{ item.nama }}
-              </td>
-              <td class="px-5 py-4 text-sm text-gray-600">
-                {{ item.departemen }}
-              </td>
-              <td class="px-5 py-4 text-sm text-gray-600 text-center">
-                {{ item.cuti_tahunan }} Hari
-              </td>
-              <td class="px-5 py-4 text-sm text-gray-600 text-center">
-                {{ item.cuti_terpakai }} Hari
-              </td>
-              <td class="px-5 py-4 text-center">
-                <span
-                  :class="[
-                    'inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold',
-                    item.sisa_saldo <= 2
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-blue-100 text-blue-700',
-                  ]"
-                >
-                  {{ item.sisa_saldo }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div
-        class="flex items-center justify-between px-5 py-3 border-t border-gray-100"
-      >
-        <p class="text-xs text-gray-500">
-          Menampilkan
-          {{
-            currentData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0
-          }}-{{ Math.min(currentPage * itemsPerPage, totalItems) }} dari
-          {{ totalItems }} karyawan
-        </p>
-        <div class="flex items-center gap-1">
-          <button
-            @click="goToPage(currentPage - 1)"
-            :disabled="currentPage === 1"
-            class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 cursor-pointer"
+    <template v-else>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p
+            class="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1"
           >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-          <button
-            v-for="page in totalPages"
-            :key="page"
-            @click="goToPage(page)"
-            :class="[
-              'w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium cursor-pointer',
-              page === currentPage
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:bg-gray-50',
-            ]"
+            Total Karyawan Aktif
+          </p>
+          <p class="text-2xl font-bold text-gray-800">
+            {{ summary.total_karyawan_aktif }}
+            <span class="text-sm font-normal text-gray-500">Orang</span>
+          </p>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p
+            class="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1"
           >
-            {{ page }}
-          </button>
-          <button
-            @click="goToPage(currentPage + 1)"
-            :disabled="currentPage === totalPages"
-            class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 cursor-pointer"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
+            Karyawan Yang Sedang Cuti
+          </p>
+          <p class="text-2xl font-bold text-gray-800">
+            {{ summary.total_karyawan_cuti }}
+            <span class="text-sm font-normal text-gray-500">Orang</span>
+          </p>
         </div>
       </div>
-    </div>
+
+      <div
+        class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+      >
+        <div
+          class="p-4 border-b border-gray-100 flex items-center justify-between"
+        >
+          <h3 class="font-semibold text-gray-800">
+            Daftar Jatah Cuti Karyawan
+          </h3>
+          <select
+            v-model="filterDepartemen"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          >
+            <option value="semua">Semua Departemen</option>
+            <option v-for="dept in departemenList" :key="dept" :value="dept">
+              {{ dept }}
+            </option>
+          </select>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="bg-gray-50 border-b border-gray-200">
+                <th
+                  class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-12"
+                >
+                  No.
+                </th>
+                <th
+                  class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  Nama Karyawan
+                </th>
+                <th
+                  class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  Departemen
+                </th>
+                <th
+                  class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  Cuti Tahunan
+                </th>
+                <th
+                  class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  Cuti Terpakai
+                </th>
+                <th
+                  class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  Sisa Saldo
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-if="currentData.length === 0">
+                <td colspan="6" class="text-center py-8 text-gray-400 text-sm">
+                  Tidak ada data
+                </td>
+              </tr>
+              <tr
+                v-for="(item, index) in currentData"
+                :key="index"
+                class="hover:bg-gray-50 transition-colors"
+              >
+                <td class="px-5 py-4 text-sm text-gray-500 text-center">
+                  {{ (currentPage - 1) * itemsPerPage + index + 1 }}
+                </td>
+                <td class="px-5 py-4 text-sm font-medium text-gray-800">
+                  {{ item.nama }}
+                </td>
+                <td class="px-5 py-4 text-sm text-gray-600">
+                  {{ item.nama_departemen }}
+                </td>
+                <td class="px-5 py-4 text-sm text-gray-600 text-center">
+                  {{ item.total_cuti }} Hari
+                </td>
+                <td class="px-5 py-4 text-sm text-gray-600 text-center">
+                  {{ item.cuti_terpakai }} Hari
+                </td>
+                <td class="px-5 py-4 text-center">
+                  <span
+                    :class="[
+                      'inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold',
+                      item.sisa_cuti <= 2
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-blue-100 text-blue-700',
+                    ]"
+                  >
+                    {{ item.sisa_cuti }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          class="flex items-center justify-between px-5 py-3 border-t border-gray-100"
+        >
+          <p class="text-xs text-gray-500">
+            Menampilkan
+            {{
+              currentData.length > 0
+                ? (currentPage - 1) * itemsPerPage + 1
+                : 0
+            }}-{{ Math.min(currentPage * itemsPerPage, totalItems) }} dari
+            {{ totalItems }} karyawan
+          </p>
+          <div class="flex items-center gap-1">
+            <button
+              @click="goToPage(currentPage - 1)"
+              :disabled="currentPage === 1"
+              class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 cursor-pointer"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <button
+              v-for="page in totalPages"
+              :key="page"
+              @click="goToPage(page)"
+              :class="[
+                'w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium cursor-pointer',
+                page === currentPage
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-50',
+              ]"
+            >
+              {{ page }}
+            </button>
+            <button
+              @click="goToPage(currentPage + 1)"
+              :disabled="currentPage === totalPages"
+              class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 cursor-pointer"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <Teleport to="body">
       <Transition name="fade">
@@ -392,7 +374,9 @@ const handleApply = () => {
         >
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-bold text-gray-800">Tambah Kuota Cuti</h3>
+              <h3 class="text-lg font-bold text-gray-800">
+                Sesuaikan Kuota Cuti
+              </h3>
               <button
                 @click="closeModal"
                 class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -449,11 +433,7 @@ const handleApply = () => {
                   class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
                   <option value="semua">Semua Karyawan</option>
-                  <option
-                    v-for="k in karyawanList"
-                    :key="k.id_karyawan"
-                    :value="k.id_karyawan"
-                  >
+                  <option v-for="k in karyawanList" :key="k.nama" :value="k.nama">
                     {{ k.nama }}
                   </option>
                 </select>

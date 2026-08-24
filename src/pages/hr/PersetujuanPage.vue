@@ -76,7 +76,7 @@ const handleApprove = async (id: number) => {
     await hrApi.approve(id);
     pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
     if (ringkasan.value) {
-      ringkasan.value.menunggu = Math.max(0, ringkasan.value.menunggu - 1);
+      ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
       ringkasan.value.disetujui_bulan_ini += 1;
     }
   } catch {
@@ -107,7 +107,7 @@ const handleReject = async () => {
       (item) => item.id_log_cuti !== rejectTarget.value!.id_log_cuti
     );
     if (ringkasan.value) {
-      ringkasan.value.menunggu = Math.max(0, ringkasan.value.menunggu - 1);
+      ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
       ringkasan.value.ditolak_bulan_ini += 1;
     }
     closeRejectModal();
@@ -289,7 +289,7 @@ onMounted(async () => {
             <div class="space-y-3">
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span class="text-sm text-gray-600">Menunggu</span>
-                <span class="text-lg font-bold text-gray-800">{{ ringkasan?.menunggu ?? '-' }}</span>
+                <span class="text-lg font-bold text-gray-800">{{ ringkasan?.total_menunggu ?? '-' }}</span>
               </div>
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span class="text-sm text-gray-600">Disetujui Bulan Ini</span>

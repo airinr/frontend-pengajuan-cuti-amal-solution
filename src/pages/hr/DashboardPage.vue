@@ -5,13 +5,13 @@ import {
   hrApi,
   type DashboardStats,
   type ActivityItem,
+  type CutiMendatangItem,
 } from "../../services/hr.service";
-import type { KalenderItem } from "../../services/calendar.service";
 
 const router = useRouter();
 
 const stats = ref<DashboardStats | null>(null);
-const cutiMendatang = ref<KalenderItem[]>([]);
+const cutiMendatang = ref<CutiMendatangItem[]>([]);
 const activities = ref<ActivityItem[]>([]);
 const loading = ref(true);
 
