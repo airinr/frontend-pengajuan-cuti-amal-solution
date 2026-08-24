@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { leaveApi, type OngoingCuti } from '../../services/leave.service'
+import { karyawanApi, type OngoingCuti } from '../../services/karyawan.service'
 
 const ongoingList = ref<OngoingCuti[]>([])
 const loading = ref(true)
@@ -98,7 +98,7 @@ const getCardBorderColor = (item: OngoingCuti) => {
 
 onMounted(async () => {
   try {
-    const res = await leaveApi.getOngoingCuti()
+    const res = await karyawanApi.getOngoingCuti()
     ongoingList.value = res.data
   } catch {
     ongoingList.value = []

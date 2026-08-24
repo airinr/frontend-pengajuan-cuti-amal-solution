@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { leaveApi, type RiwayatCuti } from '../../services/leave.service'
+import { karyawanApi, type RiwayatCuti } from '../../services/karyawan.service'
 
 const riwayat = ref<RiwayatCuti[]>([])
 const loading = ref(true)
@@ -103,7 +103,7 @@ const goToPage = (page: number) => {
 
 onMounted(async () => {
   try {
-    const res = await leaveApi.getRiwayatCuti()
+    const res = await karyawanApi.getRiwayatCuti()
     riwayat.value = res.data
   } catch {
     riwayat.value = []

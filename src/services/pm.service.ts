@@ -31,23 +31,6 @@ export interface ActivityItem {
   tipe: "approve" | "reject" | "submit" | "system";
 }
 
-export interface PersetujuanItem {
-  id_log_cuti: number;
-  id_user: number;
-  nama: string;
-  jabatan: string;
-  departemen: string;
-  jenis_cuti: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
-  durasi: number;
-  delegasi_tugas: string;
-  sisa_cuti: number;
-  keterangan: string;
-  status: "Menunggu" | "Disetujui" | "Ditolak";
-  created_at: string;
-}
-
 export interface RingkasanTim {
   total_pengajuan: number;
   menunggu_persetujuan: number;
@@ -95,9 +78,6 @@ export const pmApi = {
 
   getHistoryCutiTim: () => api.get<HistoryCutiItem[]>("/pm/history-cuti-tim"),
 
-  getPendingApprovals: () =>
-    api.get<PersetujuanItem[]>("/pm/approvals/pending"),
-
   getApprovalHistory: (page = 1, limit = 10, search = "") =>
     api.get<{ data: PersetujuanItem[]; total: number }>(
       "/pm/approvals/history",
@@ -109,11 +89,6 @@ export const pmApi = {
   getRingkasanTim: () => api.get<RingkasanTim>("/pm/approvals/ringkasan"),
 
   getKapasitasTim: () => api.get<KapasitasTim[]>("/pm/approvals/kapasitas"),
-
-  approve: (id: number) => api.post(`/pm/approvals/${id}/approve`),
-
-  reject: (id: number, alasan?: string) =>
-    api.post(`/pm/approvals/${id}/reject`, { alasan }),
 
   getRekapSummary: () => api.get<RekapTimSummary>("/pm/rekap-cuti-ringkasan"),
 

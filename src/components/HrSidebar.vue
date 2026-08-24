@@ -18,18 +18,18 @@ const router = useRouter();
 const user = ref<CurrentUser | null>(null);
 
 const hrMenu = [
-  { label: "Dashboard", route: "/hr/dashboard" },
-  { label: "Persetujuan", route: "/hr/persetujuan" },
-  { label: "Log & Rekap Cuti", route: "/hr/log-rekap-cuti" },
-  { label: "Data Karyawan", route: "/hr/data-karyawan" },
-  { label: "Jatah Cuti", route: "/hr/jatah-cuti" },
-  { label: "Kalender & Libur", route: "/hr/kalender-libur" },
+  { label: "Dashboard", icon: "grid", route: "/hr/dashboard" },
+  { label: "Persetujuan", icon: "check-circle", route: "/hr/persetujuan" },
+  { label: "Log & Rekap Cuti", icon: "clipboard", route: "/hr/log-rekap-cuti" },
+  { label: "Data Karyawan", icon: "users", route: "/hr/data-karyawan" },
+  { label: "Jatah Cuti", icon: "briefcase", route: "/hr/jatah-cuti" },
+  { label: "Kalender & Libur", icon: "calendar", route: "/hr/kalender-libur" },
 ];
 
 const personalMenu = [
-  { label: "Pengajuan Saya", route: "/hr/pengajuan-cuti" },
-  { label: "Riwayat Cuti", route: "/hr/riwayat-cuti" },
-  { label: "Profil", route: "/hr/profil" },
+  { label: "Pengajuan Saya", icon: "file-plus", route: "/hr/pengajuan-cuti" },
+  { label: "Riwayat Cuti", icon: "history", route: "/hr/riwayat-cuti" },
+  { label: "Profil", icon: "user", route: "/hr/profil" },
 ];
 
 const isActive = (itemRoute: string) => {
@@ -62,32 +62,29 @@ onMounted(async () => {
 
 <template>
   <div>
-    <!-- Mobile Backdrop -->
-    <div
-      v-if="open"
-      @click="emit('close')"
-      class="fixed inset-0 bg-black/40 z-40 lg:hidden transition-opacity duration-200"
-    />
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="open"
+          class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          @click="emit('close')"
+        />
+      </Transition>
+    </Teleport>
 
-    <!-- Sidebar Container -->
     <aside
       :class="[
-        'fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r border-gray-100 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 lg:sticky lg:top-0 lg:shrink-0',
-        open ? 'translate-x-0' : '-translate-x-full',
+        'fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:z-auto',
+        open ? 'translate-x-0' : '-translate-x-full'
       ]"
     >
-      <!-- Logo Header -->
       <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-[#0f4bb4] rounded-xl flex items-center justify-center text-white shadow-sm">
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm-8 4H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/>
-            </svg>
-          </div>
-          <h1 class="text-xl font-bold text-[#0f4bb4] tracking-tight">
-            AjuanCuti
-          </h1>
-        </div>
+        <h1 class="text-xl font-bold text-blue-600 flex items-center gap-2">
+          <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/>
+          </svg>
+          AjuanCuti
+        </h1>
         <button
           @click="emit('close')"
           class="lg:hidden p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -100,60 +97,100 @@ onMounted(async () => {
 
       <nav class="flex-1 p-4 overflow-y-auto">
         <!-- HR Admin -->
-        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-3">
-          HR ADMIN
-        </p>
+        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">HR Admin</p>
         <ul class="space-y-1 mb-6">
           <li v-for="item in hrMenu" :key="item.route">
             <button
               @click="navigateTo(item.route)"
               :class="[
-                'w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer',
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                 isActive(item.route)
-                  ? 'bg-[#0f4bb4] text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
               ]"
             >
+              <!-- grid -->
+              <svg v-if="item.icon === 'grid'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              <!-- check-circle -->
+              <svg v-else-if="item.icon === 'check-circle'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <!-- clipboard -->
+              <svg v-else-if="item.icon === 'clipboard'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <!-- users -->
+              <svg v-else-if="item.icon === 'users'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              <!-- briefcase -->
+              <svg v-else-if="item.icon === 'briefcase'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <!-- calendar -->
+              <svg v-else-if="item.icon === 'calendar'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <!-- file-plus -->
+              <svg v-else-if="item.icon === 'file-plus'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <!-- history -->
+              <svg v-else-if="item.icon === 'history'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <!-- user -->
+              <svg v-else-if="item.icon === 'user'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
               {{ item.label }}
             </button>
           </li>
         </ul>
 
         <!-- Personal -->
-        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-3">
-          PERSONAL
-        </p>
+        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">Personal</p>
         <ul class="space-y-1">
           <li v-for="item in personalMenu" :key="item.route">
             <button
               @click="navigateTo(item.route)"
               :class="[
-                'w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer',
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                 isActive(item.route)
-                  ? 'bg-[#0f4bb4] text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
               ]"
             >
+              <svg v-if="item.icon === 'file-plus'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <svg v-else-if="item.icon === 'history'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <svg v-else-if="item.icon === 'user'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
               {{ item.label }}
             </button>
           </li>
         </ul>
       </nav>
 
-      <!-- Bottom User Profile -->
       <div class="p-4 border-t border-gray-100">
-        <div class="flex items-center gap-3 px-3 py-2">
+        <div class="flex items-center gap-3 px-4 py-2">
           <div
-            class="w-9 h-9 bg-[#0f4bb4] rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+            class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium"
           >
-            {{ user ? getInitials(user.nama) : "HR" }}
+            {{ user ? getInitials(user.nama) : "..." }}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-xs font-bold text-gray-800 truncate">
-              {{ user?.nama || "HR Admin" }}
+            <p class="text-sm font-medium text-gray-800 truncate">
+              {{ user?.nama || "Loading..." }}
             </p>
-            <p class="text-[10px] text-gray-400 truncate">
-              {{ user?.jabatan || "Human Resource" }}
+            <p class="text-xs text-gray-500 truncate">
+              {{ user?.username ? `${user.username}@company.com` : "" }}
             </p>
           </div>
         </div>
@@ -161,3 +198,14 @@ onMounted(async () => {
     </aside>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

@@ -2,11 +2,11 @@
 import { ref, onMounted } from "vue";
 import {
   direkturApi,
-  type PersetujuanItem,
   type RingkasanPersetujuan,
 } from "../../services/direktur.service";
+import { approvalApi, type ApprovalQueueItem } from "../../services/approval.service";
 
-const pendingList = ref<PersetujuanItem[]>([]);
+const pendingList = ref<ApprovalQueueItem[]>([]);
 const ringkasan = ref<RingkasanPersetujuan>({
   menunggu: 0,
   disetujui_bulan_ini: 0,
@@ -39,7 +39,7 @@ const formatDateRange = (start: string, end: string) => {
 const fetchPending = async () => {
   try {
     const [pendingRes, ringkasanRes] = await Promise.allSettled([
-      direkturApi.getPendingApprovals(),
+      approvalApi.getApprovalQueue(),
       direkturApi.getRingkasan(),
     ]);
     if (pendingRes.status === "fulfilled" && Array.isArray(pendingRes.value.data)) {
@@ -69,7 +69,7 @@ const confirmApprove = async () => {
   const id = selectedItem.value.id_log_cuti;
   processingId.value = id;
   try {
-    await direkturApi.approve(id);
+    await approvalApi.approve(id);
     pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
     ringkasan.value.menunggu = Math.max(0, ringkasan.value.menunggu - 1);
     ringkasan.value.disetujui_bulan_ini += 1;
@@ -87,7 +87,7 @@ const confirmReject = async () => {
   const id = selectedItem.value.id_log_cuti;
   processingId.value = id;
   try {
-    await direkturApi.reject(id, rejectReason.value);
+    await approvalApi.reject(id, rejectReason.value);
     pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
     ringkasan.value.menunggu = Math.max(0, ringkasan.value.menunggu - 1);
     ringkasan.value.ditolak_bulan_ini += 1;
@@ -142,7 +142,7 @@ onMounted(async () => {
           <!-- User Info Header -->
           <div>
             <h2 class="text-xl font-bold text-gray-900">{{ item.nama }}</h2>
-            <p class="text-xs text-gray-500 mt-1">{{ item.jabatan ? item.jabatan + ' • ' : '' }}{{ item.departemen }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ item.nama_departemen }}</p>
           </div>
 
           <!-- Metadata Pill Box -->
@@ -164,7 +164,7 @@ onMounted(async () => {
               </div>
               <div>
                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">DELEGASI TUGAS</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.delegasi_tugas || '-' }}</p>
+                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.pengganti || '-' }}</p>
               </div>
               <div>
                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">SISA CUTI</p>
@@ -177,7 +177,7 @@ onMounted(async () => {
           <div>
             <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">ALASAN / CATATAN</p>
             <div class="bg-[#f0f5ff] rounded-xl p-4 text-xs text-gray-700 leading-relaxed font-normal">
-              {{ item.keterangan || '-' }}
+              {{ item.alasan || '-' }}
             </div>
           </div>
 
