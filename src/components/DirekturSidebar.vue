@@ -101,7 +101,7 @@ onMounted(async () => {
       <nav class="flex-1 p-4 overflow-y-auto">
         <!-- Direktur Admin -->
         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-3">
-          HR ADMIN
+          DIREKTUR ADMIN
         </p>
         <ul class="space-y-1 mb-6">
           <li v-for="item in direkturMenu" :key="item.route">

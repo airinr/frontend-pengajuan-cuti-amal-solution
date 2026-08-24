@@ -1,36 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import {
-  hrApi,
+  direkturApi,
   type PersetujuanItem,
   type RingkasanPersetujuan,
-} from "../../services/hr.service";
+} from "../../services/direktur.service";
 
-const pendingList = ref<PersetujuanItem[]>([
-  {
-    id_log_cuti: 1,
-    id_user: 11,
-    nama: "Rani Mawar",
-    jabatan: "Staff",
-    departemen: "Human Resource • Manajemen Perusahaan",
-    jenis_cuti: "Cuti Tahunan",
-    tanggal_mulai: "2023-11-20",
-    tanggal_selesai: "2023-11-24",
-    durasi: 5,
-    delegasi_tugas: "Dina S.",
-    sisa_cuti: 6,
-    disetujui_oleh: "HR Manager",
-    keterangan: "Liburan keluarga tahunan yang sudah direncanakan sejak lama.",
-    status: "Menunggu",
-  },
-]);
-
+const pendingList = ref<PersetujuanItem[]>([]);
 const ringkasan = ref<RingkasanPersetujuan>({
-  menunggu: 1,
-  disetujui_bulan_ini: 2,
+  menunggu: 0,
+  disetujui_bulan_ini: 0,
   ditolak_bulan_ini: 0,
 });
 
+const loading = ref(true);
 const processingId = ref<number | null>(null);
 
 // Modal States
@@ -38,6 +21,37 @@ const showApproveModal = ref(false);
 const showRejectModal = ref(false);
 const selectedItem = ref<PersetujuanItem | null>(null);
 const rejectReason = ref("");
+
+const formatDateRange = (start: string, end: string) => {
+  if (!start) return "-";
+  const s = new Date(start);
+  const e = new Date(end || start);
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+  ];
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+    return `${s.getDate()} - ${e.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
+  }
+  return `${s.getDate()} ${months[s.getMonth()]} ${s.getFullYear()} - ${e.getDate()} ${months[e.getMonth()]} ${e.getFullYear()}`;
+};
+
+const fetchPending = async () => {
+  try {
+    const [pendingRes, ringkasanRes] = await Promise.allSettled([
+      direkturApi.getPendingApprovals(),
+      direkturApi.getRingkasan(),
+    ]);
+    if (pendingRes.status === "fulfilled" && Array.isArray(pendingRes.value.data)) {
+      pendingList.value = pendingRes.value.data;
+    }
+    if (ringkasanRes.status === "fulfilled" && ringkasanRes.value.data) {
+      ringkasan.value = ringkasanRes.value.data;
+    }
+  } catch {
+    // silent fail
+  }
+};
 
 const openApproveConfirm = (item: PersetujuanItem) => {
   selectedItem.value = item;
@@ -55,16 +69,16 @@ const confirmApprove = async () => {
   const id = selectedItem.value.id_log_cuti;
   processingId.value = id;
   try {
-    await hrApi.approve(id);
-  } catch {
-    // local update
-  } finally {
+    await direkturApi.approve(id);
     pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
     ringkasan.value.menunggu = Math.max(0, ringkasan.value.menunggu - 1);
     ringkasan.value.disetujui_bulan_ini += 1;
-    processingId.value = null;
     showApproveModal.value = false;
     selectedItem.value = null;
+  } catch {
+    // silent fail
+  } finally {
+    processingId.value = null;
   }
 };
 
@@ -73,35 +87,24 @@ const confirmReject = async () => {
   const id = selectedItem.value.id_log_cuti;
   processingId.value = id;
   try {
-    await hrApi.reject(id, rejectReason.value);
-  } catch {
-    // local update
-  } finally {
+    await direkturApi.reject(id, rejectReason.value);
     pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
     ringkasan.value.menunggu = Math.max(0, ringkasan.value.menunggu - 1);
     ringkasan.value.ditolak_bulan_ini += 1;
-    processingId.value = null;
     showRejectModal.value = false;
     selectedItem.value = null;
     rejectReason.value = "";
+  } catch {
+    // silent fail
+  } finally {
+    processingId.value = null;
   }
 };
 
 onMounted(async () => {
-  try {
-    const [pendingRes, ringkasanRes] = await Promise.allSettled([
-      hrApi.getPendingApprovals(),
-      hrApi.getRingkasan(),
-    ]);
-    if (pendingRes.status === "fulfilled" && pendingRes.value.data && pendingRes.value.data.length > 0) {
-      pendingList.value = pendingRes.value.data;
-    }
-    if (ringkasanRes.status === "fulfilled" && ringkasanRes.value.data) {
-      ringkasan.value = ringkasanRes.value.data;
-    }
-  } catch {
-    // fallback
-  }
+  loading.value = true;
+  await fetchPending();
+  loading.value = false;
 });
 </script>
 
@@ -121,12 +124,17 @@ onMounted(async () => {
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       <!-- Left Column: Pending Leaves List (8 Cols) -->
       <div class="lg:col-span-8 space-y-5">
-        <div v-if="pendingList.length === 0" class="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
+        <div v-if="loading" class="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm flex justify-center items-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f4bb4]"></div>
+        </div>
+
+        <div v-else-if="pendingList.length === 0" class="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
           <p class="text-base font-semibold text-gray-800">Tidak ada pengajuan cuti</p>
           <p class="text-sm text-gray-400 mt-1">Semua pengajuan cuti telah selesai diproses.</p>
         </div>
 
         <div
+          v-else
           v-for="item in pendingList"
           :key="item.id_log_cuti"
           class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-7 space-y-5"
@@ -134,7 +142,7 @@ onMounted(async () => {
           <!-- User Info Header -->
           <div>
             <h2 class="text-xl font-bold text-gray-900">{{ item.nama }}</h2>
-            <p class="text-xs text-gray-500 mt-1">{{ item.departemen }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ item.jabatan ? item.jabatan + ' • ' : '' }}{{ item.departemen }}</p>
           </div>
 
           <!-- Metadata Pill Box -->
@@ -146,7 +154,9 @@ onMounted(async () => {
               </div>
               <div>
                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">TANGGAL</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">20 - 24 Nov 2023</p>
+                <p class="text-xs font-bold text-gray-900 mt-1">
+                  {{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}
+                </p>
               </div>
               <div>
                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">DURASI</p>
@@ -158,7 +168,7 @@ onMounted(async () => {
               </div>
               <div>
                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">SISA CUTI</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.sisa_cuti }}</p>
+                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.sisa_cuti }} Hari</p>
               </div>
             </div>
           </div>
@@ -167,7 +177,7 @@ onMounted(async () => {
           <div>
             <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">ALASAN / CATATAN</p>
             <div class="bg-[#f0f5ff] rounded-xl p-4 text-xs text-gray-700 leading-relaxed font-normal">
-              {{ item.keterangan }}
+              {{ item.keterangan || '-' }}
             </div>
           </div>
 
@@ -275,7 +285,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- POPUP MODAL: PENOLAKAN CUTI (EXACTLY MATCHING USER SCREENSHOT) -->
+    <!-- POPUP MODAL: PENOLAKAN CUTI -->
     <div
       v-if="showRejectModal && selectedItem"
       class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"

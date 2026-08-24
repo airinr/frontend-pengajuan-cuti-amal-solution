@@ -4,3 +4,5 @@ export { departmentApi } from './department.service'
 export { calendarApi } from './calendar.service'
 export { pmApi } from './pm.service'
 export { hrApi } from './hr.service'
+export { direkturApi } from './direktur.service'
+

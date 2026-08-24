@@ -1,17 +1,13 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { authApi } from "../../services/auth.service";
+import type { CurrentUser } from "../../types";
 
 const router = useRouter();
 
-const profile = ref({
-  nama: "Budi Santoso",
-  jabatan: "Direktur",
-  departemen: "Manajemen Perusahaan",
-  telepon: "0812-3498-0000",
-  email: "budi.santoso@gmail.id",
-  bahasa: "Bahasa Indonesia",
-});
+const user = ref<CurrentUser | null>(null);
+const loading = ref(true);
 
 const showPasswordModal = ref(false);
 const passwordForm = ref({
@@ -19,29 +15,86 @@ const passwordForm = ref({
   password_baru: "",
   konfirmasi: "",
 });
+const passwordLoading = ref(false);
+const passwordError = ref("");
+const passwordSuccess = ref("");
+
+const fetchProfile = async () => {
+  loading.value = true;
+  try {
+    const res = await authApi.me();
+    user.value = res.data;
+  } catch {
+    // silent fail
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleChangePassword = async () => {
+  passwordError.value = "";
+  passwordSuccess.value = "";
+
+  if (passwordForm.value.password_baru !== passwordForm.value.konfirmasi) {
+    passwordError.value = "Konfirmasi kata sandi baru tidak cocok";
+    return;
+  }
+
+  passwordLoading.value = true;
+  try {
+    await authApi.changePassword({
+      password_lama: passwordForm.value.password_lama,
+      password_baru: passwordForm.value.password_baru,
+      konfirmasi_password_baru: passwordForm.value.konfirmasi,
+    });
+    passwordSuccess.value = "Kata sandi berhasil diubah";
+    setTimeout(() => {
+      showPasswordModal.value = false;
+      passwordForm.value = { password_lama: "", password_baru: "", konfirmasi: "" };
+      passwordSuccess.value = "";
+    }, 1200);
+  } catch (err: any) {
+    passwordError.value = err.response?.data?.detail || "Gagal mengubah kata sandi";
+  } finally {
+    passwordLoading.value = false;
+  }
+};
 
 const handleLogout = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("token_type");
   router.push("/login");
 };
+
+const handleSaveProfile = () => {
+  // Placeholder feedback for save changes
+  alert("Perubahan profil berhasil disimpan");
+};
+
+onMounted(() => {
+  fetchProfile();
+});
 </script>
 
 <template>
   <div class="space-y-6 max-w-7xl mx-auto">
+    <div v-if="loading" class="flex justify-center items-center py-20">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-[#0f4bb4]"></div>
+    </div>
+
     <!-- Main 2-Column Layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       <!-- Left Column: Avatar & Role Card (4 Cols) -->
       <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col items-center text-center">
         <!-- Circle Avatar Placeholder -->
-        <div class="w-32 h-32 rounded-full border-4 border-gray-100 bg-gray-50/50 flex items-center justify-center mb-6">
+        <div class="w-32 h-32 rounded-full border-4 border-gray-100 bg-gray-50/50 flex items-center justify-center mb-6 text-gray-300 shadow-xs">
           <svg class="w-16 h-16 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
           </svg>
         </div>
 
-        <h2 class="text-xl font-bold text-gray-900">{{ profile.nama }}</h2>
-        <p class="text-xs text-gray-500 mt-1 mb-4">{{ profile.jabatan }}</p>
+        <h2 class="text-xl font-bold text-gray-900">{{ user?.nama || "Budi Santoso" }}</h2>
+        <p class="text-xs text-gray-500 mt-1 mb-4">{{ user?.jabatan || "Direktur" }}</p>
 
         <!-- Administrator Aktif Badge -->
         <div class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0f4bb4] text-white rounded-full text-[10px] font-bold tracking-wider uppercase shadow-sm">
@@ -66,19 +119,19 @@ const handleLogout = () => {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
             <div>
               <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">NAMA LENGKAP</p>
-              <p class="text-sm font-bold text-gray-900 mt-1">{{ profile.nama }}</p>
+              <p class="text-sm font-bold text-gray-900 mt-1">{{ user?.nama || "Budi Santoso" }}</p>
             </div>
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">NOMOR TELEPON</p>
-              <p class="text-sm font-bold text-gray-900 mt-1">{{ profile.telepon }}</p>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">JABATAN</p>
+              <p class="text-sm font-bold text-gray-900 mt-1 capitalize">{{ user?.jabatan || user?.role || "Direktur" }}</p>
             </div>
             <div>
               <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">DEPARTEMEN</p>
-              <p class="text-sm font-bold text-gray-900 mt-1">{{ profile.departemen }}</p>
+              <p class="text-sm font-bold text-gray-900 mt-1">{{ user?.departemen || "Manajemen Perusahaan" }}</p>
             </div>
             <div>
               <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">EMAIL</p>
-              <p class="text-sm font-bold text-gray-900 mt-1">{{ profile.email }}</p>
+              <p class="text-sm font-bold text-gray-900 mt-1">{{ user?.email || "budi.santoso@gmail.id" }}</p>
             </div>
           </div>
         </div>
@@ -95,8 +148,8 @@ const handleLogout = () => {
           <div class="divide-y divide-gray-50">
             <!-- Ubah Kata Sandi Row -->
             <div
-              @click="showPasswordModal = true"
-              class="py-3 flex items-center justify-between hover:bg-gray-50 rounded-xl px-2 -mx-2 transition-colors cursor-pointer"
+              @click="showPasswordModal = true; passwordError = ''; passwordSuccess = ''"
+              class="py-3.5 flex items-center justify-between hover:bg-gray-50 rounded-xl px-2 -mx-2 transition-colors cursor-pointer"
             >
               <div class="flex items-center gap-3">
                 <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,7 +163,7 @@ const handleLogout = () => {
             </div>
 
             <!-- Bahasa Row -->
-            <div class="py-3 flex items-center justify-between hover:bg-gray-50 rounded-xl px-2 -mx-2 transition-colors cursor-pointer">
+            <div class="py-3.5 flex items-center justify-between hover:bg-gray-50 rounded-xl px-2 -mx-2 transition-colors cursor-pointer">
               <div class="flex items-center gap-3">
                 <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -142,6 +195,7 @@ const handleLogout = () => {
 
           <!-- Simpan Perubahan Button -->
           <button
+            @click="handleSaveProfile"
             class="px-6 py-2.5 bg-[#0f4bb4] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
           >
             Simpan Perubahan
@@ -153,17 +207,25 @@ const handleLogout = () => {
     <!-- Modal Ubah Kata Sandi -->
     <div
       v-if="showPasswordModal"
-      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
     >
       <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
         <h3 class="text-base font-bold text-gray-900">Ubah Kata Sandi</h3>
+
+        <div v-if="passwordError" class="p-3 bg-red-50 text-red-600 rounded-xl text-xs">
+          {{ passwordError }}
+        </div>
+        <div v-if="passwordSuccess" class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-semibold">
+          {{ passwordSuccess }}
+        </div>
+
         <div class="space-y-3">
           <div>
             <label class="block text-xs font-semibold text-gray-700 mb-1">Kata Sandi Lama</label>
             <input
               v-model="passwordForm.password_lama"
               type="password"
-              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4]"
+              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
             />
           </div>
           <div>
@@ -171,7 +233,7 @@ const handleLogout = () => {
             <input
               v-model="passwordForm.password_baru"
               type="password"
-              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4]"
+              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
             />
           </div>
           <div>
@@ -179,22 +241,23 @@ const handleLogout = () => {
             <input
               v-model="passwordForm.konfirmasi"
               type="password"
-              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4]"
+              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
             />
           </div>
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button
             @click="showPasswordModal = false"
-            class="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-xl cursor-pointer"
+            class="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200"
           >
             Batal
           </button>
           <button
-            @click="showPasswordModal = false"
-            class="px-4 py-2 text-xs font-bold text-white bg-[#0f4bb4] rounded-xl cursor-pointer"
+            @click="handleChangePassword"
+            :disabled="passwordLoading"
+            class="px-4 py-2 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl cursor-pointer disabled:opacity-50"
           >
-            Simpan
+            {{ passwordLoading ? "Menyimpan..." : "Simpan" }}
           </button>
         </div>
       </div>

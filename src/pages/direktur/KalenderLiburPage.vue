@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { holidayApi, type Holiday } from "../../services/holiday.service";
 
-const currentMonth = ref(2); // Maret (0-indexed)
-const currentYear = ref(2024);
+const today = new Date();
+const currentMonth = ref(today.getMonth());
+const currentYear = ref(today.getFullYear());
+const holidays = ref<Holiday[]>([]);
+const loading = ref(true);
 
 const monthNames = [
   "Januari",
@@ -21,44 +25,106 @@ const monthNames = [
 
 const dayNames = ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"];
 
-// Hardcoded sample days for Maret 2024 matching screenshot
-const calendarCells = ref([
-  { day: 25, currentMonth: false, isSunday: true },
-  { day: 26, currentMonth: false },
-  { day: 27, currentMonth: false },
-  { day: 28, currentMonth: false },
-  { day: 29, currentMonth: false },
-  { day: 1, currentMonth: true },
-  { day: 2, currentMonth: true },
-  { day: 3, currentMonth: true, isSunday: true },
-  { day: 4, currentMonth: true },
-  { day: 5, currentMonth: true },
-  { day: 6, currentMonth: true },
-  { day: 7, currentMonth: true },
-  { day: 8, currentMonth: true },
-  { day: 9, currentMonth: true, badge: "Libur Nasional", badgeType: "red" },
-  { day: 10, currentMonth: true, isSunday: true, badge: "Libur Nasional", badgeType: "red" },
-  { day: 11, currentMonth: true, badge: "Cuti Bersama", badgeType: "blue" },
-  { day: 12, currentMonth: true, badge: "Cuti Bersama", badgeType: "blue" },
-  { day: 13, currentMonth: true, isToday: true },
-  { day: 14, currentMonth: true },
-  { day: 15, currentMonth: true },
-  { day: 16, currentMonth: true },
-  { day: 17, currentMonth: true, isSunday: true },
-  { day: 18, currentMonth: true },
-  { day: 19, currentMonth: true },
-  { day: 20, currentMonth: true },
-  { day: 21, currentMonth: true },
-  { day: 22, currentMonth: true },
-  { day: 23, currentMonth: true },
-  { day: 24, currentMonth: true, isSunday: true },
-  { day: 25, currentMonth: true },
-  { day: 26, currentMonth: true },
-  { day: 27, currentMonth: true },
-  { day: 28, currentMonth: true, badge: "Libur Nasional", badgeType: "red" },
-  { day: 29, currentMonth: true },
-  { day: 30, currentMonth: true },
-]);
+const formatDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const calendarDays = computed(() => {
+  const year = currentYear.value;
+  const month = currentMonth.value;
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const days: { day: number; currentMonth: boolean; date: Date; isSunday: boolean }[] = [];
+
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = new Date(year, month - 1, daysInPrevMonth - i);
+    days.push({
+      day: daysInPrevMonth - i,
+      currentMonth: false,
+      date: d,
+      isSunday: d.getDay() === 0,
+    });
+  }
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const d = new Date(year, month, i);
+    days.push({
+      day: i,
+      currentMonth: true,
+      date: d,
+      isSunday: d.getDay() === 0,
+    });
+  }
+
+  const remaining = 42 - days.length;
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(year, month + 1, i);
+    days.push({
+      day: i,
+      currentMonth: false,
+      date: d,
+      isSunday: d.getDay() === 0,
+    });
+  }
+
+  return days;
+});
+
+const isCurrentDay = (date: Date) => formatDate(date) === formatDate(today);
+
+const getHolidayOnDate = (date: Date): Holiday | undefined => {
+  const dateStr = formatDate(date);
+  return holidays.value.find((h) => h.date === dateStr);
+};
+
+const isCutiBersama = (date: Date) => {
+  const h = getHolidayOnDate(date);
+  return h?.is_cuti_bersama === true;
+};
+
+const isLiburNasional = (date: Date) => {
+  const h = getHolidayOnDate(date);
+  return h && !h.is_cuti_bersama;
+};
+
+const holidaysThisMonth = computed(() => {
+  return holidays.value.filter((h) => {
+    const d = new Date(h.date);
+    return (
+      d.getMonth() === currentMonth.value &&
+      d.getFullYear() === currentYear.value
+    );
+  });
+});
+
+const holidaysByMonth = computed(() => {
+  const map = new Map<string, (Holiday & { dayName: string; dayNum: string })[]>();
+  const dayNamesShort = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+
+  holidays.value.forEach((h) => {
+    const d = new Date(h.date);
+    const key = `${monthNames[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
+    const item = {
+      ...h,
+      dayName: dayNamesShort[d.getDay()],
+      dayNum: String(d.getDate()).padStart(2, "0"),
+    };
+    if (!map.has(key)) {
+      map.set(key, []);
+    }
+    map.get(key)!.push(item);
+  });
+
+  return Array.from(map.entries()).map(([monthKey, items]) => ({
+    month: monthKey,
+    items,
+  }));
+});
 
 // Modal States
 const showAddModal = ref(false);
@@ -73,10 +139,25 @@ const liburForm = ref({
   keterangan: "",
 });
 
+const fetchHolidays = async (year: number) => {
+  loading.value = true;
+  try {
+    const res = await holidayApi.getByYear(year);
+    if (res.data?.data) {
+      holidays.value = res.data.data;
+    }
+  } catch {
+    // silent fail
+  } finally {
+    loading.value = false;
+  }
+};
+
 const prevMonth = () => {
   if (currentMonth.value === 0) {
     currentMonth.value = 11;
     currentYear.value--;
+    fetchHolidays(currentYear.value);
   } else {
     currentMonth.value--;
   }
@@ -86,28 +167,44 @@ const nextMonth = () => {
   if (currentMonth.value === 11) {
     currentMonth.value = 0;
     currentYear.value++;
+    fetchHolidays(currentYear.value);
   } else {
     currentMonth.value++;
   }
 };
 
 const handleSaveLibur = () => {
-  if (!liburForm.value.nama) return;
+  if (!liburForm.value.nama || !liburForm.value.tanggal) return;
+  holidays.value.push({
+    date: liburForm.value.tanggal,
+    name: liburForm.value.nama,
+    is_civic: true,
+    is_religious: false,
+    is_cuti_bersama: liburForm.value.jenis === "Cuti Bersama",
+  });
   showAddModal.value = false;
   liburForm.value = { nama: "", tanggal: "", jenis: "Libur Nasional", keterangan: "" };
 };
 
-const handleSyncApi = () => {
+const handleSyncApi = async () => {
   isSyncing.value = true;
-  setTimeout(() => {
-    isSyncing.value = false;
+  try {
+    await fetchHolidays(currentYear.value);
     syncSuccess.value = true;
     setTimeout(() => {
       syncSuccess.value = false;
       showSyncModal.value = false;
     }, 1200);
-  }, 1000);
+  } catch {
+    // silent fail
+  } finally {
+    isSyncing.value = false;
+  }
 };
+
+onMounted(() => {
+  fetchHolidays(currentYear.value);
+});
 </script>
 
 <template>
@@ -197,13 +294,13 @@ const handleSyncApi = () => {
         <!-- Calendar Days Grid -->
         <div class="grid grid-cols-7 gap-2">
           <div
-            v-for="(cell, idx) in calendarCells"
+            v-for="(cell, idx) in calendarDays"
             :key="idx"
             :class="[
-              'h-20 lg:h-24 p-2.5 rounded-xl border flex flex-col justify-between transition-all relative',
+              'h-20 lg:h-24 p-2.5 rounded-xl border flex flex-col justify-between transition-all relative overflow-hidden',
               !cell.currentMonth
                 ? 'border-transparent text-gray-300'
-                : cell.isToday
+                : isCurrentDay(cell.date)
                 ? 'border-2 border-[#0f4bb4] bg-white shadow-sm'
                 : 'border-gray-100 bg-white hover:border-gray-200'
             ]"
@@ -215,8 +312,10 @@ const handleSyncApi = () => {
                   'text-xs font-bold',
                   !cell.currentMonth
                     ? 'text-gray-300'
-                    : cell.isSunday
+                    : isLiburNasional(cell.date) || cell.isSunday
                     ? 'text-red-500'
+                    : isCutiBersama(cell.date)
+                    ? 'text-[#0f4bb4]'
                     : 'text-gray-800'
                 ]"
               >
@@ -225,22 +324,23 @@ const handleSyncApi = () => {
 
               <!-- Blue dot if Today -->
               <span
-                v-if="cell.isToday"
+                v-if="isCurrentDay(cell.date)"
                 class="w-2 h-2 rounded-full bg-[#0f4bb4]"
               ></span>
             </div>
 
             <!-- Bottom Badge in cell -->
-            <div v-if="cell.badge" class="mt-auto">
+            <div v-if="getHolidayOnDate(cell.date)" class="mt-auto">
               <span
                 :class="[
                   'block text-[9px] font-bold text-center py-0.5 px-1 rounded truncate leading-tight',
-                  cell.badgeType === 'red'
+                  isLiburNasional(cell.date)
                     ? 'bg-red-100 text-red-700'
                     : 'bg-blue-100 text-[#0f4bb4]'
                 ]"
+                :title="getHolidayOnDate(cell.date)?.name"
               >
-                {{ cell.badge }}
+                {{ isLiburNasional(cell.date) ? 'Libur Nasional' : 'Cuti Bersama' }}
               </span>
             </div>
           </div>
@@ -248,79 +348,61 @@ const handleSyncApi = () => {
       </div>
 
       <!-- Right Column: Holiday & Leave List Card -->
-      <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+      <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5 max-h-[640px] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3 sticky top-0 bg-white z-10">
           <h2 class="text-base lg:text-lg font-bold text-gray-900">
             Daftar Libur & Cuti
           </h2>
-          <button class="text-gray-400 hover:text-gray-600 cursor-pointer">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-          </button>
+          <span class="text-xs text-gray-400 font-medium">Tahun {{ currentYear }}</span>
         </div>
 
-        <!-- MARET 2024 -->
-        <div>
-          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-            MARET 2024
-          </p>
-
-          <div class="space-y-3">
-            <!-- Item 1 -->
-            <div class="p-3 bg-[#f8fafc] rounded-xl flex items-center gap-3">
-              <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex flex-col items-center justify-center shrink-0">
-                <span class="text-[10px] font-bold uppercase leading-none">Sab</span>
-                <span class="text-base font-extrabold leading-none mt-0.5">09</span>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-900">Hari Raya Nyepi</p>
-                <p class="text-[11px] text-gray-500 mt-0.5">Libur Nasional</p>
-              </div>
-            </div>
-
-            <!-- Item 2 -->
-            <div class="p-3 bg-[#f8fafc] rounded-xl flex items-center gap-3">
-              <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex flex-col items-center justify-center shrink-0">
-                <span class="text-[10px] font-bold uppercase leading-none">Min</span>
-                <span class="text-base font-extrabold leading-none mt-0.5">10</span>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-900">Cuti Bersama Nyepi</p>
-                <p class="text-[11px] text-gray-500 mt-0.5">Dikoreksi menjadi Libur</p>
-              </div>
-            </div>
-          </div>
+        <div v-if="loading" class="flex justify-center items-center py-12">
+          <div class="animate-spin rounded-full h-7 w-7 border-b-2 border-[#0f4bb4]"></div>
         </div>
 
-        <!-- APRIL 2024 -->
-        <div class="pt-2">
-          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-            APRIL 2024
-          </p>
+        <div v-else-if="holidaysByMonth.length === 0" class="py-12 text-center text-gray-400 text-xs font-medium">
+          Tidak ada data hari libur resmi pada tahun {{ currentYear }}.
+        </div>
 
-          <div class="space-y-3">
-            <!-- Item 3 -->
-            <div class="p-3 bg-[#f8fafc] rounded-xl flex items-center gap-3">
-              <div class="w-12 h-12 rounded-xl bg-blue-100 text-[#0f4bb4] flex flex-col items-center justify-center shrink-0">
-                <span class="text-[10px] font-bold uppercase leading-none">Sen</span>
-                <span class="text-base font-extrabold leading-none mt-0.5">08</span>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-900">Cuti Bersama Idul Fitri</p>
-                <p class="text-[11px] text-gray-500 mt-0.5">Cuti Bersama</p>
-              </div>
-            </div>
+        <div v-else class="space-y-6">
+          <div
+            v-for="group in holidaysByMonth"
+            :key="group.month"
+          >
+            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">
+              {{ group.month }}
+            </p>
 
-            <!-- Item 4 -->
-            <div class="p-3 bg-[#f8fafc] rounded-xl flex items-center gap-3">
-              <div class="w-12 h-12 rounded-xl bg-blue-100 text-[#0f4bb4] flex flex-col items-center justify-center shrink-0">
-                <span class="text-[10px] font-bold uppercase leading-none">Sel</span>
-                <span class="text-base font-extrabold leading-none mt-0.5">09</span>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-gray-900">Cuti Bersama Idul Fitri</p>
-                <p class="text-[11px] text-gray-500 mt-0.5">Cuti Bersama</p>
+            <div class="space-y-3">
+              <div
+                v-for="item in group.items"
+                :key="item.date + item.name"
+                class="p-3 bg-[#f8fafc] rounded-xl flex items-center gap-3 border border-gray-50"
+              >
+                <div
+                  :class="[
+                    'w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 font-bold',
+                    item.is_cuti_bersama
+                      ? 'bg-blue-100 text-[#0f4bb4]'
+                      : 'bg-red-100 text-red-600'
+                  ]"
+                >
+                  <span class="text-[10px] font-bold uppercase leading-none">{{ item.dayName }}</span>
+                  <span class="text-base font-extrabold leading-none mt-0.5">{{ item.dayNum }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-bold text-gray-900 leading-snug truncate" :title="item.name">
+                    {{ item.name }}
+                  </p>
+                  <p
+                    :class="[
+                      'text-[11px] font-medium mt-0.5',
+                      item.is_cuti_bersama ? 'text-blue-600' : 'text-gray-500'
+                    ]"
+                  >
+                    {{ item.is_cuti_bersama ? 'Cuti Bersama' : 'Libur Nasional' }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -328,7 +410,7 @@ const handleSyncApi = () => {
       </div>
     </div>
 
-    <!-- POPUP MODAL 1: TAMBAH HARI LIBUR (EXACTLY MATCHING USER SCREENSHOT 2) -->
+    <!-- POPUP MODAL 1: TAMBAH HARI LIBUR -->
     <div
       v-if="showAddModal"
       class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
@@ -361,17 +443,13 @@ const handleSyncApi = () => {
 
           <!-- 2. Tanggal -->
           <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">Tanggal</label>
+            <label class="block font-semibold text-gray-800 mb-1.5">Tanggal (YYYY-MM-DD)</label>
             <div class="relative">
               <input
                 v-model="liburForm.tanggal"
-                type="text"
-                placeholder="Pilih tanggal"
+                type="date"
                 class="w-full px-3.5 py-2.5 bg-[#f0f5ff]/70 border border-transparent rounded-xl text-xs text-gray-800 outline-none focus:bg-white focus:border-[#0f4bb4] pr-10 cursor-pointer transition-all"
               />
-              <svg class="w-4 h-4 text-gray-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { hrApi, type ActivityItem } from "../../services/hr.service";
+import { direkturApi, type ActivityItem } from "../../services/direktur.service";
 
 const router = useRouter();
 
@@ -13,7 +13,6 @@ interface DirekturStats {
 }
 
 interface CutiMendatangItem {
-  id?: number;
   nama: string;
   jenis_cuti: string;
   departemen: string;
@@ -22,50 +21,15 @@ interface CutiMendatangItem {
 }
 
 const stats = ref<DirekturStats>({
-  total_karyawan: 30,
-  menunggu_direktur: 8,
-  cuti_bulan_ini: 3,
-  cuti_mendatang: 5,
+  total_karyawan: 0,
+  menunggu_direktur: 0,
+  cuti_bulan_ini: 0,
+  cuti_mendatang: 0,
 });
 
-const cutiMendatangList = ref<CutiMendatangItem[]>([
-  {
-    nama: "Rani Mawar",
-    jenis_cuti: "Cuti Tahunan",
-    departemen: "Human Resource",
-    waktu_teks: "Besok",
-    status: "Menunggu",
-  },
-]);
-
-const activities = ref<ActivityItem[]>([
-  {
-    id: 1,
-    deskripsi: "Budi Santoso disetujui cuti tahunan (2 hari).",
-    waktu: "10 menit yang lalu",
-    tipe: "approve",
-  },
-  {
-    id: 2,
-    deskripsi: "Siti Aminah mengajukan cuti sakit.",
-    waktu: "1 jam yang lalu",
-    tipe: "reject", // pink/red highlight icon
-  },
-  {
-    id: 3,
-    deskripsi: "Andi Wijaya mengubah pengajuan cuti.",
-    waktu: "3 jam yang lalu",
-    tipe: "submit", // file/edit icon
-  },
-  {
-    id: 4,
-    deskripsi: "Sistem memperbarui saldo cuti bulanan.",
-    waktu: "Kemarin",
-    tipe: "system", // calendar icon
-  },
-]);
-
-const loading = ref(false);
+const cutiMendatangList = ref<CutiMendatangItem[]>([]);
+const activities = ref<ActivityItem[]>([]);
+const loading = ref(true);
 
 const goToKalender = () => {
   router.push("/direktur/kalender-libur");
@@ -75,38 +39,57 @@ const goToSemuaAktivitas = () => {
   router.push("/direktur/log-rekap-cuti");
 };
 
+const formatDateRange = (start: string, end?: string) => {
+  if (!start) return "Mendatang";
+  const s = new Date(start);
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+  ];
+  if (!end || start === end) {
+    return `${s.getDate()} ${months[s.getMonth()]}`;
+  }
+  const e = new Date(end);
+  if (s.getMonth() === e.getMonth()) {
+    return `${s.getDate()} - ${e.getDate()} ${months[s.getMonth()]}`;
+  }
+  return `${s.getDate()} ${months[s.getMonth()]} - ${e.getDate()} ${months[e.getMonth()]}`;
+};
+
 onMounted(async () => {
   try {
     const [statsRes, mendatangRes, activityRes] = await Promise.allSettled([
-      hrApi.getDashboardStats(),
-      hrApi.getCutiMendatang(),
-      hrApi.getRecentActivity(),
+      direkturApi.getDashboardStats(),
+      direkturApi.getCutiMendatang(),
+      direkturApi.getRecentActivity(),
     ]);
 
     if (statsRes.status === "fulfilled" && statsRes.value.data) {
       stats.value = {
-        total_karyawan: statsRes.value.data.total_karyawan ?? 30,
-        menunggu_direktur: (statsRes.value.data as any).menunggu_direktur ?? statsRes.value.data.menunggu_hr ?? 8,
-        cuti_bulan_ini: statsRes.value.data.cuti_bulan_ini ?? 3,
-        cuti_mendatang: statsRes.value.data.cuti_mendatang ?? 5,
+        total_karyawan: statsRes.value.data.total_karyawan ?? 0,
+        menunggu_direktur: statsRes.value.data.menunggu_direktur ?? statsRes.value.data.menunggu_hr ?? 0,
+        cuti_bulan_ini: statsRes.value.data.cuti_bulan_ini ?? 0,
+        cuti_mendatang: statsRes.value.data.cuti_mendatang ?? 0,
       };
     }
 
-    if (mendatangRes.status === "fulfilled" && mendatangRes.value.data && mendatangRes.value.data.length > 0) {
-      cutiMendatangList.value = mendatangRes.value.data.map((item) => ({
+    if (mendatangRes.status === "fulfilled" && Array.isArray(mendatangRes.value.data)) {
+      cutiMendatangList.value = mendatangRes.value.data.map((item: any) => ({
         nama: item.nama,
         jenis_cuti: item.jenis_cuti || "Cuti Tahunan",
-        departemen: item.keterangan || "Human Resource",
-        waktu_teks: item.tanggal ? "Mendatang" : "Besok",
+        departemen: item.keterangan || "General",
+        waktu_teks: item.tanggal ? formatDateRange(item.tanggal, item.tanggal_selesai || item.tanggal) : "Mendatang",
         status: item.status || "Menunggu",
       }));
     }
 
-    if (activityRes.status === "fulfilled" && activityRes.value.data && activityRes.value.data.length > 0) {
+    if (activityRes.status === "fulfilled" && Array.isArray(activityRes.value.data)) {
       activities.value = activityRes.value.data;
     }
   } catch {
-    // Gunakan fallback default yang sudah disesuaikan persis dengan rancangan
+    // silent fail
+  } finally {
+    loading.value = false;
   }
 });
 </script>
@@ -219,7 +202,10 @@ onMounted(async () => {
           </div>
 
           <!-- Items List -->
-          <div class="pt-4 space-y-3">
+          <div v-if="cutiMendatangList.length === 0" class="py-10 text-center text-gray-400 text-xs font-medium">
+            Tidak ada cuti karyawan mendatang saat ini.
+          </div>
+          <div v-else class="pt-4 space-y-3">
             <div
               v-for="(item, index) in cutiMendatangList"
               :key="index"
@@ -239,7 +225,7 @@ onMounted(async () => {
                   {{ item.waktu_teks }}
                 </span>
                 <span
-                  class="inline-block text-[11px] px-2.5 py-0.5 rounded-full font-semibold border bg-red-50 text-red-500 border-red-100"
+                  class="inline-block text-[11px] px-2.5 py-0.5 rounded-full font-semibold border bg-blue-50 text-blue-600 border-blue-100"
                 >
                   {{ item.status }}
                 </span>
@@ -256,12 +242,15 @@ onMounted(async () => {
         </h2>
 
         <!-- Vertical Timeline List -->
-        <div class="relative space-y-6 pl-1">
+        <div v-if="activities.length === 0" class="py-10 text-center text-gray-400 text-xs font-medium">
+          Belum ada aktivitas terbaru.
+        </div>
+        <div v-else class="relative space-y-6 pl-1">
           <!-- Continuous vertical line connecting all items -->
           <div class="absolute left-[19px] top-4 bottom-5 w-[1.5px] bg-gray-100"></div>
 
           <div
-            v-for="activity in activities"
+            v-for="activity in activities.slice(0, 5)"
             :key="activity.id"
             class="relative flex items-start gap-3.5 z-10"
           >
