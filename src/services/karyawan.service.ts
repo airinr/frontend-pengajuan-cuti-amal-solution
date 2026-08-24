@@ -17,16 +17,16 @@ export interface RiwayatCuti {
 export interface OngoingCuti {
   jenis_cuti: string;
   durasi: number;
-  keterangan: string;
+  keterangan_cuti: string;
   tanggal_mulai: string;
   tanggal_selesai: string;
   status_sekarang: string;
-  disetujui_pm: number | null;
-  disetujui_hr: number | null;
-  disetujui_direktur: number | null;
-  approved_at_pm: string | null;
-  approved_at_hr: string | null;
-  approved_at_direktur: string | null;
+  diproses_pm: number;
+  diproses_hr: number;
+  diproses_direktur: number;
+  processed_at_pm: string | null;
+  processed_at_hr: string | null;
+  processed_at_direktur: string | null;
   alasan_penolakan: string | null;
 }
 
@@ -36,6 +36,19 @@ export interface KalenderItem {
   keterangan: string;
   jenis_cuti: string;
   status: string;
+}
+
+export interface HolidaysNext {
+  nama_libur: string;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  total_hari: number;
+}
+
+export interface ActivityItem {
+  jenis_aktivitas: string;
+  keterangan: string;
+  tanggal: string;
 }
 
 export const karyawanApi = {
@@ -50,4 +63,8 @@ export const karyawanApi = {
 
   getTeamCalendar: () =>
     api.get<KalenderItem[]>("/karyawan/kalender-cuti-tim"),
+
+  getHolidaysNext: () => api.get<HolidaysNext>("/holidays/next"),
+
+  getActivities: () => api.get<ActivityItem[]>("/karyawan/activities"),
 };
