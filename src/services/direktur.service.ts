@@ -129,18 +129,10 @@ export const direkturApi = {
 
   getRecentActivity: () => api.get<ActivityItem[]>("/hr/activity"),
 
-  getPendingApprovals: () =>
-    api.get<PersetujuanItem[]>("/hr/approvals/pending"),
-
   getApprovalHistory: () =>
     api.get<PersetujuanItem[]>("/hr/approvals/history"),
 
   getRingkasan: () => api.get<RingkasanPersetujuan>("/hr/persetujuan"),
-
-  approve: (id: number) => api.post(`/hr/approvals/${id}/approve`),
-
-  reject: (id: number, alasan: string) =>
-    api.post(`/hr/approvals/${id}/reject`, { alasan }),
 
   getRekap: (params: { search?: string; tahun?: number; status?: string }) =>
     api.get<RekapItem[]>("/hr/log-rekap/rekap", { params }),

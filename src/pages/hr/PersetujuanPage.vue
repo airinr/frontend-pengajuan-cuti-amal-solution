@@ -5,13 +5,17 @@ import {
   type PersetujuanItem,
   type RingkasanPersetujuan,
 } from "../../services/hr.service";
+import { approvalApi, type ApprovalQueueItem } from "../../services/approval.service";
 
 const activeTab = ref<"menunggu" | "riwayat">("menunggu");
-const pendingList = ref<PersetujuanItem[]>([]);
+const pendingList = ref<ApprovalQueueItem[]>([]);
 const historyList = ref<PersetujuanItem[]>([]);
 const ringkasan = ref<RingkasanPersetujuan | null>(null);
 const loading = ref(true);
 const processingId = ref<number | null>(null);
+
+const showApproveModal = ref(false);
+const approveTarget = ref<ApprovalQueueItem | null>(null);
 
 const showRejectModal = ref(false);
 const rejectTarget = ref<PersetujuanItem | null>(null);
@@ -43,7 +47,7 @@ const getInitials = (name: string) => {
 const fetchPending = async () => {
   try {
     const [pendingRes, ringkasanRes] = await Promise.allSettled([
-      hrApi.getPendingApprovals(),
+      approvalApi.getApprovalQueue(),
       hrApi.getRingkasan(),
     ]);
     if (pendingRes.status === "fulfilled") pendingList.value = pendingRes.value.data || [];
@@ -69,16 +73,28 @@ const switchTab = (tab: "menunggu" | "riwayat") => {
   }
 };
 
-const handleApprove = async (id: number) => {
-  if (processingId.value) return;
+const openApproveModal = (item: ApprovalQueueItem) => {
+  approveTarget.value = item;
+  showApproveModal.value = true;
+};
+
+const closeApproveModal = () => {
+  showApproveModal.value = false;
+  approveTarget.value = null;
+};
+
+const handleApprove = async () => {
+  if (!approveTarget.value) return;
+  const id = approveTarget.value.id_log_cuti;
   processingId.value = id;
   try {
-    await hrApi.approve(id);
+    await approvalApi.approve(id);
     pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
     if (ringkasan.value) {
       ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
       ringkasan.value.disetujui_bulan_ini += 1;
     }
+    closeApproveModal();
   } catch {
     // silent fail
   } finally {
@@ -102,7 +118,7 @@ const handleReject = async () => {
   if (!rejectTarget.value || !rejectAlasan.value.trim()) return;
   rejectLoading.value = true;
   try {
-    await hrApi.reject(rejectTarget.value.id_log_cuti, rejectAlasan.value);
+    await approvalApi.reject(rejectTarget.value.id_log_cuti, rejectAlasan.value);
     pendingList.value = pendingList.value.filter(
       (item) => item.id_log_cuti !== rejectTarget.value!.id_log_cuti
     );
@@ -183,12 +199,7 @@ onMounted(async () => {
             <div class="flex">
               <!-- Left border color -->
               <div
-                :class="[
-                  'w-1 flex-shrink-0',
-                  item.status === 'menunggu_hr' ? 'bg-red-500' :
-                  item.status === 'disetujui' ? 'bg-green-500' :
-                  'bg-red-500',
-                ]"
+                class="w-1 flex-shrink-0 bg-red-500"
               ></div>
               <div class="flex-1 p-4 lg:p-5">
                 <!-- Header: Avatar + Name + Status -->
@@ -199,7 +210,7 @@ onMounted(async () => {
                     </div>
                     <div>
                       <p class="text-sm font-semibold text-gray-800">{{ item.nama }}</p>
-                      <p class="text-xs text-gray-500">{{ item.jabatan }} &bull; {{ item.departemen }}</p>
+                      <p class="text-xs text-gray-500">{{ item.nama_departemen }}</p>
                     </div>
                   </div>
                   <span
@@ -221,7 +232,7 @@ onMounted(async () => {
                 </div>
 
                 <!-- Info Grid -->
-                <div class="grid grid-cols-6 gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
+                <div class="grid grid-cols-5 gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Jenis Cuti</p>
                     <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.jenis_cuti }}</p>
@@ -235,23 +246,19 @@ onMounted(async () => {
                     <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.durasi }} Hari</p>
                   </div>
                   <div>
-                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Delegasi Tugas</p>
-                    <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.delegasi_tugas || '-' }}</p>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Pengganti</p>
+                    <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.pengganti || '-' }}</p>
                   </div>
                   <div>
                     <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Sisa Cuti</p>
                     <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.sisa_cuti }}</p>
-                  </div>
-                  <div>
-                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Disetujui</p>
-                    <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.disetujui_oleh || '-' }}</p>
                   </div>
                 </div>
 
                 <!-- Alasan -->
                 <div class="mb-4">
                   <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium mb-1">Alasan / Catatan</p>
-                  <p class="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{{ item.keterangan || '-' }}</p>
+                  <p class="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{{ item.alasan || '-' }}</p>
                 </div>
 
                 <!-- Actions -->
@@ -267,7 +274,7 @@ onMounted(async () => {
                     Tolak
                   </button>
                   <button
-                    @click="handleApprove(item.id_log_cuti)"
+                    @click="openApproveModal(item)"
                     :disabled="processingId === item.id_log_cuti"
                     class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                   >
@@ -355,6 +362,58 @@ onMounted(async () => {
                 class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {{ rejectLoading ? 'Mengirim...' : 'Konfirmasi Tolak' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Approve Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showApproveModal"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="closeApproveModal"
+        >
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">Konfirmasi Persetujuan</h3>
+              <button
+                @click="closeApproveModal"
+                class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p class="text-sm text-gray-500 mb-4">
+              Anda akan menyetujui pengajuan cuti dari <span class="font-semibold text-gray-800">{{ approveTarget?.nama }}</span>.
+              Apakah Anda yakin ingin menyetujui?
+            </p>
+
+            <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
+              <p><span class="text-gray-500">Jenis Cuti:</span> <span class="font-medium text-gray-800">{{ approveTarget?.jenis_cuti }}</span></p>
+              <p><span class="text-gray-500">Tanggal:</span> <span class="font-medium text-gray-800">{{ approveTarget ? formatDateRange(approveTarget.tanggal_mulai, approveTarget.tanggal_selesai) : '' }}</span></p>
+              <p><span class="text-gray-500">Durasi:</span> <span class="font-medium text-gray-800">{{ approveTarget?.durasi }} Hari</span></p>
+            </div>
+
+            <div class="flex items-center justify-end gap-3">
+              <button
+                @click="closeApproveModal"
+                class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                @click="handleApprove"
+                :disabled="processingId !== null"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {{ processingId ? 'Menyetujui...' : 'Setujui' }}
               </button>
             </div>
           </div>

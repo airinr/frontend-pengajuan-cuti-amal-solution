@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
-import { calendarApi, type KalenderItem } from "../../services/calendar.service";
+import { karyawanApi, type KalenderItem } from "../../services/karyawan.service";
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -135,7 +135,7 @@ onMounted(async () => {
   try {
     const [holidayRes, teamRes] = await Promise.all([
       holidayApi.getByYear(currentYear.value),
-      calendarApi.getTeamCalendar(),
+      karyawanApi.getTeamCalendar(),
     ]);
     holidays.value = holidayRes.data.data || [];
     teamCalendar.value = teamRes.data || [];

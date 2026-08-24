@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
-import { calendarApi, type KalenderItem } from "../../services/calendar.service";
+import { karyawanApi, type KalenderItem } from "../../services/karyawan.service";
 import { authApi } from "../../services/auth.service";
 import type { CurrentUser } from "../../types";
 
@@ -158,8 +158,8 @@ onMounted(async () => {
   try {
     const [holidayRes, myRes, teamRes, userRes] = await Promise.all([
       holidayApi.getByYear(currentYear.value),
-      calendarApi.getMyCalendar(),
-      calendarApi.getTeamCalendar(),
+      karyawanApi.getMyCalendar(),
+      karyawanApi.getTeamCalendar(),
       authApi.me(),
     ]);
     holidays.value = holidayRes.data.data || [];

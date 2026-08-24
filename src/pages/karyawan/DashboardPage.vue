@@ -2,11 +2,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authApi } from '../../services/auth.service'
+import { karyawanApi, type OngoingCuti, type ActivityItem } from '../../services/karyawan.service'
+import { holidayApi, type Holiday } from '../../services/holiday.service'
 import type { CurrentUser } from '../../types'
 
 const router = useRouter()
 
 const user = ref<CurrentUser | null>(null)
+const ongoingList = ref<OngoingCuti[]>([])
+const upcomingHolidays = ref<Holiday[]>([])
+const activities = ref<ActivityItem[]>([])
 const loading = ref(true)
 
 const totalCuti = computed(() => user.value?.total_cuti ?? '-')
@@ -16,20 +21,63 @@ const terpakai = computed(() => {
   return user.value.total_cuti - user.value.sisa_cuti
 })
 
+const formatDate = (dateStr: string) => {
+  const d = new Date(dateStr)
+  const day = d.getDate()
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+  return `${day} ${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
+const formatDateRange = (start: string, end: string) => {
+  return `${formatDate(start)} - ${formatDate(end)}`
+}
+
+const statusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    menunggu_pm: 'Menunggu PM',
+    menunggu_hr: 'Menunggu HR',
+    menunggu_direktur: 'Menunggu Direktur',
+    disetujui: 'Disetujui',
+    ditolak: 'Ditolak',
+  }
+  return labels[status] || status
+}
+
+const statusColor = (status: string) => {
+  if (status.includes('menunggu')) return 'bg-yellow-100 text-yellow-700'
+  if (status === 'disetujui') return 'bg-green-100 text-green-700'
+  if (status === 'ditolak') return 'bg-red-100 text-red-700'
+  return 'bg-gray-100 text-gray-700'
+}
+
+const goToPengajuan = () => {
+  router.push('/karyawan/pengajuan-cuti')
+}
+
 onMounted(async () => {
   try {
-    const res = await authApi.me()
-    user.value = res.data
+    const [userRes, ongoingRes, holidayRes, activitiesRes] = await Promise.allSettled([
+      authApi.me(),
+      karyawanApi.getOngoingCuti(),
+      holidayApi.getByYear(new Date().getFullYear()),
+      karyawanApi.getActivities(),
+    ])
+    if (userRes.status === 'fulfilled') user.value = userRes.value.data
+    if (ongoingRes.status === 'fulfilled') ongoingList.value = ongoingRes.value.data || []
+    if (holidayRes.status === 'fulfilled') {
+      const today = new Date().toISOString().split('T')[0]
+      const holidays = holidayRes.value.data.data || []
+      upcomingHolidays.value = holidays
+        .filter((h) => h.date >= today)
+        .sort((a, b) => a.date.localeCompare(b.date))
+    }
+    if (activitiesRes.status === 'fulfilled') activities.value = activitiesRes.value.data || []
   } catch {
     // silent fail
   } finally {
     loading.value = false
   }
 })
-
-const goToPengajuan = () => {
-  router.push('/karyawan/pengajuan-cuti')
-}
 </script>
 
 <template>
@@ -37,7 +85,7 @@ const goToPengajuan = () => {
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
       <div>
         <h1 class="text-xl lg:text-2xl font-bold text-gray-800">Ringkasan Cuti</h1>
-        <p class="text-xs lg:text-sm text-gray-500">Periode Tahun 2024</p>
+        <p class="text-xs lg:text-sm text-gray-500">Periode Tahun {{ new Date().getFullYear() }}</p>
       </div>
       <button
         @click="goToPengajuan"
@@ -111,21 +159,74 @@ const goToPengajuan = () => {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div class="lg:col-span-2 space-y-4 lg:space-y-6">
+          <!-- Pengajuan Sedang Diproses -->
           <div class="bg-white rounded-xl shadow-sm border border-gray-100">
             <div class="p-4 lg:p-6 border-b border-gray-100">
               <div class="flex justify-between items-center">
                 <h3 class="font-semibold text-gray-800">Pengajuan Sedang Diproses</h3>
               </div>
             </div>
-            <div class="p-4 lg:p-6 text-center text-gray-400 text-sm">-</div>
+            <div class="p-4 lg:p-6">
+              <div v-if="ongoingList.length === 0" class="text-center text-gray-400 text-sm py-4">
+                Tidak ada pengajuan yang sedang diproses
+              </div>
+              <div v-else class="space-y-3">
+                <div
+                  v-for="(item, i) in ongoingList"
+                  :key="i"
+                  class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">{{ item.jenis_cuti }}</p>
+                    <p class="text-xs text-gray-500">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }} &bull; {{ item.durasi }} Hari</p>
+                    <p v-if="item.keterangan_cuti" class="text-xs text-gray-400 mt-1">{{ item.keterangan_cuti }}</p>
+                  </div>
+                  <span
+                    :class="[
+                      'inline-block text-[10px] px-2.5 py-1 rounded-full font-medium',
+                      statusColor(item.status_sekarang),
+                    ]"
+                  >
+                    {{ statusLabel(item.status_sekarang) }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
+          <!-- Hari Libur Mendatang -->
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
             <h3 class="font-semibold text-gray-800 mb-4">Hari Libur Mendatang</h3>
-            <div class="text-center text-gray-400 text-sm">-</div>
+            <div v-if="upcomingHolidays.length > 0" class="space-y-2">
+              <div
+                v-for="(h, i) in upcomingHolidays"
+                :key="i"
+                class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg"
+              >
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-800 truncate">{{ h.name }}</p>
+                  <p class="text-xs text-gray-500">{{ formatDate(h.date) }}</p>
+                </div>
+                <span
+                  :class="[
+                    'inline-block text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0',
+                    h.is_cuti_bersama ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700',
+                  ]"
+                >
+                  {{ h.is_cuti_bersama ? 'Cuti Bersama' : 'Libur Nasional' }}
+                </span>
+              </div>
+            </div>
+            <div v-else class="text-center text-gray-400 text-sm">Tidak ada libur mendatang</div>
           </div>
         </div>
 
+        <!-- Aktivitas Terbaru -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
           <div class="flex items-center gap-2 mb-4">
             <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +234,43 @@ const goToPengajuan = () => {
             </svg>
             <h3 class="font-semibold text-gray-800">Aktivitas Terbaru</h3>
           </div>
-          <div class="text-center text-gray-400 text-sm">-</div>
+          <div v-if="activities.length === 0" class="text-center text-gray-400 text-sm py-4">
+            Belum ada aktivitas
+          </div>
+          <div v-else class="space-y-3">
+            <div
+              v-for="(item, i) in activities"
+              :key="i"
+              class="flex items-start gap-3"
+            >
+              <div
+                :class="[
+                  'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
+                  item.jenis_aktivitas === 'pengajuan' ? 'bg-blue-100' :
+                  item.jenis_aktivitas === 'disetujui' ? 'bg-green-100' :
+                  item.jenis_aktivitas === 'ditolak' ? 'bg-red-100' :
+                  'bg-gray-100',
+                ]"
+              >
+                <svg v-if="item.jenis_aktivitas === 'pengajuan'" class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <svg v-else-if="item.jenis_aktivitas === 'disetujui'" class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <svg v-else-if="item.jenis_aktivitas === 'ditolak'" class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <svg v-else class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-gray-700">{{ item.keterangan }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ formatDate(item.tanggal) }}</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </template>

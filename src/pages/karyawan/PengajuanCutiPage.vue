@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { authApi, type UserList } from "../../services/auth.service";
-import { leaveApi } from "../../services/leave.service";
+import { karyawanApi } from "../../services/karyawan.service";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import type { CurrentUser } from "../../types";
 
@@ -277,7 +277,7 @@ const handleSubmit = async () => {
 
   submitting.value = true;
   try {
-    await leaveApi.createKaryawan({
+    await karyawanApi.createCuti({
       tanggal_mulai: form.value.tanggal_mulai,
       tanggal_selesai: form.value.tanggal_selesai,
       keterangan: form.value.keterangan,
