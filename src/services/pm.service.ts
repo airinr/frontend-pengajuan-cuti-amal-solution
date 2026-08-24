@@ -79,7 +79,7 @@ export const pmApi = {
   getHistoryCutiTim: () => api.get<HistoryCutiItem[]>("/pm/history-cuti-tim"),
 
   getApprovalHistory: (page = 1, limit = 10, search = "") =>
-    api.get<{ data: PersetujuanItem[]; total: number }>(
+    api.get<{ data: HistoryCutiItem[]; total: number }>(
       "/pm/approvals/history",
       {
         params: { page, limit, search },
