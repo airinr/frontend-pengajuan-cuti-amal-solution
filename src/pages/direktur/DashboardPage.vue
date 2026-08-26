@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { direkturApi, type ActivityItem } from "../../services/direktur.service";
+import { direkturApi } from "../../services/direktur.service";
+import {
+  karyawanApi,
+  type ActivityItem,
+} from "../../services/karyawan.service";
 
 const router = useRouter();
 
 interface DirekturStats {
   total_karyawan: number;
-  menunggu_direktur: number;
-  cuti_bulan_ini: number;
-  cuti_mendatang: number;
+  menunggu: number;
+  total_cuti_bulan_ini: number;
+  total_cuti_bulan_depan: number;
 }
 
 interface CutiMendatangItem {
@@ -22,9 +26,9 @@ interface CutiMendatangItem {
 
 const stats = ref<DirekturStats>({
   total_karyawan: 0,
-  menunggu_direktur: 0,
-  cuti_bulan_ini: 0,
-  cuti_mendatang: 0,
+  menunggu: 0,
+  total_cuti_bulan_ini: 0,
+  total_cuti_bulan_depan: 0,
 });
 
 const cutiMendatangList = ref<CutiMendatangItem[]>([]);
@@ -43,8 +47,18 @@ const formatDateRange = (start: string, end?: string) => {
   if (!start) return "Mendatang";
   const s = new Date(start);
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "Mei",
+    "Jun",
+    "Jul",
+    "Agu",
+    "Sep",
+    "Okt",
+    "Nov",
+    "Des",
   ];
   if (!end || start === end) {
     return `${s.getDate()} ${months[s.getMonth()]}`;
@@ -61,29 +75,37 @@ onMounted(async () => {
     const [statsRes, mendatangRes, activityRes] = await Promise.allSettled([
       direkturApi.getDashboardStats(),
       direkturApi.getCutiMendatang(),
-      direkturApi.getRecentActivity(),
+      karyawanApi.getActivities(),
     ]);
 
     if (statsRes.status === "fulfilled" && statsRes.value.data) {
       stats.value = {
         total_karyawan: statsRes.value.data.total_karyawan ?? 0,
-        menunggu_direktur: statsRes.value.data.menunggu_direktur ?? statsRes.value.data.menunggu_hr ?? 0,
-        cuti_bulan_ini: statsRes.value.data.cuti_bulan_ini ?? 0,
-        cuti_mendatang: statsRes.value.data.cuti_mendatang ?? 0,
+        menunggu: statsRes.value.data.menunggu ?? 0,
+        total_cuti_bulan_ini: statsRes.value.data.total_cuti_bulan_ini ?? 0,
+        total_cuti_bulan_depan: statsRes.value.data.total_cuti_bulan_depan ?? 0,
       };
     }
 
-    if (mendatangRes.status === "fulfilled" && Array.isArray(mendatangRes.value.data)) {
+    if (
+      mendatangRes.status === "fulfilled" &&
+      Array.isArray(mendatangRes.value.data)
+    ) {
       cutiMendatangList.value = mendatangRes.value.data.map((item: any) => ({
         nama: item.nama,
         jenis_cuti: item.jenis_cuti || "Cuti Tahunan",
         departemen: item.keterangan || "General",
-        waktu_teks: item.tanggal ? formatDateRange(item.tanggal, item.tanggal_selesai || item.tanggal) : "Mendatang",
+        waktu_teks: item.tanggal
+          ? formatDateRange(item.tanggal, item.tanggal_selesai || item.tanggal)
+          : "Mendatang",
         status: item.status || "Menunggu",
       }));
     }
 
-    if (activityRes.status === "fulfilled" && Array.isArray(activityRes.value.data)) {
+    if (
+      activityRes.status === "fulfilled" &&
+      Array.isArray(activityRes.value.data)
+    ) {
       activities.value = activityRes.value.data;
     }
   } catch {
@@ -102,94 +124,189 @@ onMounted(async () => {
         Dashboard Direktur
       </h1>
       <p class="text-sm text-gray-500 mt-1">
-        Ringkasan aktivitas cuti dan persetujuan yang membutuhkan perhatian Anda hari ini.
+        Ringkasan aktivitas cuti dan persetujuan yang membutuhkan perhatian Anda
+        hari ini.
       </p>
     </div>
 
     <!-- Stats Cards Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
       <!-- 1. Total Karyawan -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md">
+      <div
+        class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md"
+      >
         <div>
-          <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-sm">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          <div
+            class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-sm"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              />
             </svg>
           </div>
-          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">
+          <p
+            class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4"
+          >
             TOTAL KARYAWAN
           </p>
         </div>
-        <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight">
+        <p
+          class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight"
+        >
           {{ stats.total_karyawan }}
         </p>
-        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50/40 rounded-full blur-xl pointer-events-none"></div>
+        <div
+          class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50/40 rounded-full blur-xl pointer-events-none"
+        ></div>
       </div>
 
       <!-- 2. Menunggu Direktur -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md">
+      <div
+        class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md"
+      >
         <div>
-          <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-500 shadow-sm">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12v3l2 2" />
+          <div
+            class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-500 shadow-sm"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 12v3l2 2"
+              />
             </svg>
           </div>
-          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">
-            MENUNGGU DIREKTUR
+          <p
+            class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4"
+          >
+            MENUNGGU
           </p>
         </div>
-        <p class="text-3xl lg:text-4xl font-extrabold text-red-600 mt-1 tracking-tight">
-          {{ stats.menunggu_direktur }}
+        <p
+          class="text-3xl lg:text-4xl font-extrabold text-red-600 mt-1 tracking-tight"
+        >
+          {{ stats.menunggu }}
         </p>
-        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-red-50/40 rounded-full blur-xl pointer-events-none"></div>
+        <div
+          class="absolute -right-4 -bottom-4 w-20 h-20 bg-red-50/40 rounded-full blur-xl pointer-events-none"
+        ></div>
       </div>
 
       <!-- 3. Cuti Bulan Ini -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md">
+      <div
+        class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md"
+      >
         <div>
-          <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          <div
+            class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shadow-sm"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
             </svg>
           </div>
-          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">
+          <p
+            class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4"
+          >
             CUTI BULAN INI
           </p>
         </div>
-        <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight">
-          {{ stats.cuti_bulan_ini }}
+        <p
+          class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight"
+        >
+          {{ stats.total_cuti_bulan_ini }}
         </p>
-        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50/40 rounded-full blur-xl pointer-events-none"></div>
+        <div
+          class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50/40 rounded-full blur-xl pointer-events-none"
+        ></div>
       </div>
 
       <!-- 4. Cuti Mendatang -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md">
+      <div
+        class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md"
+      >
         <div>
-          <div class="w-12 h-12 bg-[#334155] rounded-xl flex items-center justify-center text-white shadow-sm">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 15l2-2-2-2" />
+          <div
+            class="w-12 h-12 bg-[#334155] rounded-xl flex items-center justify-center text-white shadow-sm"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14 15l2-2-2-2"
+              />
             </svg>
           </div>
-          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">
+          <p
+            class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4"
+          >
             CUTI MENDATANG
           </p>
         </div>
-        <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight">
-          {{ stats.cuti_mendatang }}
+        <p
+          class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight"
+        >
+          {{ stats.total_cuti_bulan_depan }}
         </p>
-        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-slate-50/40 rounded-full blur-xl pointer-events-none"></div>
+        <div
+          class="absolute -right-4 -bottom-4 w-20 h-20 bg-slate-50/40 rounded-full blur-xl pointer-events-none"
+        ></div>
       </div>
     </div>
 
     <!-- Main Content Section: Cuti Mendatang + Aktivitas Terbaru -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
       <!-- Cuti Karyawan Mendatang (8 Cols) -->
-      <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between min-h-[260px]">
+      <div
+        class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between min-h-[260px]"
+      >
         <div>
           <!-- Header Bar -->
-          <div class="flex items-center justify-between pb-4 border-b border-gray-50">
+          <div
+            class="flex items-center justify-between pb-4 border-b border-gray-50"
+          >
             <h2 class="text-base lg:text-lg font-bold text-gray-900">
               Cuti Karyawan Mendatang
             </h2>
@@ -202,7 +319,10 @@ onMounted(async () => {
           </div>
 
           <!-- Items List -->
-          <div v-if="cutiMendatangList.length === 0" class="py-10 text-center text-gray-400 text-xs font-medium">
+          <div
+            v-if="cutiMendatangList.length === 0"
+            class="py-10 text-center text-gray-400 text-xs font-medium"
+          >
             Tidak ada cuti karyawan mendatang saat ini.
           </div>
           <div v-else class="pt-4 space-y-3">
@@ -236,77 +356,120 @@ onMounted(async () => {
       </div>
 
       <!-- Aktivitas Terbaru (5 Cols) -->
-      <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
+      <div
+        class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col"
+      >
         <h2 class="text-base lg:text-lg font-bold text-gray-900 mb-5">
           Aktivitas Terbaru
         </h2>
 
         <!-- Vertical Timeline List -->
-        <div v-if="activities.length === 0" class="py-10 text-center text-gray-400 text-xs font-medium">
+        <div
+          v-if="activities.length === 0"
+          class="py-10 text-center text-gray-400 text-xs font-medium"
+        >
           Belum ada aktivitas terbaru.
         </div>
         <div v-else class="relative space-y-6 pl-1">
           <!-- Continuous vertical line connecting all items -->
-          <div class="absolute left-[19px] top-4 bottom-5 w-[1.5px] bg-gray-100"></div>
+          <div
+            class="absolute left-[19px] top-4 bottom-5 w-[1.5px] bg-gray-100"
+          ></div>
 
           <div
-            v-for="activity in activities.slice(0, 5)"
-            :key="activity.id"
+            v-for="(activity, index) in activities.slice(0, 5)"
+            :key="index"
             class="relative flex items-start gap-3.5 z-10"
           >
             <!-- Timeline Icon -->
             <div
               :class="[
                 'w-8 h-8 rounded-full flex items-center justify-center shrink-0 border bg-white',
-                activity.tipe === 'approve'
+                activity.jenis_aktivitas === 'approve'
                   ? 'border-blue-100 text-blue-600 bg-blue-50/50'
-                  : activity.tipe === 'reject'
-                  ? 'border-red-100 text-red-500 bg-red-50/50'
-                  : activity.tipe === 'submit'
-                  ? 'border-gray-200 text-gray-500 bg-gray-50'
-                  : 'border-gray-200 text-gray-500 bg-gray-50'
+                  : activity.jenis_aktivitas === 'reject'
+                    ? 'border-red-100 text-red-500 bg-red-50/50'
+                    : activity.jenis_aktivitas === 'submit'
+                      ? 'border-gray-200 text-gray-500 bg-gray-50'
+                      : 'border-gray-200 text-gray-500 bg-gray-50',
               ]"
             >
               <!-- Checkmark for approve -->
-              <svg v-if="activity.tipe === 'approve'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+              <svg
+                v-if="activity.jenis_aktivitas === 'approve'"
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2.5"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
 
               <!-- Alert/Clipboard for reject or submit -->
-              <svg v-else-if="activity.tipe === 'reject'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M9 3h6a2 2 0 012 2v14a2 2 0 01-2 2H9a2 2 0 01-2-2V5a2 2 0 012-2z" />
+              <svg
+                v-else-if="activity.jenis_aktivitas === 'reject'"
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4m0 4h.01M9 3h6a2 2 0 012 2v14a2 2 0 01-2 2H9a2 2 0 01-2-2V5a2 2 0 012-2z"
+                />
               </svg>
 
               <!-- Document / edit icon -->
-              <svg v-else-if="activity.tipe === 'submit'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <svg
+                v-else-if="activity.jenis_aktivitas === 'submit'"
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
               </svg>
 
               <!-- Calendar / system icon -->
-              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg
+                v-else
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
             </div>
 
             <!-- Timeline Content -->
             <div class="flex-1 min-w-0 pt-0.5">
               <p class="text-sm font-semibold text-gray-800 leading-snug">
-                {{ activity.deskripsi }}
+                {{ activity.keterangan }}
               </p>
               <p class="text-xs text-gray-400 mt-1 font-medium">
-                {{ activity.waktu }}
+                {{ activity.tanggal }}
               </p>
             </div>
           </div>
         </div>
-
-        <!-- Lihat Semua Aktivitas link -->
-        <button
-          @click="goToSemuaAktivitas"
-          class="w-full text-center text-xs font-semibold text-blue-600 hover:text-blue-700 mt-6 pt-3 border-t border-gray-50 cursor-pointer transition-colors"
-        >
-          Lihat Semua Aktivitas
-        </button>
       </div>
     </div>
   </div>

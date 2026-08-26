@@ -1,28 +1,55 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { authApi, departmentApi } from "../services";
-import type { RegisterRequest, Department } from "../types";
+import { useRouter } from "vue-router";
+import api from "../lib/api";
+import { authApi } from "../services/auth.service";
+import type { RegisterRequest } from "../types";
+
+const router = useRouter();
 
 const emit = defineEmits<{
   switchToLogin: [];
 }>();
+
+interface Departemen {
+  id_departemen: number;
+  nama_departemen: string;
+}
+
+interface PmUser {
+  id_user: number;
+  nama: string;
+}
 
 const form = ref<RegisterRequest>({
   username: "",
   nama: "",
   password: "",
   id_departemen: 0,
+  id_pm: null,
 });
 const confirmPassword = ref("");
-const departments = ref<Department[]>([]);
+const departments = ref<Departemen[]>([]);
+const pmList = ref<PmUser[]>([]);
 const showPassword = ref(false);
 const showConfirm = ref(false);
 const agreeTerms = ref(false);
 const loading = ref(false);
 const error = ref<string | null>(null);
+const showSuccessPopup = ref(false);
 
-onMounted(() => {
-  departmentApi.getAll().then((res) => (departments.value = res.data));
+onMounted(async () => {
+  try {
+    const [deptRes, pmRes] = await Promise.allSettled([
+      api.get<Departemen[]>("/departemen"),
+      api.get<PmUser[]>("/pm"),
+    ]);
+    if (deptRes.status === "fulfilled")
+      departments.value = deptRes.value.data || [];
+    if (pmRes.status === "fulfilled") pmList.value = pmRes.value.data || [];
+  } catch {
+    // silent fail
+  }
 });
 
 const handleSubmit = async (e: Event) => {
@@ -42,7 +69,7 @@ const handleSubmit = async (e: Event) => {
   loading.value = true;
   try {
     await authApi.register(form.value);
-    emit("switchToLogin");
+    showSuccessPopup.value = true;
   } catch (err: any) {
     error.value = err.response?.data?.detail || "Gagal mendaftarkan akun";
   } finally {
@@ -354,6 +381,61 @@ const handleSubmit = async (e: Event) => {
             </div>
           </div>
 
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5"
+              >Pilih Project Manager</label
+            >
+            <div class="relative">
+              <span
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+              </span>
+              <select
+                v-model="form.id_pm"
+                class="w-full pl-10 pr-4 py-3 bg-gray-50 border-0 rounded-xl text-gray-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all appearance-none cursor-pointer"
+              >
+                <option :value="null">Pilih PM</option>
+                <option
+                  v-for="pm in pmList"
+                  :key="pm.id_user"
+                  :value="pm.id_user"
+                >
+                  {{ pm.nama }}
+                </option>
+              </select>
+              <span
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </span>
+            </div>
+          </div>
+
           <label class="flex items-start gap-3 cursor-pointer pt-2">
             <input
               v-model="agreeTerms"
@@ -418,6 +500,29 @@ const handleSubmit = async (e: Event) => {
           Masuk di sini
         </button>
       </p>
+    </div>
+  </div>
+
+  <!-- Success Popup Modal -->
+  <div
+    v-if="showSuccessPopup"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    @click.self="router.push('/login')"
+  >
+    <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Registrasi Berhasil!</h3>
+      <p class="text-sm text-gray-500 mb-6">Akun Anda berhasil dibuat. Silakan masuk untuk melanjutkan.</p>
+      <button
+        @click="router.push('/login')"
+        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+      >
+        Masuk
+      </button>
     </div>
   </div>
 </template>

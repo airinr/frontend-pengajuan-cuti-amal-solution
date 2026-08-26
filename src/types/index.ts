@@ -84,6 +84,9 @@ export interface CurrentUser {
   id_pm: number | null
   total_cuti: number
   sisa_cuti: number
+  email?: string
+  no_telp?: string
+  tanggal_bergabung?: string
   pm: {
     id_user: number
     username: string
@@ -97,10 +100,16 @@ export interface ChangePasswordRequest {
   konfirmasi_password_baru: string
 }
 
+export interface UpdateProfileRequest {
+  email?: string
+  no_telp?: string
+  tanggal_bergabung?: string
+}
+
 export interface CreateKaryawanLeaveRequest {
   tanggal_mulai: string
   tanggal_selesai: string
-  keterangan: string
+  keterangan_cuti: string
   pengganti: number
 }
 

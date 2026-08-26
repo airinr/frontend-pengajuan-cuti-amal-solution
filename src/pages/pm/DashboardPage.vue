@@ -6,8 +6,11 @@ import {
   pmApi,
   type DashboardStats,
   type DashboardTimItem,
-  type ActivityItem,
 } from "../../services/pm.service";
+import {
+  karyawanApi,
+  type ActivityItem,
+} from "../../services/karyawan.service";
 import type { CurrentUser } from "../../types";
 
 const router = useRouter();
@@ -56,7 +59,7 @@ onMounted(async () => {
   }
 
   try {
-    const activityRes = await pmApi.getRecentActivity();
+    const activityRes = await karyawanApi.getActivities();
     activities.value = activityRes.data || [];
   } catch {
     // silent fail
@@ -246,7 +249,9 @@ onMounted(async () => {
                             : 'bg-gray-100 text-gray-700',
                     ]"
                   >
-                    {{ item.status === 'menunggu_pm' ? 'Menunggu' : item.status }}
+                    {{
+                      item.status === "menunggu_pm" ? "Menunggu" : item.status
+                    }}
                   </span>
                 </div>
               </div>
@@ -268,24 +273,24 @@ onMounted(async () => {
             </div>
             <div v-else class="space-y-4">
               <div
-                v-for="item in activities.slice(0, 5)"
-                :key="item.id"
+                v-for="(item, index) in activities.slice(0, 5)"
+                :key="index"
                 class="flex items-start gap-3"
               >
                 <div
                   :class="[
                     'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
-                    item.tipe === 'approve'
+                    item.jenis_aktivitas === 'approve'
                       ? 'bg-green-100'
-                      : item.tipe === 'reject'
+                      : item.jenis_aktivitas === 'reject'
                         ? 'bg-red-100'
-                        : item.tipe === 'submit'
+                        : item.jenis_aktivitas === 'submit'
                           ? 'bg-blue-100'
                           : 'bg-gray-100',
                   ]"
                 >
                   <svg
-                    v-if="item.tipe === 'approve'"
+                    v-if="item.jenis_aktivitas === 'approve'"
                     class="w-4 h-4 text-green-600"
                     fill="none"
                     stroke="currentColor"
@@ -299,7 +304,7 @@ onMounted(async () => {
                     />
                   </svg>
                   <svg
-                    v-else-if="item.tipe === 'reject'"
+                    v-else-if="item.jenis_aktivitas === 'reject'"
                     class="w-4 h-4 text-red-600"
                     fill="none"
                     stroke="currentColor"
@@ -313,7 +318,7 @@ onMounted(async () => {
                     />
                   </svg>
                   <svg
-                    v-else-if="item.tipe === 'submit'"
+                    v-else-if="item.jenis_aktivitas === 'submit'"
                     class="w-4 h-4 text-blue-600"
                     fill="none"
                     stroke="currentColor"
@@ -342,18 +347,11 @@ onMounted(async () => {
                   </svg>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm text-gray-700">{{ item.deskripsi }}</p>
-                  <p class="text-xs text-gray-400 mt-0.5">{{ item.waktu }}</p>
+                  <p class="text-sm text-gray-700">{{ item.keterangan }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ item.tanggal }}</p>
                 </div>
               </div>
             </div>
-            <button
-              v-if="activities.length > 0"
-              @click="goToSemuaAktivitas"
-              class="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium text-center cursor-pointer"
-            >
-              Lihat Semua Aktivitas
-            </button>
           </div>
         </div>
       </div>

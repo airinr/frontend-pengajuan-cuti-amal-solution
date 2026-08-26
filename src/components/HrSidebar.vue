@@ -24,10 +24,12 @@ const hrMenu = [
   { label: "Data Karyawan", icon: "users", route: "/hr/data-karyawan" },
   { label: "Jatah Cuti", icon: "briefcase", route: "/hr/jatah-cuti" },
   { label: "Kalender & Libur", icon: "calendar", route: "/hr/kalender-libur" },
+  { label: "Kalender Tim", icon: "calendar", route: "/hr/kalender-tim" },
 ];
 
 const personalMenu = [
   { label: "Pengajuan Saya", icon: "file-plus", route: "/hr/pengajuan-cuti" },
+  { label: "Status Pengajuan", icon: "clipboard-list", route: "/hr/status-pengajuan" },
   { label: "Riwayat Cuti", icon: "history", route: "/hr/riwayat-cuti" },
   { label: "Profil", icon: "user", route: "/hr/profil" },
 ];
@@ -74,7 +76,7 @@ onMounted(async () => {
 
     <aside
       :class="[
-        'fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:z-auto',
+        'fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:z-auto',
         open ? 'translate-x-0' : '-translate-x-full'
       ]"
     >
@@ -165,6 +167,9 @@ onMounted(async () => {
             >
               <svg v-if="item.icon === 'file-plus'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <svg v-else-if="item.icon === 'clipboard-list'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
               <svg v-else-if="item.icon === 'history'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

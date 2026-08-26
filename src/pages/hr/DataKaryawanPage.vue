@@ -301,7 +301,7 @@ onMounted(() => {
                         : 'bg-red-100 text-red-700',
                     ]"
                   >
-                    {{ item.status === "Aktif" ? "Aktif" : "Non-aktif" }}
+                    {{ item.status === "Aktif" ? "Aktif" : "Cuti" }}
                   </span>
                 </td>
                 <td class="px-4 py-3 text-center">

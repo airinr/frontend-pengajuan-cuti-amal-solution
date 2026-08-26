@@ -5,10 +5,13 @@ import {
   type RingkasanPersetujuan,
 } from "../../services/direktur.service";
 import { approvalApi, type ApprovalQueueItem } from "../../services/approval.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+
+const { showError } = useErrorPopup();
 
 const pendingList = ref<ApprovalQueueItem[]>([]);
 const ringkasan = ref<RingkasanPersetujuan>({
-  menunggu: 0,
+  total_menunggu: 0,
   disetujui_bulan_ini: 0,
   ditolak_bulan_ini: 0,
 });
@@ -19,7 +22,7 @@ const processingId = ref<number | null>(null);
 // Modal States
 const showApproveModal = ref(false);
 const showRejectModal = ref(false);
-const selectedItem = ref<PersetujuanItem | null>(null);
+const selectedItem = ref<ApprovalQueueItem | null>(null);
 const rejectReason = ref("");
 
 const formatDateRange = (start: string, end: string) => {
@@ -53,12 +56,12 @@ const fetchPending = async () => {
   }
 };
 
-const openApproveConfirm = (item: PersetujuanItem) => {
+const openApproveConfirm = (item: ApprovalQueueItem) => {
   selectedItem.value = item;
   showApproveModal.value = true;
 };
 
-const openRejectConfirm = (item: PersetujuanItem) => {
+const openRejectConfirm = (item: ApprovalQueueItem) => {
   selectedItem.value = item;
   rejectReason.value = "";
   showRejectModal.value = true;
@@ -71,12 +74,12 @@ const confirmApprove = async () => {
   try {
     await approvalApi.approve(id);
     pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
-    ringkasan.value.menunggu = Math.max(0, ringkasan.value.menunggu - 1);
+    ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
     ringkasan.value.disetujui_bulan_ini += 1;
     showApproveModal.value = false;
     selectedItem.value = null;
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     processingId.value = null;
   }
@@ -89,13 +92,13 @@ const confirmReject = async () => {
   try {
     await approvalApi.reject(id, rejectReason.value);
     pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
-    ringkasan.value.menunggu = Math.max(0, ringkasan.value.menunggu - 1);
+    ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
     ringkasan.value.ditolak_bulan_ini += 1;
     showRejectModal.value = false;
     selectedItem.value = null;
     rejectReason.value = "";
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     processingId.value = null;
   }
@@ -215,7 +218,7 @@ onMounted(async () => {
           <!-- Menunggu -->
           <div class="bg-[#f0f5ff] rounded-xl p-4 flex items-center justify-between">
             <span class="text-xs font-semibold text-gray-700">Menunggu</span>
-            <span class="text-xl font-extrabold text-[#0f4bb4]">{{ ringkasan.menunggu }}</span>
+            <span class="text-xl font-extrabold text-[#0f4bb4]">{{ ringkasan.total_menunggu }}</span>
           </div>
 
           <!-- Disetujui Bulan Ini -->
@@ -305,7 +308,7 @@ onMounted(async () => {
 
         <!-- Description Note -->
         <p class="text-xs text-gray-600 leading-relaxed">
-          Harap berikan alasan yang jelas dan informatif terkait penolakan permohonan cuti ini, karena ini akan dikirimkan langsung kepada pemohon.
+          Anda akan menolak permintaan dari karyawan. Tolong berikan alasan atas keputusan ini. Alasan ini akan dikirim ke karyawan tersebut.
         </p>
 
         <!-- Form Textarea -->

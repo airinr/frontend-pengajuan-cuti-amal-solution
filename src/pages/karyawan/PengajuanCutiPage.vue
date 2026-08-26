@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
+
 import { authApi, type UserList } from "../../services/auth.service";
 import { karyawanApi } from "../../services/karyawan.service";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import type { CurrentUser } from "../../types";
+import { useErrorPopup } from "../../composables/useErrorPopup";
 
-const router = useRouter();
+const { showError } = useErrorPopup();
 
 const user = ref<CurrentUser | null>(null);
 const users = ref<UserList[]>([]);
@@ -18,6 +19,7 @@ const warningMessage = ref("");
 const holidays = ref<Holiday[]>([]);
 const showDropdown = ref(false);
 const searchQuery = ref("");
+const showSuccessPopup = ref(false);
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -26,7 +28,7 @@ const currentYear = ref(today.getFullYear());
 const form = ref({
   tanggal_mulai: "",
   tanggal_selesai: "",
-  keterangan: "",
+  keterangan_cuti: "",
   pengganti: null as number | null,
   setuju_aturan: false,
 });
@@ -265,7 +267,7 @@ const handleSubmit = async () => {
     return;
   }
 
-  if (!form.value.keterangan) {
+  if (!form.value.keterangan_cuti) {
     errorMessage.value = "Masukkan keterangan cuti";
     return;
   }
@@ -280,24 +282,21 @@ const handleSubmit = async () => {
     await karyawanApi.createCuti({
       tanggal_mulai: form.value.tanggal_mulai,
       tanggal_selesai: form.value.tanggal_selesai,
-      keterangan: form.value.keterangan,
+      keterangan_cuti: form.value.keterangan_cuti,
       pengganti: form.value.pengganti,
     });
-    successMessage.value = "Pengajuan cuti berhasil dikirim!";
+    showSuccessPopup.value = true;
     form.value = {
       tanggal_mulai: "",
       tanggal_selesai: "",
-      keterangan: "",
+      keterangan_cuti: "",
       pengganti: null,
       setuju_aturan: false,
     };
     selectedDates.value = [];
     searchQuery.value = "";
-    setTimeout(() => {
-      router.push("/karyawan/status-pengajuan");
-    }, 2000);
-  } catch (err: any) {
-    errorMessage.value = err.response?.data?.detail || "Gagal mengajukan cuti";
+  } catch (err) {
+    showError(err);
   } finally {
     submitting.value = false;
   }
@@ -523,7 +522,7 @@ const handleSubmit = async () => {
                 >Alasan Cuti</label
               >
               <textarea
-                v-model="form.keterangan"
+                v-model="form.keterangan_cuti"
                 rows="3"
                 placeholder="Jelaskan secara singkat alasan pengambilan cuti Anda..."
                 class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -546,7 +545,7 @@ const handleSubmit = async () => {
                 }}</span>
                 (<span class="font-medium">{{ selectedDaysCount }}</span> hari),
                 dengan alasan:
-                <span class="font-medium">{{ form.keterangan || "-" }}</span
+                <span class="font-medium">{{ form.keterangan_cuti || "-" }}</span
                 >.
               </p>
               <p class="text-sm text-gray-600 mb-2">
@@ -664,7 +663,7 @@ const handleSubmit = async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700"
-                >Pengajuan minimal dilakukan <strong>H-3</strong> sebelum
+                >Pengajuan minimal dilakukan <strong>H-10</strong> sebelum
                 tanggal cuti.</span
               >
             </li>
@@ -754,13 +753,30 @@ const handleSubmit = async () => {
         >
           <p class="text-sm text-red-600">{{ errorMessage }}</p>
         </div>
-        <div
-          v-if="successMessage"
-          class="bg-green-50 border border-green-200 rounded-xl p-4"
-        >
-          <p class="text-sm text-green-600">{{ successMessage }}</p>
-        </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Success Popup Modal -->
+  <div
+    v-if="showSuccessPopup"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    @click.self="showSuccessPopup = false"
+  >
+    <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Pengajuan Cuti Berhasil Dikirim!</h3>
+      <p class="text-sm text-gray-500 mb-6">Pengajuan Anda akan diproses oleh atasan.</p>
+      <button
+        @click="showSuccessPopup = false"
+        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+      >
+        Tutup
+      </button>
     </div>
   </div>
 </template>

@@ -5,6 +5,7 @@ import {
   type RekapItem,
   type LogCutiItem,
 } from "../../services/hr.service";
+import { authApi } from "../../services/auth.service";
 
 const activeTab = ref<"rekapitulasi" | "log">("rekapitulasi");
 const searchQuery = ref("");
@@ -16,6 +17,8 @@ const itemsPerPage = 10;
 const rekapList = ref<RekapItem[]>([]);
 const logList = ref<LogCutiItem[]>([]);
 const loading = ref(true);
+const userRole = ref("");
+const exporting = ref(false);
 
 const years = computed(() => {
   const current = new Date().getFullYear();
@@ -45,7 +48,7 @@ const filteredRekap = computed(() => {
 const filteredLog = computed(() => {
   return logList.value.filter((item) => {
     const matchSearch = !searchQuery.value || item.nama.toLowerCase().includes(searchQuery.value.toLowerCase());
-    const matchStatus = selectedStatus.value === "semua" || item.status === selectedStatus.value;
+    const matchStatus = selectedStatus.value === "semua" || item.status.includes(selectedStatus.value);
     return matchSearch && matchStatus;
   });
 });
@@ -65,14 +68,9 @@ const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage) || 
 const fetchData = async () => {
   loading.value = true;
   try {
-    const params = {
-      search: searchQuery.value,
-      tahun: selectedYear.value,
-      status: selectedStatus.value,
-    };
     const [rekapRes, logRes] = await Promise.allSettled([
-      hrApi.getRekap(params),
-      hrApi.getLogCuti(params),
+      hrApi.getRekap(),
+      hrApi.getLogCuti(),
     ]);
     if (rekapRes.status === "fulfilled") rekapList.value = rekapRes.value.data || [];
     if (logRes.status === "fulfilled") logList.value = logRes.value.data || [];
@@ -108,11 +106,57 @@ const getInitials = (name: string) => {
 
 watch([selectedYear, selectedStatus], () => {
   currentPage.value = 1;
-  fetchData();
 });
 
-onMounted(() => {
-  fetchData();
+const exportRekapCsv = async () => {
+  exporting.value = true;
+  try {
+    const res = await hrApi.exportCuti(selectedYear.value);
+    const blob = new Blob([res.data as BlobPart], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `rekapitulasi-cuti-${selectedYear.value}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  } catch {
+    // silent fail
+  } finally {
+    exporting.value = false;
+  }
+};
+
+const exportLogCsv = async () => {
+  exporting.value = true;
+  try {
+    const res = await hrApi.exportCuti(selectedYear.value);
+    const blob = new Blob([res.data as BlobPart], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `log-cuti-${selectedYear.value}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  } catch {
+    // silent fail
+  } finally {
+    exporting.value = false;
+  }
+};
+
+const canExport = computed(() => userRole.value === "hr" || userRole.value === "direktur");
+
+onMounted(async () => {
+  loading.value = true;
+  try {
+    await fetchData();
+    const userRes = await authApi.me().catch(() => null);
+    if (userRes?.data) userRole.value = userRes.data.role || "";
+  } catch {
+    // silent fail
+  } finally {
+    loading.value = false;
+  }
 });
 </script>
 
@@ -205,6 +249,23 @@ onMounted(() => {
             Ditolak
           </button>
         </div>
+
+        <!-- Export CSV Button -->
+        <button
+          v-if="canExport"
+          @click="activeTab === 'rekapitulasi' ? exportRekapCsv() : exportLogCsv()"
+          :disabled="exporting"
+          class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors cursor-pointer disabled:opacity-50"
+        >
+          <svg v-if="!exporting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ exporting ? 'Exporting...' : 'Export CSV' }}
+        </button>
       </div>
     </div>
 
@@ -225,17 +286,16 @@ onMounted(() => {
                 <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Departemen</th>
                 <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tanggal</th>
                 <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total Cuti/Tahun (Hari)</th>
-                <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cuti Diambil (Hari)</th>
                 <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Sisa Cuti (Hari)</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-if="currentData.length === 0">
-                <td colspan="7" class="text-center py-8 text-gray-400 text-sm">Tidak ada data</td>
+                <td colspan="6" class="text-center py-8 text-gray-400 text-sm">Tidak ada data</td>
               </tr>
               <tr
                 v-for="(item, index) in currentData"
-                :key="item.id_user"
+                :key="index"
                 class="hover:bg-gray-50 transition-colors"
               >
                 <td class="px-4 py-3 text-sm text-gray-500 text-center">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
@@ -247,10 +307,9 @@ onMounted(() => {
                     <span class="text-sm font-medium text-gray-800">{{ item.nama }}</span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ item.departemen }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ item.tanggal }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600 text-center">{{ item.total_cuti_tahun }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600 text-center">{{ item.cuti_diambil }}</td>
+                <td class="px-4 py-3 text-sm text-gray-600">{{ item.nama_departemen }}</td>
+                <td class="px-4 py-3 text-sm text-gray-600">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</td>
+                <td class="px-4 py-3 text-sm text-gray-600 text-center">{{ item.total_cuti }}</td>
                 <td class="px-4 py-3 text-sm font-medium text-center" :class="item.sisa_cuti <= 2 ? 'text-red-600' : 'text-gray-800'">
                   {{ item.sisa_cuti }}
                 </td>
@@ -270,7 +329,7 @@ onMounted(() => {
                 <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Durasi</th>
                 <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Jenis Cuti</th>
                 <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Keterangan</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Backup</th>
+                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Pengganti</th>
                 <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                 <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">HR/Approver</th>
               </tr>
@@ -297,20 +356,20 @@ onMounted(() => {
                 <td class="px-4 py-3 text-sm text-gray-600 text-center">{{ item.durasi }} Hari</td>
                 <td class="px-4 py-3 text-sm text-gray-600">{{ item.jenis_cuti }}</td>
                 <td class="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{{ item.keterangan || '-' }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ item.backup || '-' }}</td>
+                <td class="px-4 py-3 text-sm text-gray-600">{{ item.pengganti || '-' }}</td>
                 <td class="px-4 py-3 text-center">
                   <span
                     :class="[
                       'inline-block text-[10px] px-2.5 py-1 rounded-full font-medium',
-                      item.status === 'disetujui' ? 'bg-green-100 text-green-700' :
-                      item.status === 'ditolak' ? 'bg-red-100 text-red-700' :
+                      item.status.includes('disetujui') ? 'bg-green-100 text-green-700' :
+                      item.status.includes('ditolak') ? 'bg-red-100 text-red-700' :
                       'bg-yellow-100 text-yellow-700',
                     ]"
                   >
-                    {{ item.status === 'disetujui' ? 'Disetujui' : item.status === 'ditolak' ? 'Ditolak' : item.status }}
+                    {{ item.status.includes('disetujui') ? 'Disetujui' : item.status.includes('ditolak') ? 'Ditolak' : item.status.replace('menunggu_', 'Menunggu ').replace('_', ' ').toUpperCase() }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ item.hr_approver || '-' }}</td>
+                <td class="px-4 py-3 text-sm text-gray-600">{{ item.hr_approved_by || '-' }}</td>
               </tr>
             </tbody>
           </table>

@@ -32,6 +32,7 @@ import DirekturDataKaryawanPage from '../pages/direktur/DataKaryawanPage.vue'
 import DirekturJatahCutiPage from '../pages/direktur/JatahCutiPage.vue'
 import DirekturKalenderLiburPage from '../pages/direktur/KalenderLiburPage.vue'
 import DirekturProfilPage from '../pages/direktur/ProfilPage.vue'
+import KalenderTimPage from '../pages/pm/KalenderTimPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -131,6 +132,11 @@ const routes: RouteRecordRaw[] = [
         component: RiwayatCutiPage
       },
       {
+        path: 'status-pengajuan',
+        name: 'PmStatusPengajuan',
+        component: StatusPengajuanPage
+      },
+      {
         path: 'profil',
         name: 'PmProfil',
         component: ProfilPage
@@ -177,6 +183,11 @@ const routes: RouteRecordRaw[] = [
         component: HrKalenderLiburPage
       },
       {
+        path: 'kalender-tim',
+        name: 'HrKalenderTim',
+        component: KalenderTimPage
+      },
+      {
         path: 'pengajuan-cuti',
         name: 'HrPengajuanCuti',
         component: PengajuanCutiPage
@@ -185,6 +196,11 @@ const routes: RouteRecordRaw[] = [
         path: 'riwayat-cuti',
         name: 'HrRiwayatCuti',
         component: RiwayatCutiPage
+      },
+      {
+        path: 'status-pengajuan',
+        name: 'HrStatusPengajuan',
+        component: StatusPengajuanPage
       },
       {
         path: 'profil',
@@ -233,6 +249,11 @@ const routes: RouteRecordRaw[] = [
         component: DirekturKalenderLiburPage
       },
       {
+        path: 'kalender-tim',
+        name: 'DirekturKalenderTim',
+        component: KalenderTimPage
+      },
+      {
         path: 'pengajuan-cuti',
         name: 'DirekturPengajuanCuti',
         component: PengajuanCutiPage
@@ -256,9 +277,23 @@ const router = createRouter({
   routes
 })
 
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+};
+
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('token')
-  const isAuthenticated = !!token
+  const isAuthenticated = !!token && !isTokenExpired(token)
+
+  if (!isAuthenticated && token) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('token_type')
+  }
 
   if (to.meta.requiresGuest && isAuthenticated) {
     next('/karyawan/dashboard')

@@ -25,9 +25,8 @@ const handleSubmit = async (e: Event) => {
     localStorage.setItem("token", response.data.access_token);
     localStorage.setItem("token_type", response.data.token_type);
 
-    const userRes = await authApi.me();
-    const role = userRes.data?.role?.toLowerCase();
-    console.log("Login role:", role);
+    const payload = JSON.parse(atob(response.data.access_token.split('.')[1]));
+    const role = payload.role?.toLowerCase();
     if (role === "pm") {
       router.push("/pm/dashboard");
     } else if (role === "hr") {

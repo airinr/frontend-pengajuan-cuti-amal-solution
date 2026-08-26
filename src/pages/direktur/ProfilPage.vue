@@ -8,6 +8,14 @@ const router = useRouter();
 
 const user = ref<CurrentUser | null>(null);
 const loading = ref(true);
+const successMessage = ref("");
+const errorMessage = ref("");
+
+const profileForm = ref({
+  email: "",
+  no_telp: "",
+});
+const profileLoading = ref(false);
 
 const showPasswordModal = ref(false);
 const passwordForm = ref({
@@ -24,6 +32,10 @@ const fetchProfile = async () => {
   try {
     const res = await authApi.me();
     user.value = res.data;
+    profileForm.value = {
+      email: user.value?.email || "",
+      no_telp: user.value?.no_telp || "",
+    };
   } catch {
     // silent fail
   } finally {
@@ -66,9 +78,20 @@ const handleLogout = () => {
   router.push("/login");
 };
 
-const handleSaveProfile = () => {
-  // Placeholder feedback for save changes
-  alert("Perubahan profil berhasil disimpan");
+const handleSaveProfile = async () => {
+  profileLoading.value = true;
+  errorMessage.value = "";
+  successMessage.value = "";
+  try {
+    await authApi.updateProfile(profileForm.value);
+    successMessage.value = "Profil berhasil disimpan";
+    const res = await authApi.me();
+    user.value = res.data;
+  } catch (err: any) {
+    errorMessage.value = err.response?.data?.detail || "Gagal menyimpan profil";
+  } finally {
+    profileLoading.value = false;
+  }
 };
 
 onMounted(() => {
@@ -93,8 +116,8 @@ onMounted(() => {
           </svg>
         </div>
 
-        <h2 class="text-xl font-bold text-gray-900">{{ user?.nama || "Budi Santoso" }}</h2>
-        <p class="text-xs text-gray-500 mt-1 mb-4">{{ user?.jabatan || "Direktur" }}</p>
+        <h2 class="text-xl font-bold text-gray-900">{{ user?.nama }}</h2>
+        <p class="text-xs text-gray-500 mt-1 mb-4">{{ user?.role }}</p>
 
         <!-- Administrator Aktif Badge -->
         <div class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0f4bb4] text-white rounded-full text-[10px] font-bold tracking-wider uppercase shadow-sm">
@@ -119,19 +142,29 @@ onMounted(() => {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
             <div>
               <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">NAMA LENGKAP</p>
-              <p class="text-sm font-bold text-gray-900 mt-1">{{ user?.nama || "Budi Santoso" }}</p>
+              <p class="text-sm font-bold text-gray-900 mt-1">{{ user?.nama }}</p>
             </div>
             <div>
               <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">JABATAN</p>
-              <p class="text-sm font-bold text-gray-900 mt-1 capitalize">{{ user?.jabatan || user?.role || "Direktur" }}</p>
-            </div>
-            <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">DEPARTEMEN</p>
-              <p class="text-sm font-bold text-gray-900 mt-1">{{ user?.departemen || "Manajemen Perusahaan" }}</p>
+              <p class="text-sm font-bold text-gray-900 mt-1 capitalize">{{ user?.role }}</p>
             </div>
             <div>
               <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">EMAIL</p>
-              <p class="text-sm font-bold text-gray-900 mt-1">{{ user?.email || "budi.santoso@gmail.id" }}</p>
+              <input
+                v-model="profileForm.email"
+                type="email"
+                placeholder="Masukkan email"
+                class="w-full mt-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
+              />
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">NOMOR TELEPON</p>
+              <input
+                v-model="profileForm.no_telp"
+                type="text"
+                placeholder="Masukkan nomor telepon"
+                class="w-full mt-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
+              />
             </div>
           </div>
         </div>
@@ -181,6 +214,12 @@ onMounted(() => {
         </div>
 
         <!-- 3. Bottom Action Buttons -->
+        <div v-if="successMessage" class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-semibold">
+          {{ successMessage }}
+        </div>
+        <div v-if="errorMessage" class="p-3 bg-red-50 text-red-600 rounded-xl text-xs">
+          {{ errorMessage }}
+        </div>
         <div class="flex items-center justify-end gap-3 pt-2">
           <!-- Keluar Akun Button -->
           <button
@@ -196,9 +235,10 @@ onMounted(() => {
           <!-- Simpan Perubahan Button -->
           <button
             @click="handleSaveProfile"
-            class="px-6 py-2.5 bg-[#0f4bb4] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+            :disabled="profileLoading"
+            class="px-6 py-2.5 bg-[#0f4bb4] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
           >
-            Simpan Perubahan
+            {{ profileLoading ? 'Menyimpan...' : 'Simpan Perubahan' }}
           </button>
         </div>
       </div>

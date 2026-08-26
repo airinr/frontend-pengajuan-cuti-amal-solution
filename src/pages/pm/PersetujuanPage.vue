@@ -4,9 +4,11 @@ import {
   pmApi,
   type HistoryCutiItem,
   type RingkasanTim,
-  type KapasitasTim,
 } from "../../services/pm.service";
 import { approvalApi, type ApprovalQueueItem } from "../../services/approval.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+
+const { showError } = useErrorPopup();
 
 const activeTab = ref<"menunggu" | "riwayat">("menunggu");
 const searchQuery = ref("");
@@ -18,13 +20,17 @@ const pendingList = ref<ApprovalQueueItem[]>([]);
 const allHistoryList = ref<HistoryCutiItem[]>([]);
 const historyList = ref<HistoryCutiItem[]>([]);
 const ringkasan = ref<RingkasanTim | null>(null);
-const kapasitas = ref<KapasitasTim[]>([]);
 const loading = ref(true);
 
 const processingId = ref<number | null>(null);
 
 const showApproveModal = ref(false);
 const approveTarget = ref<ApprovalQueueItem | null>(null);
+
+const showRejectModal = ref(false);
+const rejectTarget = ref<ApprovalQueueItem | null>(null);
+const rejectAlasan = ref("");
+const rejectLoading = ref(false);
 
 const formatDate = (dateStr: string) => {
   const d = new Date(dateStr);
@@ -60,14 +66,12 @@ const getInitials = (name: string) => {
 
 const fetchPending = async () => {
   try {
-    const [pendingRes, ringkasanRes, kapasitasRes] = await Promise.allSettled([
+    const [pendingRes, ringkasanRes] = await Promise.allSettled([
       approvalApi.getApprovalQueue(),
       pmApi.getRingkasanTim(),
-      pmApi.getKapasitasTim(),
     ]);
     if (pendingRes.status === "fulfilled") pendingList.value = pendingRes.value.data || [];
     if (ringkasanRes.status === "fulfilled") ringkasan.value = ringkasanRes.value.data;
-    if (kapasitasRes.status === "fulfilled") kapasitas.value = kapasitasRes.value.data || [];
   } catch {
     // silent fail
   }
@@ -123,27 +127,42 @@ const handleApprove = async () => {
       ringkasan.value.menunggu_persetujuan = Math.max(0, ringkasan.value.menunggu_persetujuan - 1);
     }
     closeApproveModal();
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     processingId.value = null;
   }
 };
 
-const handleReject = async (id: number) => {
-  if (processingId.value) return;
-  processingId.value = id;
+const handleReject = async () => {
+  if (!rejectTarget.value || !rejectAlasan.value.trim()) return;
+  rejectLoading.value = true;
+  processingId.value = rejectTarget.value.id_log_cuti;
   try {
-    await approvalApi.reject(id, "");
-    pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
+    await approvalApi.reject(rejectTarget.value.id_log_cuti, rejectAlasan.value);
+    pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== rejectTarget.value!.id_log_cuti);
     if (ringkasan.value) {
       ringkasan.value.menunggu_persetujuan = Math.max(0, ringkasan.value.menunggu_persetujuan - 1);
     }
-  } catch {
-    // silent fail
+    closeRejectModal();
+  } catch (err) {
+    showError(err);
   } finally {
+    rejectLoading.value = false;
     processingId.value = null;
   }
+};
+
+const openRejectModal = (item: ApprovalQueueItem) => {
+  rejectTarget.value = item;
+  rejectAlasan.value = "";
+  showRejectModal.value = true;
+};
+
+const closeRejectModal = () => {
+  showRejectModal.value = false;
+  rejectTarget.value = null;
+  rejectAlasan.value = "";
 };
 
 const switchTab = (tab: "menunggu" | "riwayat") => {
@@ -300,7 +319,7 @@ onMounted(async () => {
                   <!-- Actions -->
                   <div class="flex items-center justify-end gap-3">
                     <button
-                      @click="handleReject(item.id_log_cuti)"
+                      @click="openRejectModal(item)"
                       :disabled="processingId === item.id_log_cuti"
                       class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                     >
@@ -343,32 +362,6 @@ onMounted(async () => {
                 <div class="flex justify-between items-center">
                   <span class="text-sm text-gray-600">Sedang Cuti</span>
                   <span class="text-lg font-bold text-gray-800">{{ ringkasan?.sedang_cuti ?? '-' }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Kapasitas Tim -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-              <h3 class="text-sm font-bold text-gray-800 mb-4">Kapasitas Tim (Minggu Ini)</h3>
-              <div class="space-y-3">
-                <div v-for="(item, i) in kapasitas" :key="i" class="flex items-center justify-between">
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs text-gray-600 truncate">{{ item.hari }}, {{ item.tanggal }}</p>
-                  </div>
-                  <div class="flex items-center gap-2 ml-3">
-                    <div class="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        :class="[
-                          'h-full rounded-full',
-                          item.persentase >= 90 ? 'bg-green-500' :
-                          item.persentase >= 70 ? 'bg-yellow-500' :
-                          'bg-red-500',
-                        ]"
-                        :style="{ width: `${item.persentase}%` }"
-                      ></div>
-                    </div>
-                    <span class="text-xs text-gray-500 w-16 text-right">{{ item.persentase }}% Hadir</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -537,6 +530,63 @@ onMounted(async () => {
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {{ processingId ? 'Menyetujui...' : 'Setujui' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Reject Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showRejectModal"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="closeRejectModal"
+        >
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">Penolakan Cuti</h3>
+              <button
+                @click="closeRejectModal"
+                class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p class="text-sm text-gray-500 mb-4">
+              Anda akan menolak permintaan dari karyawan. Tolong berikan alasan atas keputusan ini. Alasan ini akan dikirim ke karyawan tersebut.
+            </p>
+
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Alasan Penolakan <span class="text-red-500">*</span>
+              </label>
+              <textarea
+                v-model="rejectAlasan"
+                rows="3"
+                placeholder="contoh: Ada meeting dengan client"
+                class="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              ></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-3">
+              <button
+                @click="closeRejectModal"
+                class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                @click="handleReject"
+                :disabled="!rejectAlasan.trim() || rejectLoading"
+                class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {{ rejectLoading ? 'Mengirim...' : 'Konfirmasi Tolak' }}
               </button>
             </div>
           </div>
