@@ -2,9 +2,9 @@ import api from "../lib/api";
 
 export interface DashboardStats {
   total_karyawan: number;
-  menunggu_hr: number;
-  cuti_bulan_ini: number;
-  cuti_mendatang: number;
+  menunggu: number;
+  total_cuti_bulan_ini: number;
+  total_cuti_bulan_depan: number;
 }
 
 export interface ActivityItem {
@@ -38,26 +38,24 @@ export interface RingkasanPersetujuan {
 }
 
 export interface RekapItem {
-  id_user: number;
   nama: string;
-  departemen: string;
-  tanggal: string;
-  total_cuti_tahun: number;
-  cuti_diambil: number;
+  nama_departemen: string;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  total_cuti: number;
   sisa_cuti: number;
 }
 
 export interface LogCutiItem {
-  id_log_cuti: number;
   nama: string;
   tanggal_mulai: string;
   tanggal_selesai: string;
   durasi: number;
   jenis_cuti: string;
   keterangan: string;
-  backup: string;
+  pengganti: string;
   status: string;
-  hr_approver: string;
+  hr_approved_by: string;
 }
 
 export interface CutiMendatangItem {
@@ -112,11 +110,11 @@ export const hrApi = {
 
   getRingkasan: () => api.get<RingkasanPersetujuan>("/hr/persetujuan"),
 
-  getRekap: (params: { search?: string; tahun?: number; status?: string }) =>
-    api.get<RekapItem[]>("/hr/log-rekap/rekap", { params }),
+  getRekap: () =>
+    api.get<RekapItem[]>("/hr/rekapitulasi"),
 
-  getLogCuti: (params: { search?: string; tahun?: number; status?: string }) =>
-    api.get<LogCutiItem[]>("/hr/log-rekap/log", { params }),
+  getLogCuti: () =>
+    api.get<LogCutiItem[]>("/hr/log-cuti"),
 
   getDataKaryawanSummary: () =>
     api.get<RingkasanKaryawan>("/hr/ringkasan-karyawan"),
@@ -132,4 +130,10 @@ export const hrApi = {
 
   getDaftarCutiKaryawan: () =>
     api.get<DaftarCutiKaryawan[]>("/hr/daftar-cuti-karyawan"),
+
+  exportCuti: (year?: number) =>
+    api.get("/hr/export-cuti", { params: { year }, responseType: "blob" }),
+
+  tambahCuti: (data: { id_user: number; jumlah_hari: number; keterangan: string }) =>
+    api.post("/hr/tambah-cuti", data),
 };

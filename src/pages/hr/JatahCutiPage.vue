@@ -5,6 +5,8 @@ import {
   type ManajemenJatahCuti,
   type DaftarCutiKaryawan,
 } from "../../services/hr.service";
+import { authApi } from "../../services/auth.service";
+import type { CurrentUser } from "../../types";
 
 const searchQuery = ref("");
 const filterDepartemen = ref("semua");
@@ -17,6 +19,7 @@ const summary = ref<ManajemenJatahCuti>({
   total_karyawan_cuti: 0,
 });
 const daftarList = ref<DaftarCutiKaryawan[]>([]);
+const currentUser = ref<CurrentUser | null>(null);
 
 const departemenList = computed(() => {
   const depts = [...new Set(daftarList.value.map((d) => d.nama_departemen))];
@@ -51,17 +54,12 @@ const goToPage = (page: number) => {
 };
 
 const showModal = ref(false);
-const formDepartemen = ref("semua");
-const formKaryawan = ref("semua");
 const formTahun = ref(new Date().getFullYear());
 const formKuota = ref(12);
-
-const karyawanList = computed(() => {
-  if (formDepartemen.value === "semua") return daftarList.value;
-  return daftarList.value.filter(
-    (d) => d.nama_departemen === formDepartemen.value,
-  );
-});
+const formKeterangan = ref("");
+const applyLoading = ref(false);
+const applyError = ref("");
+const applySuccess = ref("");
 
 const years = computed(() => {
   const current = new Date().getFullYear();
@@ -69,10 +67,11 @@ const years = computed(() => {
 });
 
 const openModal = () => {
-  formDepartemen.value = "semua";
-  formKaryawan.value = "semua";
   formTahun.value = new Date().getFullYear();
   formKuota.value = 12;
+  formKeterangan.value = "";
+  applyError.value = "";
+  applySuccess.value = "";
   showModal.value = true;
 };
 
@@ -80,21 +79,44 @@ const closeModal = () => {
   showModal.value = false;
 };
 
-const handleApply = () => {
-  closeModal();
+const handleApply = async () => {
+  if (!currentUser.value) {
+    applyError.value = "Data user tidak ditemukan";
+    return;
+  }
+
+  applyLoading.value = true;
+  applyError.value = "";
+  applySuccess.value = "";
+  try {
+    await hrApi.tambahCuti({
+      id_user: currentUser.value.id_user,
+      jumlah_hari: formKuota.value,
+      keterangan: formKeterangan.value || "Penyesuaian kuota cuti",
+    });
+    applySuccess.value = "Kuota cuti berhasil ditambahkan untuk semua karyawan";
+    await fetchData();
+  } catch (err: any) {
+    applyError.value = err.response?.data?.detail || "Gagal menambahkan kuota cuti";
+  } finally {
+    applyLoading.value = false;
+  }
 };
 
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [summaryRes, daftarRes] = await Promise.allSettled([
+    const [summaryRes, daftarRes, userRes] = await Promise.allSettled([
       hrApi.getManajemenJatahCuti(),
       hrApi.getDaftarCutiKaryawan(),
+      authApi.me(),
     ]);
     if (summaryRes.status === "fulfilled")
       summary.value = summaryRes.value.data;
     if (daftarRes.status === "fulfilled")
       daftarList.value = daftarRes.value.data || [];
+    if (userRes.status === "fulfilled")
+      currentUser.value = userRes.value.data;
   } catch {
     // silent fail
   } finally {
@@ -397,47 +419,10 @@ onMounted(() => {
               </button>
             </div>
             <p class="text-sm text-gray-500 mb-5">
-              Atur jatah cuti tahunan dan khusus untuk karyawan secara masal
-              atau individu.
+              Tambahkan kuota cuti untuk semua karyawan.
             </p>
 
             <div class="space-y-4">
-              <div>
-                <label
-                  class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1"
-                >
-                  Pilih Departemen
-                </label>
-                <select
-                  v-model="formDepartemen"
-                  class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="semua">Semua Departemen</option>
-                  <option
-                    v-for="dept in departemenList"
-                    :key="dept"
-                    :value="dept"
-                  >
-                    {{ dept }}
-                  </option>
-                </select>
-              </div>
-              <div>
-                <label
-                  class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1"
-                >
-                  Pilih Karyawan
-                </label>
-                <select
-                  v-model="formKaryawan"
-                  class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="semua">Semua Karyawan</option>
-                  <option v-for="k in karyawanList" :key="k.nama" :value="k.nama">
-                    {{ k.nama }}
-                  </option>
-                </select>
-              </div>
               <div>
                 <label
                   class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1"
@@ -482,6 +467,26 @@ onMounted(() => {
                   </button>
                 </div>
               </div>
+              <div>
+                <label
+                  class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1"
+                >
+                  Keterangan
+                </label>
+                <input
+                  v-model="formKeterangan"
+                  type="text"
+                  placeholder="Contoh: Penyesuaian kuota cuti tahunan"
+                  class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div v-if="applyError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              {{ applyError }}
+            </div>
+            <div v-if="applySuccess" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600">
+              {{ applySuccess }}
             </div>
 
             <div class="flex items-center justify-end gap-3 mt-6">
@@ -493,9 +498,10 @@ onMounted(() => {
               </button>
               <button
                 @click="handleApply"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer"
+                :disabled="applyLoading"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
-                Terapkan Perubahan
+                {{ applyLoading ? 'Menyimpan...' : 'Terapkan Perubahan' }}
               </button>
             </div>
           </div>

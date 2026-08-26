@@ -9,6 +9,13 @@ const router = useRouter()
 const user = ref<CurrentUser | null>(null)
 const loading = ref(true)
 const errorMessage = ref('')
+const successMessage = ref('')
+
+const profileForm = ref({
+  email: '',
+  no_telp: '',
+})
+const profileLoading = ref(false)
 
 const passwordForm = ref({
   password_lama: '',
@@ -28,6 +35,10 @@ onMounted(async () => {
   try {
     const res = await authApi.me()
     user.value = res.data
+    profileForm.value = {
+      email: user.value?.email || '',
+      no_telp: user.value?.no_telp || '',
+    }
   } catch {
     errorMessage.value = 'Gagal memuat data profil'
   } finally {
@@ -61,6 +72,22 @@ const handleLogout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('token_type')
   router.push('/login')
+}
+
+const handleSaveProfile = async () => {
+  profileLoading.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await authApi.updateProfile(profileForm.value)
+    successMessage.value = 'Profil berhasil disimpan'
+    const res = await authApi.me()
+    user.value = res.data
+  } catch (err: any) {
+    errorMessage.value = err.response?.data?.detail || 'Gagal menyimpan profil'
+  } finally {
+    profileLoading.value = false
+  }
 }
 </script>
 
@@ -100,21 +127,21 @@ const handleLogout = () => {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
               <div>
                 <label class="block text-sm text-gray-500 mb-1">Email</label>
-                <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  <span class="text-sm text-gray-700">-</span>
-                </div>
+                <input
+                  v-model="profileForm.email"
+                  type="email"
+                  placeholder="Masukkan email"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
               </div>
               <div>
                 <label class="block text-sm text-gray-500 mb-1">Nomor Telepon</label>
-                <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <span class="text-sm text-gray-700">-</span>
-                </div>
+                <input
+                  v-model="profileForm.no_telp"
+                  type="text"
+                  placeholder="Masukkan nomor telepon"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
               </div>
               <div>
                 <label class="block text-sm text-gray-500 mb-1">Departemen</label>
@@ -131,7 +158,7 @@ const handleLogout = () => {
                   <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span class="text-sm text-gray-700">-</span>
+                  <span class="text-sm text-gray-700">{{ user.tanggal_bergabung || '-' }}</span>
                 </div>
               </div>
             </div>
@@ -232,6 +259,12 @@ const handleLogout = () => {
       </div>
 
       <!-- Bottom Buttons -->
+      <div v-if="successMessage" class="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600">
+        {{ successMessage }}
+      </div>
+      <div v-if="errorMessage && !loading" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+        {{ errorMessage }}
+      </div>
       <div class="flex flex-col sm:flex-row justify-end gap-3">
         <button
           @click="handleLogout"
@@ -243,12 +276,14 @@ const handleLogout = () => {
           Keluar Akun
         </button>
         <button
-          class="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          @click="handleSaveProfile"
+          :disabled="profileLoading"
+          class="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          Simpan Perubahan
+          {{ profileLoading ? 'Menyimpan...' : 'Simpan Perubahan' }}
         </button>
       </div>
     </div>

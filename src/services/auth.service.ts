@@ -1,5 +1,5 @@
 import api from '../lib/api'
-import type { AuthResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, RegisterResponse } from '../types'
+import type { AuthResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, RegisterResponse, UpdateProfileRequest } from '../types'
 
 export interface UserList {
   id_user: number
@@ -27,6 +27,9 @@ export const authApi = {
 
   changePassword: (data: ChangePasswordRequest) =>
     api.put('/auth/change-password', data),
+
+  updateProfile: (data: UpdateProfileRequest) =>
+    api.put('/auth/profile', data),
 
   getAllUsers: () =>
     api.get<UserList[]>('/auth/users'),

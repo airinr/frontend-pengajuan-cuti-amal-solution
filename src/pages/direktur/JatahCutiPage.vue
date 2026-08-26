@@ -4,6 +4,8 @@ import {
   direkturApi,
   type DepartemenItem,
 } from "../../services/direktur.service";
+import { authApi } from "../../services/auth.service";
+import type { CurrentUser } from "../../types";
 
 interface EmployeeLeaveItem {
   id: number;
@@ -27,15 +29,18 @@ const totalKaryawanCuti = ref(0);
 
 const employeeLeaves = ref<EmployeeLeaveItem[]>([]);
 const departemenList = ref<DepartemenItem[]>([]);
+const currentUser = ref<CurrentUser | null>(null);
 
 // Modal State
 const showAdjustModal = ref(false);
 const adjustForm = ref({
-  departemen: "Semua Departemen",
-  karyawan: "Semua Karyawan",
   tahun: new Date().getFullYear(),
   jatahCutiTahunan: 12,
+  keterangan: "",
 });
+const adjustLoading = ref(false);
+const adjustError = ref("");
+const adjustSuccess = ref("");
 
 const years = computed(() => {
   const current = new Date().getFullYear();
@@ -45,10 +50,11 @@ const years = computed(() => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [statsRes, daftarRes, deptRes] = await Promise.allSettled([
+    const [statsRes, daftarRes, deptRes, userRes] = await Promise.allSettled([
       direkturApi.getManajemenJatahCuti(),
       direkturApi.getDaftarCutiKaryawan(),
       direkturApi.getDataDepartemen(),
+      authApi.me(),
     ]);
 
     if (statsRes.status === "fulfilled" && statsRes.value.data) {
@@ -72,6 +78,10 @@ const fetchData = async () => {
     if (deptRes.status === "fulfilled" && Array.isArray(deptRes.value.data)) {
       departemenList.value = deptRes.value.data;
     }
+
+    if (userRes.status === "fulfilled") {
+      currentUser.value = userRes.value.data;
+    }
   } catch {
     // silent fail
   } finally {
@@ -94,7 +104,6 @@ const filteredList = computed(() => {
     const matchSearch =
       !searchQuery.value ||
       item.nama.toLowerCase().includes(q) ||
-      item.id_karyawan.toLowerCase().includes(q) ||
       item.departemen.toLowerCase().includes(q);
     const matchDept =
       selectedDept.value === "semua" || item.departemen === selectedDept.value;
@@ -115,25 +124,28 @@ const goToPage = (page: number) => {
   currentPage.value = page;
 };
 
-const handleSaveAdjustment = () => {
-  if (adjustForm.value.karyawan === "Semua Karyawan") {
-    employeeLeaves.value.forEach((item) => {
-      if (
-        adjustForm.value.departemen === "Semua Departemen" ||
-        item.departemen === adjustForm.value.departemen
-      ) {
-        item.cuti_tahunan = adjustForm.value.jatahCutiTahunan;
-        item.sisa_saldo = Math.max(0, adjustForm.value.jatahCutiTahunan - item.cuti_terpakai);
-      }
-    });
-  } else {
-    const target = employeeLeaves.value.find((e) => e.nama === adjustForm.value.karyawan);
-    if (target) {
-      target.cuti_tahunan = adjustForm.value.jatahCutiTahunan;
-      target.sisa_saldo = Math.max(0, adjustForm.value.jatahCutiTahunan - target.cuti_terpakai);
-    }
+const handleSaveAdjustment = async () => {
+  if (!currentUser.value) {
+    adjustError.value = "Data user tidak ditemukan";
+    return;
   }
-  showAdjustModal.value = false;
+
+  adjustLoading.value = true;
+  adjustError.value = "";
+  adjustSuccess.value = "";
+  try {
+    await direkturApi.tambahCuti({
+      id_user: currentUser.value.id_user,
+      jumlah_hari: adjustForm.value.jatahCutiTahunan,
+      keterangan: adjustForm.value.keterangan || "Penyesuaian kuota cuti",
+    });
+    adjustSuccess.value = "Kuota cuti berhasil ditambahkan untuk semua karyawan";
+    await fetchData();
+  } catch (err: any) {
+    adjustError.value = err.response?.data?.detail || "Gagal menambahkan kuota cuti";
+  } finally {
+    adjustLoading.value = false;
+  }
 };
 </script>
 
@@ -159,7 +171,7 @@ const handleSaveAdjustment = () => {
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Cari karyawan berdasarkan nama atau ID..."
+            placeholder="Cari karyawan berdasarkan nama..."
             class="w-full pl-10 pr-4 py-2 bg-gray-50/80 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white outline-none"
           />
         </div>
@@ -242,7 +254,7 @@ const handleSaveAdjustment = () => {
           <table class="w-full text-left text-xs">
             <thead class="bg-gray-50/80 border-b border-gray-100 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
               <tr>
-                <th class="py-3.5 px-6">ID KARYAWAN</th>
+                <th class="py-3.5 px-6">NO</th>
                 <th class="py-3.5 px-6">NAMA KARYAWAN</th>
                 <th class="py-3.5 px-6">DEPARTEMEN</th>
                 <th class="py-3.5 px-6 text-center">CUTI TAHUNAN</th>
@@ -259,8 +271,8 @@ const handleSaveAdjustment = () => {
               </tr>
             </tbody>
             <tbody v-else class="divide-y divide-gray-50 font-medium text-gray-700">
-              <tr v-for="item in currentData" :key="item.id" class="hover:bg-gray-50/60 transition-colors">
-                <td class="py-4 px-6 font-mono text-gray-600">{{ item.id_karyawan }}</td>
+              <tr v-for="(item, idx) in currentData" :key="item.id" class="hover:bg-gray-50/60 transition-colors">
+                <td class="py-4 px-6 text-gray-500 text-center">{{ (currentPage - 1) * itemsPerPage + idx + 1 }}</td>
                 <td class="py-4 px-6 font-bold text-gray-900">{{ item.nama }}</td>
                 <td class="py-4 px-6 text-gray-600">{{ item.departemen }}</td>
                 <td class="py-4 px-6 text-center font-bold text-gray-900">{{ item.cuti_tahunan }} Hari</td>
@@ -344,53 +356,7 @@ const handleSaveAdjustment = () => {
 
         <!-- Form Fields -->
         <div class="space-y-4 text-xs pt-1">
-          <!-- 1. PILIH DEPARTEMEN -->
-          <div>
-            <label class="block font-bold text-gray-600 uppercase text-[10px] tracking-wider mb-1.5">
-              PILIH DEPARTEMEN
-            </label>
-            <div class="relative">
-              <select
-                v-model="adjustForm.departemen"
-                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4] cursor-pointer pr-10"
-              >
-                <option value="Semua Departemen">Semua Departemen</option>
-                <option
-                  v-for="dept in departemenList"
-                  :key="dept.nama_departemen"
-                  :value="dept.nama_departemen"
-                >
-                  {{ dept.nama_departemen }}
-                </option>
-              </select>
-              <svg class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-
-          <!-- 2. PILIH KARYAWAN -->
-          <div>
-            <label class="block font-bold text-gray-600 uppercase text-[10px] tracking-wider mb-1.5">
-              PILIH KARYAWAN
-            </label>
-            <div class="relative">
-              <select
-                v-model="adjustForm.karyawan"
-                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4] cursor-pointer pr-10"
-              >
-                <option value="Semua Karyawan">Semua Karyawan</option>
-                <option v-for="emp in employeeLeaves" :key="emp.id" :value="emp.nama">
-                  {{ emp.nama }} ({{ emp.id_karyawan }})
-                </option>
-              </select>
-              <svg class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-
-          <!-- 3. TAHUN JATAH -->
+          <!-- 1. TAHUN JATAH -->
           <div>
             <label class="block font-bold text-gray-600 uppercase text-[10px] tracking-wider mb-1.5">
               TAHUN JATAH
@@ -410,7 +376,7 @@ const handleSaveAdjustment = () => {
             </div>
           </div>
 
-          <!-- 4. JATAH CUTI TAHUNAN (Counter) -->
+          <!-- 2. JATAH CUTI TAHUNAN (Counter) -->
           <div>
             <label class="block font-bold text-gray-600 uppercase text-[10px] tracking-wider mb-1.5">
               JATAH CUTI TAHUNAN
@@ -436,6 +402,27 @@ const handleSaveAdjustment = () => {
           </div>
         </div>
 
+        <!-- 3. KETERANGAN -->
+        <div>
+          <label class="block font-bold text-gray-600 uppercase text-[10px] tracking-wider mb-1.5">
+            KETERANGAN
+          </label>
+          <input
+            v-model="adjustForm.keterangan"
+            type="text"
+            placeholder="Contoh: Penyesuaian kuota cuti tahunan"
+            class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4]"
+          />
+        </div>
+
+        <!-- Error/Success Messages -->
+        <div v-if="adjustError" class="p-3 bg-red-50 text-red-600 rounded-xl text-xs">
+          {{ adjustError }}
+        </div>
+        <div v-if="adjustSuccess" class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-semibold">
+          {{ adjustSuccess }}
+        </div>
+
         <!-- Footer Actions -->
         <div class="flex items-center justify-end gap-3 pt-4">
           <button
@@ -446,9 +433,10 @@ const handleSaveAdjustment = () => {
           </button>
           <button
             @click="handleSaveAdjustment"
-            class="px-6 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer"
+            :disabled="adjustLoading"
+            class="px-6 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
           >
-            Terapkan Perubahan
+            {{ adjustLoading ? 'Menyimpan...' : 'Terapkan Perubahan' }}
           </button>
         </div>
       </div>

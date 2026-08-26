@@ -37,12 +37,6 @@ export interface RingkasanTim {
   sedang_cuti: number;
 }
 
-export interface KapasitasTim {
-  hari: string;
-  tanggal: string;
-  persentase: number;
-}
-
 export interface RekapSaldoItem {
   nama: string;
   nama_departemen: string;
@@ -86,9 +80,7 @@ export const pmApi = {
       },
     ),
 
-  getRingkasanTim: () => api.get<RingkasanTim>("/pm/approvals/ringkasan"),
-
-  getKapasitasTim: () => api.get<KapasitasTim[]>("/pm/approvals/kapasitas"),
+  getRingkasanTim: () => api.get<RingkasanTim>("/pm/ringkasan-tim"),
 
   getRekapSummary: () => api.get<RekapTimSummary>("/pm/rekap-cuti-ringkasan"),
 

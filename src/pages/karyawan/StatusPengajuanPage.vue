@@ -1,9 +1,36 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { karyawanApi, type OngoingCuti } from '../../services/karyawan.service'
+import { authApi } from '../../services/auth.service'
 
 const ongoingList = ref<OngoingCuti[]>([])
 const loading = ref(true)
+const userRole = ref<string>('karyawan')
+
+const stepsByRole: Record<string, { label: string; statusKey: string }[]> = {
+  karyawan: [
+    { label: 'Diajukan', statusKey: 'submitted' },
+    { label: 'Menunggu PM', statusKey: 'pm' },
+    { label: 'Menunggu HRD', statusKey: 'hr' },
+    { label: 'Selesai', statusKey: 'selesai' },
+  ],
+  pm: [
+    { label: 'Diajukan', statusKey: 'submitted' },
+    { label: 'Menunggu HRD', statusKey: 'hr' },
+    { label: 'Selesai', statusKey: 'selesai' },
+  ],
+  hr: [
+    { label: 'Diajukan', statusKey: 'submitted' },
+    { label: 'Menunggu Direktur', statusKey: 'direktur' },
+    { label: 'Selesai', statusKey: 'selesai' },
+  ],
+  direktur: [
+    { label: 'Diajukan', statusKey: 'submitted' },
+    { label: 'Selesai', statusKey: 'selesai' },
+  ],
+}
+
+const currentSteps = computed(() => stepsByRole[userRole.value] || stepsByRole.karyawan)
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
@@ -51,43 +78,56 @@ const getStatusConfig = (status: string) => {
   return configs[status] || { label: status, color: 'text-gray-600', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' }
 }
 
-const getStepStatus = (item: OngoingCuti, step: number) => {
+const getStepStatus = (item: OngoingCuti, stepIndex: number) => {
   const status = item.status_sekarang
+  const steps = currentSteps.value
+  const step = steps[stepIndex]
+  if (!step) return 'pending'
 
   if (status.includes('ditolak')) {
-    if (step === 1) return 'completed'
-    if (step === 2 && status.includes('ditolak_pm')) return 'rejected'
+    if (stepIndex === 0) return 'completed'
+    const rejectKey = status.replace('ditolak_', '')
+    if (step.statusKey === rejectKey) return 'rejected'
     return 'pending'
   }
 
-  if (step === 1) return 'completed'
+  if (stepIndex === 0) return 'completed'
 
-  if (step === 2) {
-    if (item.disetujui_pm) return 'completed'
-    if (status === 'menunggu_pm') return 'active'
+  const prevStep = steps[stepIndex - 1]
+  if (prevStep.statusKey === 'submitted') {
+    if (status === `menunggu_${step.statusKey}`) return 'active'
+    if (status === `disetujui_${step.statusKey}` || status.includes(`disetujui_${step.statusKey}`)) return 'completed'
+    if (status === 'menunggu_pm' || status === 'menunggu_hr' || status === 'menunggu_direktur') {
+      if (stepIndex === 1 && (status === 'menunggu_pm' || status === 'menunggu_hr' || status === 'menunggu_direktur')) return 'active'
+      return 'pending'
+    }
     return 'pending'
   }
 
-  if (step === 3) {
-    if (item.disetujui_hr) return 'completed'
-    if (status === 'menunggu_hr') return 'active'
-    return 'pending'
-  }
+  if (status === `menunggu_${step.statusKey}`) return 'active'
+  if (status === `disetujui_${step.statusKey}` || status.includes(`disetujui_${step.statusKey}`)) return 'completed'
 
-  if (step === 4) {
-    if (item.disetujui_direktur) return 'completed'
-    if (status === 'menunggu_direktur') return 'active'
+  const allStatuses = ['pm', 'hr', 'direktur']
+  const currentIdx = allStatuses.indexOf(step.statusKey)
+  const prevStatuses = allStatuses.slice(0, currentIdx)
+  const allPrevApproved = prevStatuses.every(s => status.includes(`disetujui_${s}`) || item[`disetujui_${s}` as keyof OngoingCuti])
+
+  if (allPrevApproved) {
+    if (status === `menunggu_${step.statusKey}`) return 'active'
     return 'pending'
   }
 
   return 'pending'
 }
 
-const getStepDate = (item: OngoingCuti, step: number) => {
-  if (step === 1) return item.tanggal_mulai
-  if (step === 2) return item.approved_at_pm
-  if (step === 3) return item.approved_at_hr
-  if (step === 4) return item.approved_at_direktur
+const getStepDate = (item: OngoingCuti, stepIndex: number) => {
+  const steps = currentSteps.value
+  const step = steps[stepIndex]
+  if (!step) return null
+  if (stepIndex === 0) return item.tanggal_mulai
+  if (step.statusKey === 'pm') return item.processed_at_pm
+  if (step.statusKey === 'hr') return item.processed_at_hr
+  if (step.statusKey === 'direktur') return item.processed_at_direktur
   return null
 }
 
@@ -98,8 +138,12 @@ const getCardBorderColor = (item: OngoingCuti) => {
 
 onMounted(async () => {
   try {
-    const res = await karyawanApi.getOngoingCuti()
-    ongoingList.value = res.data
+    const [cutiRes, userRes] = await Promise.allSettled([
+      karyawanApi.getOngoingCuti(),
+      authApi.me(),
+    ])
+    if (cutiRes.status === 'fulfilled') ongoingList.value = cutiRes.value.data
+    if (userRes.status === 'fulfilled') userRole.value = userRes.value.data?.role || 'karyawan'
   } catch {
     ongoingList.value = []
   } finally {
@@ -185,111 +229,54 @@ onMounted(async () => {
 
             <div class="flex items-center justify-between relative">
               <div class="absolute top-5 left-0 right-0 h-0.5 bg-gray-200"></div>
-              <div class="absolute top-5 left-0 h-0.5 bg-blue-600 transition-all" :style="{ width: item.status_sekarang.includes('ditolak') ? '25%' : getStepStatus(item, 4) === 'completed' ? '100%' : getStepStatus(item, 3) === 'completed' ? '66%' : getStepStatus(item, 2) === 'completed' ? '33%' : '0%' }"></div>
+              <div
+                class="absolute top-5 left-0 h-0.5 bg-blue-600 transition-all"
+                :style="{
+                  width: item.status_sekarang.includes('ditolak')
+                    ? `${100 / (currentSteps.length * 2)}%`
+                    : getStepStatus(item, currentSteps.length - 1) === 'completed'
+                      ? '100%'
+                      : `${((currentSteps.length - 1) / currentSteps.length) * 100}%`
+                }"
+              ></div>
 
-              <div class="flex flex-col items-center relative z-10">
+              <div
+                v-for="(step, stepIndex) in currentSteps"
+                :key="stepIndex"
+                class="flex flex-col items-center relative z-10"
+              >
                 <div :class="[
                   'w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-4 border-white',
-                  getStepStatus(item, 1) === 'completed' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'
-                ]">
-                  <svg v-if="getStepStatus(item, 1) === 'completed'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span v-else class="text-xs lg:text-sm font-medium">1</span>
-                </div>
-                <p class="text-[10px] lg:text-xs font-medium text-gray-800 mt-2 text-center">Diajukan</p>
-                <p class="text-[10px] lg:text-xs text-gray-400 text-center">{{ formatDateShort(item.tanggal_mulai) }}</p>
-              </div>
-
-              <div class="flex flex-col items-center relative z-10">
-                <div :class="[
-                  'w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-4 border-white',
-                  getStepStatus(item, 2) === 'completed' ? 'bg-blue-600 text-white' :
-                  getStepStatus(item, 2) === 'rejected' ? 'bg-red-500 text-white' :
-                  getStepStatus(item, 2) === 'active' ? 'bg-blue-600 text-white animate-pulse' :
+                  getStepStatus(item, stepIndex) === 'completed' ? 'bg-blue-600 text-white' :
+                  getStepStatus(item, stepIndex) === 'rejected' ? 'bg-red-500 text-white' :
+                  getStepStatus(item, stepIndex) === 'active' ? 'bg-blue-600 text-white animate-pulse' :
                   'bg-gray-200 text-gray-400'
                 ]">
-                  <svg v-if="getStepStatus(item, 2) === 'completed'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-if="getStepStatus(item, stepIndex) === 'completed'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  <svg v-else-if="getStepStatus(item, 2) === 'rejected'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-else-if="getStepStatus(item, stepIndex) === 'rejected'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <svg v-else-if="getStepStatus(item, 2) === 'active'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-else-if="getStepStatus(item, stepIndex) === 'active'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  <span v-else class="text-xs lg:text-sm font-medium">2</span>
+                  <span v-else class="text-xs lg:text-sm font-medium">{{ stepIndex + 1 }}</span>
                 </div>
                 <p :class="[
                   'text-[10px] lg:text-xs font-medium mt-2 text-center',
-                  getStepStatus(item, 2) === 'active' ? 'text-blue-600' :
-                  getStepStatus(item, 2) === 'rejected' ? 'text-red-500' :
-                  getStepStatus(item, 2) === 'completed' ? 'text-gray-800' : 'text-gray-400'
+                  getStepStatus(item, stepIndex) === 'active' ? 'text-blue-600' :
+                  getStepStatus(item, stepIndex) === 'rejected' ? 'text-red-500' :
+                  getStepStatus(item, stepIndex) === 'completed' ? 'text-gray-800' : 'text-gray-400'
                 ]">
-                  {{ getStepStatus(item, 2) === 'completed' ? 'Disetujui PM' :
-                     getStepStatus(item, 2) === 'rejected' ? 'Ditolak PM' :
-                     getStepStatus(item, 2) === 'active' ? 'Menunggu PM' : 'Menunggu PM' }}
-                </p>
-                <p class="text-xs text-gray-400">
-                  {{ getStepDate(item, 2) ? formatDateShort(getStepDate(item, 2)!) : '-' }}
-                </p>
-              </div>
-
-              <div class="flex flex-col items-center relative z-10">
-                <div :class="[
-                  'w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-4 border-white',
-                  getStepStatus(item, 3) === 'completed' ? 'bg-blue-600 text-white' :
-                  getStepStatus(item, 3) === 'active' ? 'bg-blue-600 text-white animate-pulse' :
-                  'bg-gray-200 text-gray-400'
-                ]">
-                  <svg v-if="getStepStatus(item, 3) === 'completed'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <svg v-else-if="getStepStatus(item, 3) === 'active'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <svg v-else class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <p :class="[
-                  'text-[10px] lg:text-xs font-medium mt-2 text-center',
-                  getStepStatus(item, 3) === 'active' ? 'text-blue-600' :
-                  getStepStatus(item, 3) === 'completed' ? 'text-gray-800' : 'text-gray-400'
-                ]">
-                  {{ getStepStatus(item, 3) === 'completed' ? 'Disetujui HRD' : 'Menunggu HRD' }}
+                  {{ getStepStatus(item, stepIndex) === 'completed' && step.statusKey !== 'submitted'
+                    ? (step.statusKey === 'selesai' ? 'Selesai' : `Disetujui ${step.label.replace('Menunggu ', '')}`)
+                    : getStepStatus(item, stepIndex) === 'rejected'
+                      ? `Ditolak ${step.label.replace('Menunggu ', '')}`
+                      : step.label }}
                 </p>
                 <p class="text-[10px] lg:text-xs text-gray-400 text-center">
-                  {{ getStepDate(item, 3) ? formatDateShort(getStepDate(item, 3)!) : '-' }}
-                </p>
-              </div>
-
-              <div class="flex flex-col items-center relative z-10">
-                <div :class="[
-                  'w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-4 border-white',
-                  getStepStatus(item, 4) === 'completed' ? 'bg-blue-600 text-white' :
-                  getStepStatus(item, 4) === 'active' ? 'bg-blue-600 text-white animate-pulse' :
-                  'bg-gray-200 text-gray-400'
-                ]">
-                  <svg v-if="getStepStatus(item, 4) === 'completed'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <svg v-else-if="getStepStatus(item, 4) === 'active'" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <svg v-else class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p :class="[
-                  'text-[10px] lg:text-xs font-medium mt-2 text-center',
-                  getStepStatus(item, 4) === 'active' ? 'text-blue-600' :
-                  getStepStatus(item, 4) === 'completed' ? 'text-gray-800' : 'text-gray-400'
-                ]">
-                  Selesai
-                </p>
-                <p class="text-[10px] lg:text-xs text-gray-400 text-center">
-                  {{ getStepDate(item, 4) ? formatDateShort(getStepDate(item, 4)!) : '-' }}
+                  {{ getStepDate(item, stepIndex) ? formatDateShort(getStepDate(item, stepIndex)!) : '-' }}
                 </p>
               </div>
             </div>

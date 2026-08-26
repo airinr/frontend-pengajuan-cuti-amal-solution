@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import {
   hrApi,
-  type PersetujuanItem,
   type RingkasanPersetujuan,
 } from "../../services/hr.service";
 import { approvalApi, type ApprovalQueueItem } from "../../services/approval.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
 
-const activeTab = ref<"menunggu" | "riwayat">("menunggu");
+const { showError } = useErrorPopup();
+
+const activeTab = ref<"menunggu">("menunggu");
 const pendingList = ref<ApprovalQueueItem[]>([]);
-const historyList = ref<PersetujuanItem[]>([]);
 const ringkasan = ref<RingkasanPersetujuan | null>(null);
 const loading = ref(true);
 const processingId = ref<number | null>(null);
@@ -18,7 +19,7 @@ const showApproveModal = ref(false);
 const approveTarget = ref<ApprovalQueueItem | null>(null);
 
 const showRejectModal = ref(false);
-const rejectTarget = ref<PersetujuanItem | null>(null);
+const rejectTarget = ref<ApprovalQueueItem | null>(null);
 const rejectAlasan = ref("");
 const rejectLoading = ref(false);
 
@@ -57,22 +58,6 @@ const fetchPending = async () => {
   }
 };
 
-const fetchHistory = async () => {
-  try {
-    const res = await hrApi.getApprovalHistory();
-    historyList.value = res.data || [];
-  } catch {
-    // silent fail
-  }
-};
-
-const switchTab = (tab: "menunggu" | "riwayat") => {
-  activeTab.value = tab;
-  if (tab === "riwayat" && historyList.value.length === 0) {
-    fetchHistory();
-  }
-};
-
 const openApproveModal = (item: ApprovalQueueItem) => {
   approveTarget.value = item;
   showApproveModal.value = true;
@@ -95,14 +80,14 @@ const handleApprove = async () => {
       ringkasan.value.disetujui_bulan_ini += 1;
     }
     closeApproveModal();
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     processingId.value = null;
   }
 };
 
-const openRejectModal = (item: PersetujuanItem) => {
+const openRejectModal = (item: ApprovalQueueItem) => {
   rejectTarget.value = item;
   rejectAlasan.value = "";
   showRejectModal.value = true;
@@ -127,16 +112,12 @@ const handleReject = async () => {
       ringkasan.value.ditolak_bulan_ini += 1;
     }
     closeRejectModal();
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     rejectLoading.value = false;
   }
 };
-
-const currentList = computed(() =>
-  activeTab.value === "menunggu" ? pendingList.value : historyList.value
-);
 
 onMounted(async () => {
   loading.value = true;
@@ -153,30 +134,6 @@ onMounted(async () => {
         <h1 class="text-xl lg:text-2xl font-bold text-gray-800">Persetujuan Cuti</h1>
         <p class="text-sm text-gray-500">Kelola pengajuan cuti karyawan yang menunggu persetujuan Anda.</p>
       </div>
-      <div class="flex bg-gray-100 rounded-lg p-0.5">
-        <button
-          @click="switchTab('menunggu')"
-          :class="[
-            'px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer',
-            activeTab === 'menunggu'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-gray-600 hover:text-gray-800',
-          ]"
-        >
-          Menunggu
-        </button>
-        <button
-          @click="switchTab('riwayat')"
-          :class="[
-            'px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer',
-            activeTab === 'riwayat'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-gray-600 hover:text-gray-800',
-          ]"
-        >
-          Riwayat
-        </button>
-      </div>
     </div>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
@@ -187,12 +144,12 @@ onMounted(async () => {
       <div class="flex flex-col lg:flex-row gap-6">
         <!-- Left: Cards -->
         <div class="flex-1 space-y-4">
-          <div v-if="currentList.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
-            {{ activeTab === 'menunggu' ? 'Tidak ada pengajuan yang menunggu' : 'Belum ada riwayat' }}
+          <div v-if="pendingList.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
+            Tidak ada pengajuan yang menunggu
           </div>
 
           <div
-            v-for="item in currentList"
+            v-for="item in pendingList"
             :key="item.id_log_cuti"
             class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
           >
@@ -214,20 +171,10 @@ onMounted(async () => {
                     </div>
                   </div>
                   <span
-                    v-if="activeTab === 'menunggu'"
                     class="flex items-center gap-1.5 text-xs font-medium text-yellow-600 bg-yellow-50 px-2.5 py-1 rounded-full"
                   >
                     <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
                     MENUNGGU
-                  </span>
-                  <span
-                    v-else
-                    :class="[
-                      'text-xs font-medium px-2.5 py-1 rounded-full',
-                      item.status === 'disetujui' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
-                    ]"
-                  >
-                    {{ item.status === 'disetujui' ? 'Disetujui' : 'Ditolak' }}
                   </span>
                 </div>
 
@@ -262,7 +209,7 @@ onMounted(async () => {
                 </div>
 
                 <!-- Actions -->
-                <div v-if="activeTab === 'menunggu'" class="flex items-center justify-end gap-3">
+                <div class="flex items-center justify-end gap-3">
                   <button
                     @click="openRejectModal(item)"
                     :disabled="processingId === item.id_log_cuti"
@@ -334,7 +281,7 @@ onMounted(async () => {
             </div>
 
             <p class="text-sm text-gray-500 mb-4">
-              Kamu akan menolak permintaan dari karyawan. Tolong berikan alasan atas keputusan ini. Alasan ini akan dikirim ke karyawan tersebut.
+              Anda akan menolak permintaan dari karyawan. Tolong berikan alasan atas keputusan ini. Alasan ini akan dikirim ke karyawan tersebut.
             </p>
 
             <div class="mb-6">
