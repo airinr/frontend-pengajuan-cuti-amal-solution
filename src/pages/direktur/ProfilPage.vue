@@ -2,8 +2,10 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { authApi } from "../../services/auth.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
 import type { CurrentUser } from "../../types";
 
+const { showError } = useErrorPopup();
 const router = useRouter();
 
 const user = ref<CurrentUser | null>(null);
@@ -36,8 +38,8 @@ const fetchProfile = async () => {
       email: user.value?.email || "",
       no_telp: user.value?.no_telp || "",
     };
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }

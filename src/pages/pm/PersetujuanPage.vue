@@ -72,8 +72,8 @@ const fetchPending = async () => {
     ]);
     if (pendingRes.status === "fulfilled") pendingList.value = pendingRes.value.data || [];
     if (ringkasanRes.status === "fulfilled") ringkasan.value = ringkasanRes.value.data;
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 };
 

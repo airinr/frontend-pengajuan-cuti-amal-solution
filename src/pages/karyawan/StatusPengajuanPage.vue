@@ -2,6 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { karyawanApi, type OngoingCuti } from '../../services/karyawan.service'
 import { authApi } from '../../services/auth.service'
+import { useErrorPopup } from '../../composables/useErrorPopup'
+
+const { showError } = useErrorPopup()
 
 const ongoingList = ref<OngoingCuti[]>([])
 const loading = ref(true)
@@ -144,7 +147,8 @@ onMounted(async () => {
     ])
     if (cutiRes.status === 'fulfilled') ongoingList.value = cutiRes.value.data
     if (userRes.status === 'fulfilled') userRole.value = userRes.value.data?.role || 'karyawan'
-  } catch {
+  } catch (err) {
+    showError(err)
     ongoingList.value = []
   } finally {
     loading.value = false

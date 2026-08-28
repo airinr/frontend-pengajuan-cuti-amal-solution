@@ -40,7 +40,7 @@ onMounted(async () => {
       no_telp: user.value?.no_telp || '',
     }
   } catch {
-    errorMessage.value = 'Gagal memuat data profil'
+    errorMessage.value = 'Gagal memuat data profil. Periksa koneksi Anda.'
   } finally {
     loading.value = false
   }

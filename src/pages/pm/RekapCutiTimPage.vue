@@ -5,6 +5,9 @@ import {
   type RekapSaldoItem,
   type RekapTimSummary,
 } from "../../services/pm.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+
+const { showError } = useErrorPopup();
 
 const summary = ref<RekapTimSummary | null>(null);
 const allSaldoList = ref<RekapSaldoItem[]>([]);
@@ -28,8 +31,8 @@ const fetchSummary = async () => {
   try {
     const res = await pmApi.getRekapSummary();
     summary.value = res.data;
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 };
 
@@ -40,8 +43,8 @@ const fetchSaldo = async () => {
     totalItems.value = allSaldoList.value.length;
     totalPages.value = Math.ceil(totalItems.value / 10) || 1;
     applyPagination();
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 };
 
@@ -81,21 +84,6 @@ const getBarColor = (item: RekapSaldoItem) => {
   return "bg-blue-500";
 };
 
-const handleExportCsv = async () => {
-  try {
-    const res = await pmApi.exportRekapCsv();
-    const blob = new Blob([res.data as string], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `rekap-cuti-tim-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  } catch {
-    // silent fail
-  }
-};
-
 onMounted(async () => {
   loading.value = true;
   await Promise.all([fetchSummary(), fetchSaldo()]);
@@ -111,15 +99,6 @@ onMounted(async () => {
         <h1 class="text-xl lg:text-2xl font-bold text-gray-800">Rekap Cuti Tim</h1>
         <p class="text-sm text-gray-500">Ringkasan saldo dan penggunaan cuti untuk seluruh anggota tim.</p>
       </div>
-      <button
-        @click="handleExportCsv"
-        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer self-start"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        Export CSV
-      </button>
     </div>
 
     <div v-if="loading" class="flex justify-center items-center py-12">

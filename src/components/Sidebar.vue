@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { authApi } from "../services/auth.service";
 import type { CurrentUser } from "../types";
@@ -17,38 +17,54 @@ const router = useRouter();
 
 const user = ref<CurrentUser | null>(null);
 
-const menuItems = [
+interface MenuItem {
+  label: string;
+  icon: string;
+  route: string;
+}
+
+interface MenuSection {
+  title?: string;
+  items: MenuItem[];
+}
+
+const baseSections: MenuSection[] = [
   {
-    label: "Dashboard",
-    icon: "grid",
-    route: "/karyawan/dashboard",
+    items: [
+      { label: "Dashboard", icon: "grid", route: "/karyawan/dashboard" },
+    ],
   },
   {
-    label: "Pengajuan Cuti",
-    icon: "file-plus",
-    route: "/karyawan/pengajuan-cuti",
+    title: "CUTI",
+    items: [
+      { label: "Pengajuan Cuti", icon: "file-plus", route: "/karyawan/pengajuan-cuti" },
+      { label: "Status Pengajuan Cuti", icon: "clock", route: "/karyawan/status-pengajuan" },
+    ],
   },
   {
-    label: "Status Pengajuan",
-    icon: "clock",
-    route: "/karyawan/status-pengajuan",
-  },
-  {
-    label: "Riwayat Cuti",
-    icon: "history",
-    route: "/karyawan/riwayat-cuti",
-  },
-  {
-    label: "Kalender Cuti",
-    icon: "calendar",
-    route: "/karyawan/kalender-cuti",
-  },
-  {
-    label: "Profil",
-    icon: "user",
-    route: "/karyawan/profil",
+    items: [
+      { label: "Riwayat Cuti", icon: "history", route: "/karyawan/riwayat-cuti" },
+      { label: "Kalender Cuti", icon: "calendar", route: "/karyawan/kalender-cuti" },
+      { label: "Profil", icon: "user", route: "/karyawan/profil" },
+    ],
   },
 ];
+
+const bekerjaSection: MenuSection = {
+  title: "BEKERJA",
+  items: [
+    { label: "Pengajuan Bekerja", icon: "briefcase", route: "/karyawan/pengajuan-bekerja" },
+    { label: "Status Pengajuan Bekerja", icon: "clock-check", route: "/karyawan/status-pengajuan-kerja" },
+  ],
+};
+
+const menuSections = computed(() => {
+  const sections = [...baseSections];
+  if (user.value && user.value.id_departemen === 3) {
+    sections.splice(2, 0, bekerjaSection);
+  }
+  return sections;
+});
 
 const isActive = (itemRoute: string) => {
   return route.path === itemRoute;
@@ -73,7 +89,7 @@ onMounted(async () => {
     const res = await authApi.me();
     user.value = res.data;
   } catch {
-    // silent fail - sidebar will show fallback
+    // silent fail
   }
 });
 </script>
@@ -114,105 +130,101 @@ onMounted(async () => {
       </div>
 
       <nav class="flex-1 p-4 overflow-y-auto">
-        <ul class="space-y-1">
-          <li v-for="item in menuItems" :key="item.route">
-            <button
-              @click="navigateTo(item.route)"
-              :class="[
-                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
-                isActive(item.route)
-                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
-              ]"
-            >
-              <svg
-                v-if="item.icon === 'grid'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        <template v-for="(section, sIndex) in menuSections" :key="sIndex">
+          <p
+            v-if="section.title"
+            class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-4 mb-2 mt-4 first:mt-0 text-left"
+          >
+            {{ section.title }}
+          </p>
+          <ul class="space-y-1 mb-2">
+            <li v-for="item in section.items" :key="item.route">
+              <button
+                @click="navigateTo(item.route)"
+                :class="[
+                  'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                  isActive(item.route)
+                    ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
+                ]"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                />
-              </svg>
-              <svg
-                v-else-if="item.icon === 'file-plus'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <svg
-                v-else-if="item.icon === 'clock'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <svg
-                v-else-if="item.icon === 'history'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <svg
-                v-else-if="item.icon === 'calendar'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <svg
-                v-else-if="item.icon === 'user'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-              {{ item.label }}
-            </button>
-          </li>
-        </ul>
+                <svg
+                  v-if="item.icon === 'grid'"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                <svg
+                  v-else-if="item.icon === 'file-plus'"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <svg
+                  v-else-if="item.icon === 'clock'"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <svg
+                  v-else-if="item.icon === 'history'"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <svg
+                  v-else-if="item.icon === 'calendar'"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <svg
+                  v-else-if="item.icon === 'user'"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <svg
+                  v-else-if="item.icon === 'briefcase'"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <svg
+                  v-else-if="item.icon === 'clock-check'"
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {{ item.label }}
+              </button>
+            </li>
+          </ul>
+        </template>
       </nav>
 
       <div class="p-4 border-t border-gray-100">

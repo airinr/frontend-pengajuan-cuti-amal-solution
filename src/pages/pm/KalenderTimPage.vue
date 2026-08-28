@@ -2,6 +2,9 @@
 import { ref, computed, onMounted } from "vue";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import { karyawanApi, type KalenderItem } from "../../services/karyawan.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+
+const { showError } = useErrorPopup();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -139,8 +142,8 @@ onMounted(async () => {
     ]);
     holidays.value = holidayRes.data.data || [];
     teamCalendar.value = teamRes.data || [];
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 });
 </script>

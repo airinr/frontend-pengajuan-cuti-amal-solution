@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { karyawanApi, type RiwayatCuti } from '../../services/karyawan.service'
+import { useErrorPopup } from '../../composables/useErrorPopup'
 
+const { showError } = useErrorPopup()
 const riwayat = ref<RiwayatCuti[]>([])
 const loading = ref(true)
 const selectedYear = ref(new Date().getFullYear())
@@ -105,7 +107,8 @@ onMounted(async () => {
   try {
     const res = await karyawanApi.getRiwayatCuti()
     riwayat.value = res.data
-  } catch {
+  } catch (err) {
+    showError(err)
     riwayat.value = []
   } finally {
     loading.value = false

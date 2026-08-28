@@ -51,8 +51,8 @@ const fetchPending = async () => {
     if (ringkasanRes.status === "fulfilled" && ringkasanRes.value.data) {
       ringkasan.value = ringkasanRes.value.data;
     }
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 };
 

@@ -6,6 +6,9 @@ import {
   type LogCutiItem,
 } from "../../services/hr.service";
 import { authApi } from "../../services/auth.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+
+const { showError } = useErrorPopup();
 
 const activeTab = ref<"rekapitulasi" | "log">("rekapitulasi");
 const searchQuery = ref("");
@@ -74,8 +77,8 @@ const fetchData = async () => {
     ]);
     if (rekapRes.status === "fulfilled") rekapList.value = rekapRes.value.data || [];
     if (logRes.status === "fulfilled") logList.value = logRes.value.data || [];
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }
@@ -119,8 +122,8 @@ const exportRekapCsv = async () => {
     link.download = `rekapitulasi-cuti-${selectedYear.value}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     exporting.value = false;
   }
@@ -137,8 +140,8 @@ const exportLogCsv = async () => {
     link.download = `log-cuti-${selectedYear.value}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     exporting.value = false;
   }
@@ -152,8 +155,8 @@ onMounted(async () => {
     await fetchData();
     const userRes = await authApi.me().catch(() => null);
     if (userRes?.data) userRole.value = userRes.data.role || "";
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }

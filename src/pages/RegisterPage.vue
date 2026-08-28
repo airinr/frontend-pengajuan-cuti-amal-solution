@@ -3,8 +3,10 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import api from "../lib/api";
 import { authApi } from "../services/auth.service";
+import { useErrorPopup } from "../composables/useErrorPopup";
 import type { RegisterRequest } from "../types";
 
+const { showError } = useErrorPopup();
 const router = useRouter();
 
 const emit = defineEmits<{
@@ -47,8 +49,8 @@ onMounted(async () => {
     if (deptRes.status === "fulfilled")
       departments.value = deptRes.value.data || [];
     if (pmRes.status === "fulfilled") pmList.value = pmRes.value.data || [];
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 });
 

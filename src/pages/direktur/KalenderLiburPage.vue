@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+
+const { showError } = useErrorPopup();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -146,8 +149,8 @@ const fetchHolidays = async (year: number) => {
     if (res.data?.data) {
       holidays.value = res.data.data;
     }
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }

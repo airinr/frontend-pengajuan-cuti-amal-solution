@@ -6,7 +6,10 @@ import {
   type DaftarCutiKaryawan,
 } from "../../services/hr.service";
 import { authApi } from "../../services/auth.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
 import type { CurrentUser } from "../../types";
+
+const { showError } = useErrorPopup();
 
 const searchQuery = ref("");
 const filterDepartemen = ref("semua");
@@ -117,8 +120,8 @@ const fetchData = async () => {
       daftarList.value = daftarRes.value.data || [];
     if (userRes.status === "fulfilled")
       currentUser.value = userRes.value.data;
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }

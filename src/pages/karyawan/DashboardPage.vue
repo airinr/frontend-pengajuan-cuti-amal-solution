@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { authApi } from '../../services/auth.service'
 import { karyawanApi, type OngoingCuti, type ActivityItem } from '../../services/karyawan.service'
 import { holidayApi, type Holiday } from '../../services/holiday.service'
+import { getNetworkErrorMessage } from '../../lib/api'
 import type { CurrentUser } from '../../types'
 
 const router = useRouter()
@@ -13,6 +14,7 @@ const ongoingList = ref<OngoingCuti[]>([])
 const upcomingHolidays = ref<Holiday[]>([])
 const activities = ref<ActivityItem[]>([])
 const loading = ref(true)
+const error = ref<string | null>(null)
 
 const totalCuti = computed(() => user.value?.total_cuti ?? '-')
 const sisaCuti = computed(() => user.value?.sisa_cuti ?? '-')
@@ -54,7 +56,9 @@ const goToPengajuan = () => {
   router.push('/karyawan/pengajuan-cuti')
 }
 
-onMounted(async () => {
+const fetchData = async () => {
+  loading.value = true
+  error.value = null
   try {
     const [userRes, ongoingRes, holidayRes, activitiesRes] = await Promise.allSettled([
       authApi.me(),
@@ -72,12 +76,14 @@ onMounted(async () => {
         .sort((a, b) => a.date.localeCompare(b.date))
     }
     if (activitiesRes.status === 'fulfilled') activities.value = activitiesRes.value.data || []
-  } catch {
-    // silent fail
+  } catch (err: any) {
+    error.value = getNetworkErrorMessage(err)
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(fetchData)
 </script>
 
 <template>
@@ -97,6 +103,18 @@ onMounted(async () => {
 
     <div v-if="loading" class="flex justify-center items-center py-12">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+
+    <div v-else-if="error" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+      <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      </div>
+      <p class="text-gray-600 text-sm mb-4">{{ error }}</p>
+      <button @click="fetchData" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+        Muat Ulang
+      </button>
     </div>
 
     <template v-else>
@@ -159,7 +177,6 @@ onMounted(async () => {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div class="lg:col-span-2 space-y-4 lg:space-y-6">
-          <!-- Pengajuan Sedang Diproses -->
           <div class="bg-white rounded-xl shadow-sm border border-gray-100">
             <div class="p-4 lg:p-6 border-b border-gray-100">
               <div class="flex justify-between items-center">
@@ -194,7 +211,6 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Hari Libur Mendatang -->
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
             <h3 class="font-semibold text-gray-800 mb-4">Hari Libur Mendatang</h3>
             <div v-if="upcomingHolidays.length > 0" class="space-y-2">
@@ -226,7 +242,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Aktivitas Terbaru -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
           <div class="flex items-center gap-2 mb-4">
             <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
