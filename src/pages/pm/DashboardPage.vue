@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { authApi } from "../../services/auth.service";
 import {
   pmApi,
@@ -14,6 +15,7 @@ import {
 import { getNetworkErrorMessage } from "../../lib/api";
 import type { CurrentUser } from "../../types";
 
+const { t } = useI18n();
 const router = useRouter();
 
 const user = ref<CurrentUser | null>(null);
@@ -25,9 +27,9 @@ const error = ref<string | null>(null);
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
-  if (hour < 12) return "Selamat Pagi";
-  if (hour < 18) return "Selamat Siang";
-  return "Selamat Malam";
+  if (hour < 12) return t('greeting.morning');
+  if (hour < 18) return t('greeting.afternoon');
+  return t('greeting.evening');
 });
 
 const goToKalender = () => {
@@ -74,10 +76,10 @@ onMounted(fetchData);
   <div class="space-y-4 lg:space-y-6">
     <div>
       <h1 class="text-xl lg:text-2xl font-bold text-gray-800">
-        {{ greeting }}, Project Manager
+        {{ greeting }}, {{ t('nav.managerView') }}
       </h1>
       <p class="text-sm text-gray-500">
-        Berikut adalah ringkasan tim dan status cuti Anda hari ini.
+        {{ t('dashboard.leaveSummary') }}
       </p>
     </div>
 
@@ -95,7 +97,7 @@ onMounted(fetchData);
       </div>
       <p class="text-gray-600 text-sm mb-4">{{ error }}</p>
       <button @click="fetchData" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
-        Muat Ulang
+        {{ t('common.retry') }}
       </button>
     </div>
 
@@ -107,11 +109,11 @@ onMounted(fetchData);
           <p
             class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1"
           >
-            Sisa Cuti
+            {{ t('dashboard.remainingLeave') }}
           </p>
           <p class="text-2xl lg:text-3xl font-bold text-gray-800">
             {{ stats?.sisa_cuti ?? "-" }}
-            <span class="text-sm font-normal text-gray-500">Hari</span>
+            <span class="text-sm font-normal text-gray-500">            {{ t('dashboard.days') }}</span>
           </p>
         </div>
 
@@ -121,11 +123,11 @@ onMounted(fetchData);
           <p
             class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1"
           >
-            Cuti Terpakai
+            {{ t('dashboard.leaveUsed') }}
           </p>
           <p class="text-2xl lg:text-3xl font-bold text-gray-800">
             {{ stats?.cuti_terpakai ?? "-" }}
-            <span class="text-sm font-normal text-gray-500">Hari</span>
+            <span class="text-sm font-normal text-gray-500">            {{ t('dashboard.days') }}</span>
           </p>
         </div>
 
@@ -135,12 +137,12 @@ onMounted(fetchData);
           <p
             class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1"
           >
-            Menunggu
+            {{ t('status.waiting') }}
           </p>
           <div class="flex items-center gap-2">
             <p class="text-2xl lg:text-3xl font-bold text-gray-800">
               {{ stats?.tim_menunggu_appoval ?? "-" }}
-              <span class="text-sm font-normal text-gray-500">Tim</span>
+              <span class="text-sm font-normal text-gray-500">{{ t('common.total') }}</span>
             </p>
             <div
               v-if="stats && stats.tim_menunggu_appoval > 0"
@@ -169,18 +171,18 @@ onMounted(fetchData);
           <p
             class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1"
           >
-            Rekap Bulan Ini
+              {{ t('dashboard.monthRecap') }}
           </p>
           <p class="text-2xl lg:text-3xl font-bold text-gray-800">
             {{ stats?.total_pengajuan_tim ?? "-" }}
-            <span class="text-sm font-normal text-gray-500">Pengajuan</span>
+            <span class="text-sm font-normal text-gray-500">            {{ t('dashboard.submissions') }}</span>
           </p>
           <div class="flex items-center gap-2 mt-1">
             <span class="text-xs text-green-600 font-medium"
-              >{{ stats?.total_pengajuan_acc_tim ?? 0 }} Setuju</span
+              >{{ stats?.total_pengajuan_acc_tim ?? 0 }} {{ t('dashboard.approve') }}</span
             >
             <span class="text-xs text-red-500 font-medium"
-              >{{ stats?.total_pengajuan_decline_tim ?? 0 }} Tolak</span
+              >{{ stats?.total_pengajuan_decline_tim ?? 0 }} {{ t('dashboard.reject') }}</span
             >
           </div>
         </div>
@@ -193,13 +195,13 @@ onMounted(fetchData);
           <div class="p-4 lg:p-6 border-b border-gray-100">
             <div class="flex justify-between items-center">
               <h3 class="font-semibold text-gray-800">
-                Cuti Anggota Tim Mendatang
+                {{ t('dashboard.teamLeave') }}
               </h3>
               <button
                 @click="goToKalender"
                 class="text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
               >
-                Lihat Kalender
+                {{ t('dashboard.viewCalendar') }}
               </button>
             </div>
           </div>
@@ -208,7 +210,7 @@ onMounted(fetchData);
               v-if="pendingLeaves.length === 0"
               class="text-center text-gray-400 text-sm py-4"
             >
-              Tidak ada cuti mendatang
+              {{ t('dashboard.noTeamLeave') }}
             </div>
             <div v-else class="space-y-4">
               <div
@@ -255,7 +257,7 @@ onMounted(fetchData);
                     ]"
                   >
                     {{
-                      item.status === "menunggu_pm" ? "Menunggu" : item.status
+                      item.status === "menunggu_pm" ? t('status.waiting') : item.status
                     }}
                   </span>
                 </div>
@@ -266,14 +268,14 @@ onMounted(fetchData);
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-100">
           <div class="p-4 lg:p-6 border-b border-gray-100">
-            <h3 class="font-semibold text-gray-800">Aktivitas Terbaru</h3>
+            <h3 class="font-semibold text-gray-800">{{ t('dashboard.latestActivities') }}</h3>
           </div>
           <div class="p-4 lg:p-6">
             <div
               v-if="activities.length === 0"
               class="text-center text-gray-400 text-sm py-4"
             >
-              Belum ada aktivitas
+              {{ t('dashboard.noActivities') }}
             </div>
             <div v-else class="space-y-4">
               <div

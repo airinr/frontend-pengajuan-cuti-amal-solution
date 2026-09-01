@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   direkturApi,
   type KaryawanItem,
@@ -9,6 +10,7 @@ import { authApi } from "../../services/auth.service";
 import { departmentApi } from "../../services/department.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 
+const { t } = useI18n();
 const { showError } = useErrorPopup();
 
 const activeTab = ref<"karyawan" | "departemen">("karyawan");
@@ -324,7 +326,7 @@ const handleDeptChange = (event: Event) => {
     <!-- Header -->
     <div>
       <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-        Data Karyawan
+        {{ t('employee.title') }}
       </h1>
       <p class="text-sm text-gray-500 mt-1">
         Kelola informasi personalia, alokasi departemen, dan penugasan Project Manager dalam satu dasbor terpusat.
@@ -336,7 +338,7 @@ const handleDeptChange = (event: Event) => {
       <!-- Total Karyawan -->
       <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-          TOTAL KARYAWAN
+          {{ t('dashboard.totalEmployees') }}
         </p>
         <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-2">
           {{ summary.total_karyawan }}

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import { penambahanKerjaApi } from "../../services/penambahanKerja.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 
+const { t } = useI18n();
 const { showError } = useErrorPopup();
 const router = useRouter();
 
@@ -95,9 +97,9 @@ onMounted(async () => {
     <div v-else class="flex flex-col lg:flex-row gap-4 lg:gap-6">
       <div class="flex-1">
         <div class="mb-6">
-          <h1 class="text-2xl font-bold text-gray-800 mb-2">Pengajuan Tetap Bekerja</h1>
+          <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ t('workRequest.title') }}</h1>
           <p class="text-sm text-gray-500">
-            Isi formulir di bawah ini untuk mengajukan permohonan tetap bekerja pada hari cuti bersama.
+            {{ t('workRequest.subtitle') }}
           </p>
         </div>
 
@@ -108,7 +110,7 @@ onMounted(async () => {
 
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tanggal Cuti Bersama</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('workRequest.selectCollectiveLeave') }}</label>
               <div class="relative">
                 <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +135,7 @@ onMounted(async () => {
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Alasan Tetap Bekerja</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('workRequest.workReason') }}</label>
               <textarea
                 v-model="form.keterangan"
                 rows="4"
@@ -156,7 +158,7 @@ onMounted(async () => {
               class="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
             >
               <div v-if="submitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-              {{ submitting ? "Mengirim..." : "Ajukan Tetap Bekerja Ini" }}
+              {{ submitting ? t('workRequest.submitting') : t('workRequest.submit') }}
             </button>
           </div>
         </div>
@@ -168,7 +170,7 @@ onMounted(async () => {
             <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
-            <h3 class="font-bold text-gray-800 text-lg">Kebijakan Pengajuan</h3>
+            <h3 class="font-bold text-gray-800 text-lg">{{ t('workRequest.policy') }}</h3>
           </div>
           <ul class="space-y-4">
             <li class="flex items-start gap-3">
@@ -178,7 +180,7 @@ onMounted(async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700">
-                Pengajuan yang disetujui <strong>tidak akan memotong</strong> saldo cuti tahunan Anda.
+                {{ t('workRequest.noDeduction') }}
               </span>
             </li>
           </ul>
@@ -198,13 +200,13 @@ onMounted(async () => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
       </div>
-      <h3 class="text-lg font-semibold text-gray-800 mb-2">Pengajuan Berhasil Dikirim!</h3>
-      <p class="text-sm text-gray-500 mb-6">Pengajuan tetap bekerja Anda akan diproses oleh atasan.</p>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('workRequest.submitSuccess') }}</h3>
+      <p class="text-sm text-gray-500 mb-6">{{ t('workRequest.submitSuccessMsg') }}</p>
       <button
         @click="showSuccessPopup = false"
         class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
       >
-        Tutup
+        {{ t('workRequest.close') }}
       </button>
     </div>
   </div>

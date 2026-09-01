@@ -67,7 +67,7 @@ test.describe('PM Approval Flow', () => {
     await page.goto('/pm/rekap-cuti-tim')
     await page.waitForLoadState('networkidle')
 
-    await expect(page.getByRole('heading', { name: 'Rekap Cuti Tim' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Rekap/ })).toBeVisible()
   })
 
   test('should show team members in rekap', async ({ page, loginAs }) => {

@@ -1,21 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   penambahanKerjaApi,
   type PenambahanKerjaItem,
 } from "../../services/penambahanKerja.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 
+const { t } = useI18n();
 const { showError } = useErrorPopup();
 
 const loading = ref(true);
 const statusList = ref<PenambahanKerjaItem[]>([]);
 
-const steps = [
-  { label: "Diajukan", statusKey: "submitted" },
-  { label: "Menunggu PM", statusKey: "pm" },
-  { label: "Selesai", statusKey: "selesai" },
-];
+const steps = computed(() => [
+  { label: t('status.submitted'), statusKey: "submitted" },
+  { label: t('status.waitingPM'), statusKey: "pm" },
+  { label: t('status.completed'), statusKey: "selesai" },
+]);
 
 const formatDateRange = (start: string, end: string) => {
   const s = new Date(start);
@@ -80,9 +82,9 @@ onMounted(async () => {
 <template>
   <div>
     <div class="bg-blue-50 rounded-xl p-6 mb-8">
-      <h1 class="text-2xl font-bold text-gray-800 mb-2">Status Pengajuan Kerja</h1>
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ t('workStatus.title') }}</h1>
       <p class="text-sm text-gray-600">
-        Pantau proses persetujuan pengajuan tetap bekerja Anda secara real-time.
+        {{ t('workStatus.subtitle') }}
       </p>
     </div>
 
@@ -91,13 +93,13 @@ onMounted(async () => {
     </div>
 
     <div v-else>
-      <h2 class="text-lg font-semibold text-gray-800 mb-4">Pengajuan Aktif</h2>
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">{{ t('workStatus.activeRequests') }}</h2>
 
       <div
         v-if="statusList.length === 0"
         class="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400 text-sm"
       >
-        Tidak ada pengajuan aktif
+        {{ t('workStatus.noActive') }}
       </div>
 
       <div v-else class="space-y-4 lg:space-y-6">
@@ -145,7 +147,7 @@ onMounted(async () => {
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Status Saat Ini</span>
+                <span>{{ t('workStatus.currentStatus') }}</span>
                 <span class="font-semibold">{{ getStatusConfig(item.status).label }}</span>
               </div>
             </div>

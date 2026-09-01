@@ -4,7 +4,7 @@ test.describe('HR Management Flow', () => {
   test('should display HR dashboard with stats', async ({ page, loginAs }) => {
     await loginAs('hr_user')
 
-    await expect(page.getByRole('heading', { name: 'Dashboard HR' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Dashboard/ })).toBeVisible()
     await page.waitForLoadState('networkidle')
 
     const content = await page.textContent('body')

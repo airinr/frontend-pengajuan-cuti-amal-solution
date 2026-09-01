@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { authApi } from "../services/auth.service";
 import type { CurrentUser } from "../types";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   open: boolean;
@@ -17,28 +20,20 @@ const router = useRouter();
 
 const user = ref<CurrentUser | null>(null);
 
-const managerMenu = [
-  { label: "Dashboard", icon: "grid", route: "/pm/dashboard" },
-  { label: "Persetujuan Cuti", icon: "check-circle", route: "/pm/persetujuan" },
-  {
-    label: "Persetujuan Bekerja",
-    icon: "briefcase",
-    route: "/pm/persetujuan-bekerja",
-  },
-  { label: "Rekap Cuti Tim", icon: "clipboard", route: "/pm/rekap-cuti-tim" },
-  { label: "Kalender Tim", icon: "calendar", route: "/pm/kalender-tim" },
-];
+const managerMenu = computed(() => [
+  { label: t('nav.dashboard'), icon: "grid", route: "/pm/dashboard" },
+  { label: t('approval.leaveApproval'), icon: "check-circle", route: "/pm/persetujuan" },
+  { label: t('approval.workApproval'), icon: "briefcase", route: "/pm/persetujuan-bekerja" },
+  { label: t('nav.rekapCutiTim'), icon: "clipboard", route: "/pm/rekap-cuti-tim" },
+  { label: t('nav.kalenderTim'), icon: "calendar", route: "/pm/kalender-tim" },
+]);
 
-const personalMenu = [
-  { label: "Pengajuan Saya", icon: "file-plus", route: "/pm/pengajuan-cuti" },
-  {
-    label: "Status Pengajuan",
-    icon: "clipboard-list",
-    route: "/pm/status-pengajuan",
-  },
-  { label: "Riwayat Cuti", icon: "history", route: "/pm/riwayat-cuti" },
-  { label: "Profil", icon: "user", route: "/pm/profil" },
-];
+const personalMenu = computed(() => [
+  { label: t('nav.pengajuanSaya'), icon: "file-plus", route: "/pm/pengajuan-cuti" },
+  { label: t('nav.statusPengajuan'), icon: "clipboard-list", route: "/pm/status-pengajuan" },
+  { label: t('nav.riwayatCuti'), icon: "history", route: "/pm/riwayat-cuti" },
+  { label: t('nav.profil'), icon: "user", route: "/pm/profil" },
+]);
 
 const isActive = (itemRoute: string) => {
   return route.path === itemRoute;
@@ -95,7 +90,7 @@ onMounted(async () => {
               d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"
             />
           </svg>
-          AjuanCuti
+          {{ t('app.name') }}
         </h1>
         <button
           @click="emit('close')"
@@ -122,7 +117,7 @@ onMounted(async () => {
         <p
           class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4"
         >
-          Manager View
+          {{ t('nav.managerView') }}
         </p>
         <ul class="space-y-1 mb-6">
           <li v-for="item in managerMenu" :key="item.route">
@@ -219,7 +214,7 @@ onMounted(async () => {
         <p
           class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4"
         >
-          Personal
+          {{ t('nav.personal') }}
         </p>
         <ul class="space-y-1">
           <li v-for="item in personalMenu" :key="item.route">

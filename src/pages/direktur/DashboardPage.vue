@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { direkturApi } from "../../services/direktur.service";
 import {
   karyawanApi,
@@ -8,6 +9,7 @@ import {
 } from "../../services/karyawan.service";
 import { getNetworkErrorMessage } from "../../lib/api";
 
+const { t } = useI18n();
 const router = useRouter();
 
 interface DirekturStats {
@@ -116,11 +118,10 @@ onMounted(fetchData);
   <div class="space-y-6 max-w-7xl mx-auto">
     <div>
       <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-        Dashboard Direktur
+        {{ t('dashboard.title') }} Direktur
       </h1>
       <p class="text-sm text-gray-500 mt-1">
-        Ringkasan aktivitas cuti dan persetujuan yang membutuhkan perhatian Anda
-        hari ini.
+        {{ t('dashboard.leaveSummary') }}
       </p>
     </div>
 
@@ -136,7 +137,7 @@ onMounted(fetchData);
       </div>
       <p class="text-gray-600 text-sm mb-4">{{ error }}</p>
       <button @click="fetchData" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
-        Muat Ulang
+        {{ t('common.retry') }}
       </button>
     </div>
 
@@ -153,7 +154,7 @@ onMounted(fetchData);
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">TOTAL KARYAWAN</p>
+            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">{{ t('dashboard.totalEmployees') }}</p>
           </div>
           <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight">{{ stats.total_karyawan }}</p>
           <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50/40 rounded-full blur-xl pointer-events-none"></div>
@@ -169,7 +170,7 @@ onMounted(fetchData);
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12v3l2 2" />
               </svg>
             </div>
-            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">MENUNGGU</p>
+            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">{{ t('status.waiting') }}</p>
           </div>
           <p class="text-3xl lg:text-4xl font-extrabold text-red-600 mt-1 tracking-tight">{{ stats.menunggu }}</p>
           <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-red-50/40 rounded-full blur-xl pointer-events-none"></div>
@@ -200,7 +201,7 @@ onMounted(fetchData);
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 15l2-2-2-2" />
               </svg>
             </div>
-            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">CUTI MENDATANG</p>
+            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">{{ t('dashboard.upcomingLeave') }}</p>
           </div>
           <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight">{{ stats.total_cuti_bulan_depan }}</p>
           <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-slate-50/40 rounded-full blur-xl pointer-events-none"></div>
@@ -211,11 +212,11 @@ onMounted(fetchData);
         <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between min-h-[260px]">
           <div>
             <div class="flex items-center justify-between pb-4 border-b border-gray-50">
-              <h2 class="text-base lg:text-lg font-bold text-gray-900">Cuti Karyawan Mendatang</h2>
-              <button @click="goToKalender" class="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer transition-colors">Lihat Kalender</button>
+              <h2 class="text-base lg:text-lg font-bold text-gray-900">{{ t('dashboard.teamLeaveUpcoming') }}</h2>
+              <button @click="goToKalender" class="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer transition-colors">{{ t('dashboard.viewCalendar') }}</button>
             </div>
             <div v-if="cutiMendatangList.length === 0" class="py-10 text-center text-gray-400 text-xs font-medium">
-              Tidak ada cuti karyawan mendatang saat ini.
+              {{ t('dashboard.noTeamLeave') }}
             </div>
             <div v-else class="pt-4 space-y-3">
               <div v-for="(item, index) in cutiMendatangList" :key="index" class="flex items-center justify-between py-2">
@@ -233,9 +234,9 @@ onMounted(fetchData);
         </div>
 
         <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
-          <h2 class="text-base lg:text-lg font-bold text-gray-900 mb-5">Aktivitas Terbaru</h2>
+          <h2 class="text-base lg:text-lg font-bold text-gray-900 mb-5">{{ t('dashboard.latestActivities') }}</h2>
           <div v-if="activities.length === 0" class="py-10 text-center text-gray-400 text-xs font-medium">
-            Belum ada aktivitas terbaru.
+            {{ t('dashboard.noActivities') }}
           </div>
           <div v-else class="relative space-y-6 pl-1">
             <div class="absolute left-[19px] top-4 bottom-5 w-[1.5px] bg-gray-100"></div>

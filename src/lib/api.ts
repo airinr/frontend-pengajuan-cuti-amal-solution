@@ -1,4 +1,7 @@
 import axios from "axios";
+import i18n from "../i18n";
+
+const { t } = i18n.global;
 
 const api = axios.create({
   baseURL: "/api",
@@ -37,20 +40,20 @@ api.interceptors.response.use(
 export function getNetworkErrorMessage(error: any): string {
   if (!error.response) {
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      return 'Permintaan melewati batas waktu. Server mungkin sedang lambat.';
+      return t('network.timeout');
     }
     if (error.message === 'Network Error' || !navigator.onLine) {
-      return 'Tidak ada koneksi ke server. Periksa jaringan Anda.';
+      return t('network.noConnection');
     }
-    return 'Tidak dapat terhubung ke server.';
+    return t('network.cannotConnect');
   }
 
   const status = error.response.status;
-  if (status === 403) return 'Anda tidak memiliki akses ke data ini.';
-  if (status === 404) return 'Data tidak ditemukan.';
-  if (status >= 500) return 'Server sedang bermasalah. Silakan coba lagi nanti.';
+  if (status === 403) return t('network.forbidden');
+  if (status === 404) return t('network.notFound');
+  if (status >= 500) return t('network.serverError');
 
-  return error.response?.data?.detail || error.response?.data?.message || 'Terjadi kesalahan, silakan coba lagi.';
+  return error.response?.data?.detail || error.response?.data?.message || t('network.unknown');
 }
 
 export default api;

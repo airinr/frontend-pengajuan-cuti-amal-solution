@@ -1,4 +1,7 @@
 import { ref } from "vue";
+import i18n from "../i18n";
+
+const { t } = i18n.global;
 
 const isVisible = ref(false);
 const errorMessage = ref("");
@@ -13,7 +16,7 @@ export function useErrorPopup() {
     } else if (error?.message) {
       errorMessage.value = error.message;
     } else {
-      errorMessage.value = "Terjadi kesalahan, silakan coba lagi.";
+      errorMessage.value = t('network.unknown');
     }
     errorCode.value = error?.response?.status || null;
     isVisible.value = true;

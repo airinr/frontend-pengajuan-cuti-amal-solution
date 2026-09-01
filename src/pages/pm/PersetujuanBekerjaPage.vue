@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   approvalApi,
   type PenambahanKerjaQueueItem,
 } from "../../services/approval.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 
+const { t } = useI18n();
 const { showError } = useErrorPopup();
 
 const pendingList = ref<PenambahanKerjaQueueItem[]>([]);
@@ -126,10 +128,10 @@ onMounted(async () => {
     <!-- Header -->
     <div class="mb-6">
       <h1 class="text-xl lg:text-2xl font-bold text-gray-800">
-        Persetujuan Bekerja
+        {{ t('approval.workApproval') }}
       </h1>
       <p class="text-sm text-gray-500">
-        Kelola pengajuan tetap bekerja anggota tim Anda.
+        {{ t('approval.manageTeamWork') }}
       </p>
     </div>
 
@@ -139,7 +141,7 @@ onMounted(async () => {
 
     <template v-else>
       <div v-if="pendingList.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
-        Tidak ada pengajuan yang menunggu persetujuan
+        {{ t('approval.noPending') }}
       </div>
 
       <div v-else class="space-y-4">
@@ -164,18 +166,18 @@ onMounted(async () => {
                 </div>
                 <span class="flex items-center gap-1.5 text-xs font-medium text-yellow-600 bg-yellow-50 px-2.5 py-1 rounded-full">
                   <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
-                  MENUNGGU
+                  {{ t('status.pending').toUpperCase() }}
                 </span>
               </div>
 
               <!-- Info Grid -->
               <div class="grid grid-cols-2 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Tanggal</p>
+                  <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.dateRange') }}</p>
                   <p class="text-xs font-medium text-gray-700 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
                 </div>
                 <div>
-                  <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Keterangan</p>
+                  <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.keterangan') }}</p>
                   <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.keterangan || '-' }}</p>
                 </div>
               </div>
@@ -190,7 +192,7 @@ onMounted(async () => {
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Tolak
+                  {{ t('approval.reject') }}
                 </button>
                 <button
                   @click="openApproveModal(item)"
@@ -200,7 +202,7 @@ onMounted(async () => {
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  Setujui
+                  {{ t('approval.approve') }}
                 </button>
               </div>
             </div>
@@ -219,7 +221,7 @@ onMounted(async () => {
         >
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-bold text-gray-800">Konfirmasi Persetujuan</h3>
+              <h3 class="text-lg font-bold text-gray-800">{{ t('approval.approveConfirm') }}</h3>
               <button
                 @click="closeApproveModal"
                 class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -231,8 +233,8 @@ onMounted(async () => {
             </div>
 
             <p class="text-sm text-gray-500 mb-4">
-              Anda akan menyetujui pengajuan bekerja dari <span class="font-semibold text-gray-800">{{ approveTarget?.nama }}</span>.
-              Apakah Anda yakin ingin menyetujui?
+              {{ t('approval.approveMessage') }} <span class="font-semibold text-gray-800">{{ approveTarget?.nama }}</span>.
+              {{ t('approval.approveQuestion') }}
             </p>
 
             <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
@@ -245,14 +247,14 @@ onMounted(async () => {
                 @click="closeApproveModal"
                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               >
-                Batal
+                {{ t('common.cancel') }}
               </button>
               <button
                 @click="handleApprove"
                 :disabled="processingId !== null"
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {{ processingId ? 'Menyetujui...' : 'Setujui' }}
+                {{ processingId ? t('approval.approving') : t('approval.approve') }}
               </button>
             </div>
           </div>
@@ -270,7 +272,7 @@ onMounted(async () => {
         >
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-bold text-gray-800">Penolakan Bekerja</h3>
+              <h3 class="text-lg font-bold text-gray-800">{{ t('approval.rejectTitle') }}</h3>
               <button
                 @click="closeRejectModal"
                 class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -282,17 +284,17 @@ onMounted(async () => {
             </div>
 
             <p class="text-sm text-gray-500 mb-4">
-              Anda akan menolak permintaan dari karyawan. Tolong berikan alasan atas keputusan ini.
+              {{ t('approval.rejectMessage') }}
             </p>
 
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-1">
-                Alasan Penolakan <span class="text-red-500">*</span>
+                {{ t('approval.rejectReason') }} <span class="text-red-500">*</span>
               </label>
               <textarea
                 v-model="rejectAlasan"
                 rows="3"
-                placeholder="contoh: Tidak ada kebutuhan operasional yang mendesak"
+                placeholder="{{ t('approval.rejectPlaceholder') }}"
                 class="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               ></textarea>
             </div>
@@ -302,14 +304,14 @@ onMounted(async () => {
                 @click="closeRejectModal"
                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               >
-                Batal
+                {{ t('common.cancel') }}
               </button>
               <button
                 @click="handleReject"
                 :disabled="!rejectAlasan.trim() || rejectLoading"
                 class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {{ rejectLoading ? 'Mengirim...' : 'Konfirmasi Tolak' }}
+                {{ rejectLoading ? t('approval.rejecting') : t('approval.confirmReject') }}
               </button>
             </div>
           </div>

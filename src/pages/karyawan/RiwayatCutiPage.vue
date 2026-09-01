@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { karyawanApi, type RiwayatCuti } from '../../services/karyawan.service'
 import { useErrorPopup } from '../../composables/useErrorPopup'
+import { useCalendarNames } from '../../composables/useCalendarNames'
 
+const { t } = useI18n()
 const { showError } = useErrorPopup()
+const { monthNamesShort } = useCalendarNames()
 const riwayat = ref<RiwayatCuti[]>([])
 const loading = ref(true)
 const selectedYear = ref(new Date().getFullYear())
@@ -16,14 +20,14 @@ const years = computed(() => {
   return Array.from({ length: 5 }, (_, i) => currentYear - i)
 })
 
-const statusOptions = [
-  { value: 'semua', label: 'Semua Status' },
-  { value: 'disetujui_pm', label: 'Disetujui PM' },
-  { value: 'disetujui_direktur', label: 'Disetujui Direktur' },
-  { value: 'menunggu_pm', label: 'Menunggu PM' },
-  { value: 'menunggu_direktur', label: 'Menunggu Direktur' },
-  { value: 'ditolak', label: 'Ditolak' },
-]
+const statusOptions = computed(() => [
+  { value: 'semua', label: t('history.allStatus') },
+  { value: 'disetujui_pm', label: t('status.approvedPM') },
+  { value: 'disetujui_direktur', label: t('status.approvedDirector') },
+  { value: 'menunggu_pm', label: t('status.waitingPM') },
+  { value: 'menunggu_direktur', label: t('status.waitingDirector') },
+  { value: 'ditolak', label: t('status.rejected') },
+])
 
 const filteredRiwayat = computed(() => {
   return riwayat.value.filter(item => {
@@ -44,8 +48,7 @@ const paginatedRiwayat = computed(() => {
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
   const day = date.getDate()
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-  const month = monthNames[date.getMonth()]
+  const month = monthNamesShort.value[date.getMonth()]
   const year = date.getFullYear()
   return `${day} ${month} ${year}`
 }
@@ -53,17 +56,16 @@ const formatDate = (dateStr: string) => {
 const formatDateRange = (start: string, end: string) => {
   const s = new Date(start)
   const e = new Date(end)
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 
   if (start === end) {
-    return `${s.getDate()} ${monthNames[s.getMonth()]} ${s.getFullYear()}`
+    return `${s.getDate()} ${monthNamesShort.value[s.getMonth()]} ${s.getFullYear()}`
   }
 
   if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
-    return `${s.getDate()} - ${e.getDate()} ${monthNames[s.getMonth()]} ${s.getFullYear()}`
+    return `${s.getDate()} - ${e.getDate()} ${monthNamesShort.value[s.getMonth()]} ${s.getFullYear()}`
   }
 
-  return `${s.getDate()} ${monthNames[s.getMonth()]} - ${e.getDate()} ${monthNames[e.getMonth()]} ${s.getFullYear()}`
+  return `${s.getDate()} ${monthNamesShort.value[s.getMonth()]} - ${e.getDate()} ${monthNamesShort.value[e.getMonth()]} ${s.getFullYear()}`
 }
 
 const getStatusStyle = (status: string) => {
@@ -79,11 +81,11 @@ const getStatusStyle = (status: string) => {
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    'disetujui_pm': 'Disetujui',
-    'disetujui_direktur': 'Disetujui',
-    'menunggu_pm': 'Menunggu',
-    'menunggu_direktur': 'Menunggu',
-    'ditolak': 'Ditolak',
+    'disetujui_pm': t('status.approved'),
+    'disetujui_direktur': t('status.approved'),
+    'menunggu_pm': t('status.waiting'),
+    'menunggu_direktur': t('status.waiting'),
+    'ditolak': t('status.rejected'),
   }
   return labels[status] || status
 }
@@ -118,8 +120,8 @@ onMounted(async () => {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-800 mb-2">Riwayat Cuti</h1>
-    <p class="text-sm text-gray-500 mb-6">Lacak rekam jejak dan status pengajuan cuti Anda sebelumnya.</p>
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ t('history.title') }}</h1>
+    <p class="text-sm text-gray-500 mb-6">{{ t('history.subtitle') }}</p>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -159,17 +161,17 @@ onMounted(async () => {
         <table class="w-full">
           <thead>
             <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-              <th class="px-6 py-4">Tanggal Cuti</th>
-              <th class="px-6 py-4">Durasi</th>
-              <th class="px-6 py-4">Jenis Cuti</th>
-              <th class="px-6 py-4">Backup</th>
-              <th class="px-6 py-4">Status</th>
+              <th class="px-6 py-4">{{ t('history.leaveDate') }}</th>
+              <th class="px-6 py-4">{{ t('history.duration') }}</th>
+              <th class="px-6 py-4">{{ t('history.leaveType') }}</th>
+              <th class="px-6 py-4">{{ t('history.backup') }}</th>
+              <th class="px-6 py-4">{{ t('history.status') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="paginatedRiwayat.length === 0">
               <td colspan="5" class="px-6 py-12 text-center text-gray-400 text-sm">
-                Tidak ada data riwayat cuti
+                {{ t('history.noHistory') }}
               </td>
             </tr>
             <tr
@@ -179,10 +181,10 @@ onMounted(async () => {
             >
               <td class="px-6 py-4">
                 <p class="font-medium text-gray-800">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">Diajukan: {{ formatDate(item.tanggal_mulai) }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_mulai) }}</p>
               </td>
               <td class="px-6 py-4">
-                <span class="text-sm text-gray-700">{{ item.durasi }} Hari</span>
+                <span class="text-sm text-gray-700">{{ item.durasi }} {{ t('history.days') }}</span>
               </td>
               <td class="px-6 py-4">
                 <span class="text-sm text-gray-700 capitalize">{{ item.jenis_cuti }}</span>
@@ -216,7 +218,7 @@ onMounted(async () => {
       <!-- Mobile Cards -->
       <div class="md:hidden">
         <div v-if="paginatedRiwayat.length === 0" class="p-6 text-center text-gray-400 text-sm">
-          Tidak ada data riwayat cuti
+          {{ t('history.noHistory') }}
         </div>
         <div v-else class="divide-y divide-gray-100">
           <div
@@ -227,7 +229,7 @@ onMounted(async () => {
             <div class="flex justify-between items-start">
               <div>
                 <p class="font-medium text-gray-800">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">Diajukan: {{ formatDate(item.tanggal_mulai) }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_mulai) }}</p>
               </div>
               <span :class="['inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium', getStatusStyle(item.status)]">
                 <span :class="[
@@ -239,7 +241,7 @@ onMounted(async () => {
               </span>
             </div>
             <div class="flex items-center gap-4 text-sm text-gray-600">
-              <span>{{ item.durasi }} Hari</span>
+              <span>{{ item.durasi }} {{ t('history.days') }}</span>
               <span class="capitalize">{{ item.jenis_cuti }}</span>
             </div>
             <div v-if="item.nama_pengganti" class="flex items-center gap-2">
@@ -256,7 +258,7 @@ onMounted(async () => {
       <div class="px-4 lg:px-6 py-4 border-t border-gray-100">
         <div class="flex items-center justify-between">
           <p class="text-xs lg:text-sm text-gray-500">
-            Menampilkan {{ paginatedRiwayat.length }} dari {{ filteredRiwayat.length }} data
+            {{ t('history.showing') }} {{ paginatedRiwayat.length }} {{ t('history.of') }} {{ filteredRiwayat.length }} {{ t('history.data') }}
           </p>
           <div class="flex items-center gap-1">
             <button

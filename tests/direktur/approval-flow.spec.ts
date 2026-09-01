@@ -84,7 +84,7 @@ test.describe('Direktur Approval Flow', () => {
 
     await page.goto('/direktur/profil')
     await page.waitForLoadState('networkidle')
-    await expect(page.getByText('Informasi Pribadi')).toBeVisible()
+    await expect(page.getByText('Informasi Akun')).toBeVisible()
   })
 
   test('should show department management', async ({ page, loginAs }) => {

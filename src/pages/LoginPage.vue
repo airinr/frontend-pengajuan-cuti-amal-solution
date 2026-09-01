@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { authApi } from "../services";
 import type { LoginRequest } from "../types";
 
+const { t } = useI18n();
 const router = useRouter();
 
 const emit = defineEmits<{
@@ -38,7 +40,7 @@ const handleSubmit = async (e: Event) => {
     }
   } catch (err: any) {
     console.error("Login error:", err);
-    error.value = err.response?.data?.detail || "Username atau password salah";
+    error.value = err.response?.data?.detail || t('error.loginFailed');
   } finally {
     loading.value = false;
   }
@@ -69,7 +71,7 @@ const handleSubmit = async (e: Event) => {
           </div>
         </div>
 
-        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Login</h1>
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">{{ t('auth.login') }}</h1>
 
         <div
           v-if="error"
@@ -81,7 +83,7 @@ const handleSubmit = async (e: Event) => {
         <form @submit="handleSubmit" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >Username</label
+              >{{ t('auth.username') }}</label
             >
             <div class="relative">
               <span
@@ -114,13 +116,13 @@ const handleSubmit = async (e: Event) => {
           <div>
             <div class="flex justify-between items-center mb-1.5">
               <label class="text-sm font-medium text-gray-700"
-                >Kata Sandi</label
+                >{{ t('auth.password') }}</label
               >
               <button
                 type="button"
                 class="text-sm text-blue-600 hover:text-blue-700 cursor-pointer"
               >
-                Lupa kata sandi?
+                {{ t('auth.forgotPassword') }}
               </button>
             </div>
             <div class="relative">
@@ -145,7 +147,7 @@ const handleSubmit = async (e: Event) => {
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
                 class="w-full pl-10 pr-12 py-3 bg-gray-50 border-0 rounded-xl text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                placeholder="Masukkan kata sandi"
+                :placeholder="t('auth.password')"
                 required
               />
               <button
@@ -201,7 +203,7 @@ const handleSubmit = async (e: Event) => {
               class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"
             />
             <template v-else>
-              Masuk
+              {{ t('auth.loginButton') }}
               <svg
                 class="w-5 h-5"
                 fill="none"
@@ -220,13 +222,13 @@ const handleSubmit = async (e: Event) => {
         </form>
 
         <p class="mt-6 text-center text-sm text-gray-500">
-          Belum punya akun?
+          {{ t('auth.noAccount') }}
           <button
             type="button"
             @click="router.push('/register')"
             class="text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
           >
-            Daftar di sini
+            {{ t('auth.registerLink') }}
           </button>
         </p>
       </div>

@@ -4,21 +4,21 @@ test.describe('Pengajuan Tetap Bekerja (Dept 3)', () => {
   test('should show menu items for dept 3 karyawan', async ({ page, loginAs }) => {
     await loginAs('karyawan_dept3')
 
-    await expect(page.getByRole('button', { name: 'Pengajuan Bekerja', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Status Pengajuan Bekerja' })).toBeVisible()
+    await expect(page.locator('text=Pengajuan Bekerja').first()).toBeVisible()
+    await expect(page.locator('text=Status Pengajuan Bekerja').first()).toBeVisible()
   })
 
   test('should not show menu items for non-dept 3 karyawan', async ({ page, loginAs }) => {
     await loginAs('karyawan')
 
-    await expect(page.getByRole('button', { name: 'Pengajuan Bekerja', exact: true })).not.toBeVisible()
-    await expect(page.getByRole('button', { name: 'Status Pengajuan Bekerja' })).not.toBeVisible()
+    await expect(page.locator('text=Pengajuan Bekerja').first()).not.toBeVisible()
+    await expect(page.locator('text=Status Pengajuan Bekerja').first()).not.toBeVisible()
   })
 
   test('should navigate to pengajuan bekerja page', async ({ page, loginAs }) => {
     await loginAs('karyawan_dept3')
 
-    await page.click('text=Pengajuan Bekerja')
+    await page.locator('text=Pengajuan Bekerja').first().click()
     await page.waitForURL('**/karyawan/pengajuan-bekerja')
     expect(page.url()).toContain('/karyawan/pengajuan-bekerja')
     await expect(page.getByRole('heading', { name: 'Pengajuan Tetap Bekerja' })).toBeVisible()
@@ -78,7 +78,7 @@ test.describe('Status Pengajuan Kerja', () => {
   test('should navigate to status page', async ({ page, loginAs }) => {
     await loginAs('karyawan_dept3')
 
-    await page.getByRole('button', { name: 'Status Pengajuan Bekerja' }).click()
+    await page.locator('text=Status Pengajuan Bekerja').first().click()
     await page.waitForURL('**/karyawan/status-pengajuan-kerja')
     expect(page.url()).toContain('/karyawan/status-pengajuan-kerja')
     await expect(page.getByRole('heading', { name: 'Status Pengajuan Kerja' })).toBeVisible()

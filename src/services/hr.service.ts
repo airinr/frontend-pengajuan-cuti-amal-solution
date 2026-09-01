@@ -85,6 +85,7 @@ export interface KaryawanItem {
 }
 
 export interface DepartemenItem {
+  id_departemen: number;
   nama_departemen: string;
   jumlah_karyawan: number;
 }

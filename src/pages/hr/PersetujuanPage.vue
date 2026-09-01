@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   hrApi,
   type RingkasanPersetujuan,
@@ -7,6 +8,7 @@ import {
 import { approvalApi, type ApprovalQueueItem } from "../../services/approval.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 
+const { t } = useI18n();
 const { showError } = useErrorPopup();
 
 const activeTab = ref<"menunggu">("menunggu");
@@ -131,8 +133,8 @@ onMounted(async () => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
       <div>
-        <h1 class="text-xl lg:text-2xl font-bold text-gray-800">Persetujuan Cuti</h1>
-        <p class="text-sm text-gray-500">Kelola pengajuan cuti karyawan yang menunggu persetujuan Anda.</p>
+        <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('approval.leaveApproval') }}</h1>
+        <p class="text-sm text-gray-500">{{ t('approval.manageTeamLeave') }}</p>
       </div>
     </div>
 
@@ -145,7 +147,7 @@ onMounted(async () => {
         <!-- Left: Cards -->
         <div class="flex-1 space-y-4">
           <div v-if="pendingList.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
-            Tidak ada pengajuan yang menunggu
+            {{ t('approval.noPending') }}
           </div>
 
           <div
@@ -174,37 +176,37 @@ onMounted(async () => {
                     class="flex items-center gap-1.5 text-xs font-medium text-yellow-600 bg-yellow-50 px-2.5 py-1 rounded-full"
                   >
                     <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
-                    MENUNGGU
+                    {{ t('status.pending').toUpperCase() }}
                   </span>
                 </div>
 
                 <!-- Info Grid -->
                 <div class="grid grid-cols-5 gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Jenis Cuti</p>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.jenisCuti') }}</p>
                     <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.jenis_cuti }}</p>
                   </div>
                   <div>
-                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Tanggal</p>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.dateRange') }}</p>
                     <p class="text-xs font-medium text-gray-700 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
                   </div>
                   <div>
-                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Durasi</p>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.duration') }}</p>
                     <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.durasi }} Hari</p>
                   </div>
                   <div>
-                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Pengganti</p>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.delegasiTugas') }}</p>
                     <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.pengganti || '-' }}</p>
                   </div>
                   <div>
-                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Sisa Cuti</p>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.remainingLeave') }}</p>
                     <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.sisa_cuti }}</p>
                   </div>
                 </div>
 
                 <!-- Alasan -->
                 <div class="mb-4">
-                  <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium mb-1">Alasan / Catatan</p>
+                  <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium mb-1">{{ t('approval.leaveReason') }}</p>
                   <p class="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{{ item.alasan || '-' }}</p>
                 </div>
 
@@ -218,7 +220,7 @@ onMounted(async () => {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    Tolak
+                    {{ t('approval.reject') }}
                   </button>
                   <button
                     @click="openApproveModal(item)"
@@ -228,7 +230,7 @@ onMounted(async () => {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    Setujui
+                    {{ t('approval.approve') }}
                   </button>
                 </div>
               </div>
@@ -239,18 +241,18 @@ onMounted(async () => {
         <!-- Right Sidebar -->
         <div class="w-full lg:w-72">
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 class="text-sm font-bold text-gray-800 mb-4">Ringkasan Persetujuan</h3>
+            <h3 class="text-sm font-bold text-gray-800 mb-4">{{ t('approval.summary') }}</h3>
             <div class="space-y-3">
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span class="text-sm text-gray-600">Menunggu</span>
+                <span class="text-sm text-gray-600">{{ t('approval.waiting') }}</span>
                 <span class="text-lg font-bold text-gray-800">{{ ringkasan?.total_menunggu ?? '-' }}</span>
               </div>
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span class="text-sm text-gray-600">Disetujui Bulan Ini</span>
+                <span class="text-sm text-gray-600">{{ t('approval.disetujuiBulanIni') }}</span>
                 <span class="text-lg font-bold text-green-600">{{ ringkasan?.disetujui_bulan_ini ?? '-' }}</span>
               </div>
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span class="text-sm text-gray-600">Ditolak Bulan Ini</span>
+                <span class="text-sm text-gray-600">{{ t('approval.ditolakBulanIni') }}</span>
                 <span class="text-lg font-bold text-red-600">{{ ringkasan?.ditolak_bulan_ini ?? '-' }}</span>
               </div>
             </div>
@@ -269,7 +271,7 @@ onMounted(async () => {
         >
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-bold text-gray-800">Penolakan Cuti</h3>
+              <h3 class="text-lg font-bold text-gray-800">{{ t('approval.rejectTitle') }}</h3>
               <button
                 @click="closeRejectModal"
                 class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -281,12 +283,12 @@ onMounted(async () => {
             </div>
 
             <p class="text-sm text-gray-500 mb-4">
-              Anda akan menolak permintaan dari karyawan. Tolong berikan alasan atas keputusan ini. Alasan ini akan dikirim ke karyawan tersebut.
+              {{ t('approval.rejectMessage') }}
             </p>
 
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-1">
-                Alasan Penolakan <span class="text-red-500">*</span>
+                {{ t('approval.rejectReason') }} <span class="text-red-500">*</span>
               </label>
               <textarea
                 v-model="rejectAlasan"
@@ -301,14 +303,14 @@ onMounted(async () => {
                 @click="closeRejectModal"
                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               >
-                Batal
+                {{ t('common.cancel') }}
               </button>
               <button
                 @click="handleReject"
                 :disabled="!rejectAlasan.trim() || rejectLoading"
                 class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {{ rejectLoading ? 'Mengirim...' : 'Konfirmasi Tolak' }}
+                {{ rejectLoading ? t('approval.rejecting') : t('approval.confirmReject') }}
               </button>
             </div>
           </div>
@@ -326,7 +328,7 @@ onMounted(async () => {
         >
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-bold text-gray-800">Konfirmasi Persetujuan</h3>
+              <h3 class="text-lg font-bold text-gray-800">{{ t('approval.approveConfirm') }}</h3>
               <button
                 @click="closeApproveModal"
                 class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -353,14 +355,14 @@ onMounted(async () => {
                 @click="closeApproveModal"
                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               >
-                Batal
+                {{ t('common.cancel') }}
               </button>
               <button
                 @click="handleApprove"
                 :disabled="processingId !== null"
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {{ processingId ? 'Menyetujui...' : 'Setujui' }}
+                {{ processingId ? t('approval.approving') : t('approval.approve') }}
               </button>
             </div>
           </div>

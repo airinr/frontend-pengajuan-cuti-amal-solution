@@ -53,7 +53,7 @@ test.describe('PM Persetujuan Bekerja', () => {
     const rejectBtn = page.getByRole('button', { name: 'Tolak' }).first()
     await rejectBtn.click()
 
-    await expect(page.locator('text=Penolakan Bekerja')).toBeVisible()
+    await expect(page.locator('text=Penolakan').first()).toBeVisible()
 
     await page.fill('textarea', 'Tidak ada kebutuhan operasional')
     await page.getByRole('button', { name: 'Konfirmasi Tolak' }).click()

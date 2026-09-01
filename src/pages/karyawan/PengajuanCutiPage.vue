@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 
 import { authApi, type UserList } from "../../services/auth.service";
 import { karyawanApi } from "../../services/karyawan.service";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import type { CurrentUser } from "../../types";
 import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useCalendarNames } from "../../composables/useCalendarNames";
 
+const { t } = useI18n();
 const { showError } = useErrorPopup();
+const { dayNamesMini, monthNamesLong } = useCalendarNames();
 
 const user = ref<CurrentUser | null>(null);
 const users = ref<UserList[]>([]);
@@ -58,23 +62,6 @@ const closeDropdown = () => {
     showDropdown.value = false;
   }, 200);
 };
-
-const monthNames = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-];
-
-const dayNames = ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"];
 
 const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -177,7 +164,7 @@ const handleDateClick = (day: {
   minDate.setDate(minDate.getDate() + 10);
 
   if (day.date < minDate) {
-    warningMessage.value = "Pengajuan cuti minimal H-10 sebelum tanggal cuti";
+    warningMessage.value = t('error.minAdvance');
     setTimeout(() => {
       warningMessage.value = "";
     }, 3000);
@@ -192,7 +179,7 @@ const handleDateClick = (day: {
     warningMessage.value = "";
   } else {
     if (selectedDates.value.length >= MAX_CUTI_DAYS) {
-      warningMessage.value = `Maksimal ${MAX_CUTI_DAYS} hari cuti`;
+      warningMessage.value = t('error.maxDays');
       setTimeout(() => {
         warningMessage.value = "";
       }, 3000);
@@ -258,22 +245,22 @@ const handleSubmit = async () => {
   successMessage.value = "";
 
   if (!form.value.tanggal_mulai || !form.value.tanggal_selesai) {
-    errorMessage.value = "Pilih tanggal cuti terlebih dahulu";
+    errorMessage.value = t('error.selectDate');
     return;
   }
 
   if (!form.value.pengganti) {
-    errorMessage.value = "Pilih delegasi tugas (pengganti)";
+    errorMessage.value = t('error.selectBackup');
     return;
   }
 
   if (!form.value.keterangan_cuti) {
-    errorMessage.value = "Masukkan keterangan cuti";
+    errorMessage.value = t('error.enterReason');
     return;
   }
 
   if (!form.value.setuju_aturan) {
-    errorMessage.value = "Anda harus menyetujui aturan pengajuan";
+    errorMessage.value = t('error.agreeRules');
     return;
   }
 
@@ -305,11 +292,9 @@ const handleSubmit = async () => {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-800 mb-2">Pengajuan Cuti</h1>
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ t('leave.title') || 'Pengajuan Cuti' }}</h1>
     <p class="text-sm text-gray-500 mb-6">
-      Silakan lengkapi formulir di bawah ini untuk mengajukan permohonan cuti
-      Anda.<br />
-      Pastikan Anda telah membaca aturan yang berlaku.
+      {{ t('leave.subtitle') }}
     </p>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
@@ -325,19 +310,19 @@ const handleSubmit = async () => {
           <!-- Pilih Tanggal -->
           <div class="p-4 lg:p-6 border-b border-gray-100 bg-blue-50">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-gray-800">Pilih Tanggal</h3>
+              <h3 class="font-semibold text-gray-800">{{ t('leave.selectDate') }}</h3>
               <div class="flex items-center gap-4">
                 <span
                   v-if="selectedDaysCount > 0"
                   class="text-sm text-blue-600 font-medium"
                 >
-                  {{ selectedDaysCount }} hari dipilih
+                  {{ selectedDaysCount }} {{ t('leave.daysSelected') }}
                 </span>
                 <button
                   @click="clearDates"
                   class="text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
                 >
-                  Clear dates
+                  {{ t('leave.clearDates') }}
                 </button>
               </div>
             </div>
@@ -362,7 +347,7 @@ const handleSubmit = async () => {
                 </svg>
               </button>
               <h4 class="text-xl font-bold text-gray-800">
-                {{ monthNames[currentMonth] }} {{ currentYear }}
+                {{ monthNamesLong[currentMonth] }} {{ currentYear }}
               </h4>
               <button
                 @click="nextMonth"
@@ -387,7 +372,7 @@ const handleSubmit = async () => {
             <div class="border border-gray-200 rounded-lg overflow-hidden">
               <div class="grid grid-cols-7">
                 <div
-                  v-for="day in dayNames"
+                  v-for="day in dayNamesMini"
                   :key="day"
                   class="text-center text-xs font-bold py-3 border-b border-gray-200 text-gray-700 bg-gray-50"
                 >
@@ -453,17 +438,17 @@ const handleSubmit = async () => {
                 <div
                   class="w-3 h-3 bg-red-50 border border-red-300 rounded-full"
                 ></div>
-                <span>Hari Libur</span>
+                <span>{{ t('leave.nationalHoliday') }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <div
                   class="w-3 h-3 bg-orange-50 border border-orange-300 rounded-full"
                 ></div>
-                <span>Cuti Bersama</span>
+                <span>{{ t('leave.collective') }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <div class="w-3 h-3 bg-blue-900 rounded-full"></div>
-                <span>Hari terpilih</span>
+                <span>{{ t('leave.selectedDay') }}</span>
               </div>
             </div>
 
@@ -480,25 +465,25 @@ const handleSubmit = async () => {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Jenis Cuti</label
+                  >{{ t('leave.leaveType') }}</label
                 >
                 <input
                   type="text"
-                  value="Cuti Tahunan"
+                  :value="t('leave.annual')"
                   disabled
                   class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
                 />
               </div>
               <div class="relative">
                 <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Nama Pengganti (Backup)</label
+                  >{{ t('leave.backupPerson') }}</label
                 >
                 <input
                   v-model="searchQuery"
                   @focus="showDropdown = true"
                   @blur="closeDropdown"
                   @input="form.pengganti = null"
-                  placeholder="Cari nama rekan kerja..."
+                  :placeholder="t('leave.searchPlaceholder')"
                   class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <div
@@ -519,12 +504,12 @@ const handleSubmit = async () => {
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Alasan Cuti</label
+                >{{ t('leave.leaveReason') }}</label
               >
               <textarea
                 v-model="form.keterangan_cuti"
                 rows="3"
-                placeholder="Jelaskan secara singkat alasan pengambilan cuti Anda..."
+                :placeholder="t('leave.reasonPlaceholder')"
                 class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               ></textarea>
             </div>
@@ -534,35 +519,31 @@ const handleSubmit = async () => {
           <div class="p-4 lg:p-6">
             <div class="bg-gray-50 rounded-lg p-4 mb-4">
               <h4 class="font-semibold text-gray-800 mb-2">
-                Pernyataan Pengajuan Cuti
+                {{ t('leave.declaration') }}
               </h4>
               <p class="text-sm text-gray-600 mb-3">
-                Saya mengajukan cuti pada tanggal
+                {{ t('leave.declarationText') }}
                 <span class="font-medium">{{ form.tanggal_mulai || "-" }}</span>
-                s.d.
+                {{ t('leave.declarationUntil') }}
                 <span class="font-medium">{{
                   form.tanggal_selesai || "-"
                 }}</span>
-                (<span class="font-medium">{{ selectedDaysCount }}</span> hari),
-                dengan alasan:
+                (<span class="font-medium">{{ selectedDaysCount }}</span> {{ t('leave.declarationDays') }}
                 <span class="font-medium">{{ form.keterangan_cuti || "-" }}</span
                 >.
               </p>
               <p class="text-sm text-gray-600 mb-2">
-                Dengan ini saya menyatakan bahwa:
+                {{ t('leave.declarationAgree') }}
               </p>
               <ul class="text-sm text-gray-600 space-y-1 ml-4 list-disc">
                 <li>
-                  Pengajuan cuti ini telah saya diskusikan dengan tim dan
-                  disetujui oleh anggota tim terkait.
+                  {{ t('leave.declarationPoint1') }}
                 </li>
                 <li>
-                  Pekerjaan/tanggung jawab saya selama masa cuti telah memiliki
-                  personel pengganti (backup).
+                  {{ t('leave.declarationPoint2') }}
                 </li>
                 <li>
-                  Saya bertanggung jawab penuh atas kebenaran informasi yang
-                  saya sampaikan di atas.
+                  {{ t('leave.declarationPoint3') }}
                 </li>
               </ul>
             </div>
@@ -574,7 +555,7 @@ const handleSubmit = async () => {
                 class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <span class="text-sm text-gray-600">
-                Saya menyetujui pernyataan di atas.
+                {{ t('leave.iAgree') }}
               </span>
             </label>
 
@@ -597,7 +578,7 @@ const handleSubmit = async () => {
                     d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                   />
                 </svg>
-                {{ submitting ? "Mengirim..." : "Kirim Pengajuan" }}
+                {{ submitting ? t('leave.submitting') : t('leave.submitLeave') }}
               </button>
             </div>
           </div>
@@ -618,7 +599,7 @@ const handleSubmit = async () => {
                 d="M1 21h12v2H1v-2zM5.245 8.07l2.83-2.827 14.14 14.142-2.828 2.828L5.245 8.07zM12.317 1l5.657 5.656-2.83 2.83-5.654-5.66L12.317 1zM3.825 9.485l5.657 5.657-2.828 2.828-5.657-5.657 2.828-2.828z"
               />
             </svg>
-            <h3 class="font-bold text-gray-800 text-lg">Aturan Pengajuan</h3>
+            <h3 class="font-bold text-gray-800 text-lg">{{ t('leave.rules') }}</h3>
           </div>
           <ul class="space-y-4">
             <li class="flex items-start gap-3">
@@ -640,8 +621,7 @@ const handleSubmit = async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700"
-                >Maksimal <strong>4 hari</strong> berturut-turut untuk cuti
-                reguler.</span
+                ><strong>{{ t('leave.maxDays') }}</strong> {{ t('leave.maxDaysDesc') }}</span
               >
             </li>
             <li class="flex items-start gap-3">
@@ -663,8 +643,7 @@ const handleSubmit = async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700"
-                >Pengajuan minimal dilakukan <strong>H-10</strong> sebelum
-                tanggal cuti.</span
+                >{{ t('leave.advanceNotice') }}.</span
               >
             </li>
             <li class="flex items-start gap-3">
@@ -686,8 +665,7 @@ const handleSubmit = async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700"
-                >Saldo cuti tahunan Anda harus mencukupi jumlah hari yang
-                diajukan.</span
+                >{{ t('leave.sufficientBalance') }}.</span
               >
             </li>
             <li class="flex items-start gap-3">
@@ -709,8 +687,7 @@ const handleSubmit = async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700"
-                >Pastikan tidak ada <strong>konflik jadwal</strong> penting di
-                departemen Anda.</span
+                >{{ t('leave.noConflicts') }}.</span
               >
             </li>
           </ul>
@@ -719,11 +696,11 @@ const handleSubmit = async () => {
         <!-- Sisa Cuti -->
         <div class="bg-gray-600 rounded-xl shadow-sm p-6 text-white">
           <p class="text-xs text-gray-200 uppercase tracking-wide mb-1">
-            Sisa Cuti Anda
+            {{ t('leave.remainingLeave') }}
           </p>
           <p class="text-4xl font-bold mb-4">
             {{ user?.sisa_cuti || 0 }}
-            <span class="text-lg font-normal text-gray-200">Hari</span>
+            <span class="text-lg font-normal text-gray-200">{{ t('dashboard.days') }}</span>
           </p>
           <div class="w-full bg-gray-400 rounded-full h-2 mb-3">
             <div
@@ -739,10 +716,10 @@ const handleSubmit = async () => {
           </div>
           <div class="flex justify-between text-xs text-gray-200">
             <span
-              >Digunakan:
+              >{{ t('leave.used') }}:
               {{ (user?.total_cuti || 0) - (user?.sisa_cuti || 0) }}</span
             >
-            <span>Total: {{ user?.total_cuti || 0 }}</span>
+            <span>{{ t('leave.total') }}: {{ user?.total_cuti || 0 }}</span>
           </div>
         </div>
 
@@ -769,13 +746,13 @@ const handleSubmit = async () => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
       </div>
-      <h3 class="text-lg font-semibold text-gray-800 mb-2">Pengajuan Cuti Berhasil Dikirim!</h3>
-      <p class="text-sm text-gray-500 mb-6">Pengajuan Anda akan diproses oleh atasan.</p>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('leave.submitSuccess') }}</h3>
+      <p class="text-sm text-gray-500 mb-6">{{ t('leave.submitSuccessMsg') }}</p>
       <button
         @click="showSuccessPopup = false"
         class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
       >
-        Tutup
+        {{ t('leave.close') }}
       </button>
     </div>
   </div>

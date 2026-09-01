@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   pmApi,
   type HistoryCutiItem,
@@ -7,8 +8,11 @@ import {
 } from "../../services/pm.service";
 import { approvalApi, type ApprovalQueueItem } from "../../services/approval.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useCalendarNames } from "../../composables/useCalendarNames";
 
+const { t } = useI18n();
 const { showError } = useErrorPopup();
+const { monthNamesShort } = useCalendarNames();
 
 const activeTab = ref<"menunggu" | "riwayat">("menunggu");
 const searchQuery = ref("");
@@ -35,24 +39,16 @@ const rejectLoading = ref(false);
 const formatDate = (dateStr: string) => {
   const d = new Date(dateStr);
   const day = d.getDate();
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-  ];
-  return `${day} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  return `${day} ${monthNamesShort.value[d.getMonth()]} ${d.getFullYear()}`;
 };
 
 const formatDateRange = (start: string, end: string) => {
   const s = new Date(start);
   const e = new Date(end);
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-  ];
   if (s.getMonth() === e.getMonth()) {
-    return `${s.getDate()} - ${e.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
+    return `${s.getDate()} - ${e.getDate()} ${monthNamesShort.value[s.getMonth()]} ${s.getFullYear()}`;
   }
-  return `${s.getDate()} ${months[s.getMonth()]} - ${e.getDate()} ${months[e.getMonth()]} ${s.getFullYear()}`;
+  return `${s.getDate()} ${monthNamesShort.value[s.getMonth()]} - ${e.getDate()} ${monthNamesShort.value[e.getMonth()]} ${s.getFullYear()}`;
 };
 
 const getInitials = (name: string) => {
@@ -197,12 +193,12 @@ onMounted(async () => {
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
       <div>
         <h1 class="text-xl lg:text-2xl font-bold text-gray-800">
-          {{ activeTab === 'menunggu' ? 'Persetujuan Cuti' : 'Riwayat Persetujuan Cuti' }}
+          {{ activeTab === 'menunggu' ? t('approval.leaveApproval') : t('approval.history') }}
         </h1>
         <p class="text-sm text-gray-500">
           {{ activeTab === 'menunggu'
-            ? 'Kelola pengajuan cuti anggota tim Anda.'
-            : 'Kelola dan pantau seluruh permohonan cuti karyawan yang telah diproses.'
+            ? t('approval.manageTeamLeave')
+            : t('approval.manageProcessed')
           }}
         </p>
       </div>
@@ -210,9 +206,9 @@ onMounted(async () => {
         <!-- Filter Periode -->
         <div class="relative">
           <select class="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option>Semua Periode</option>
-            <option>Bulan Ini</option>
-            <option>3 Bulan Terakhir</option>
+            <option>{{ t('approval.allPeriods') }}</option>
+            <option>{{ t('approval.thisMonth') }}</option>
+            <option>{{ t('approval.last3Months') }}</option>
           </select>
           <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -229,7 +225,7 @@ onMounted(async () => {
                 : 'text-gray-600 hover:text-gray-800',
             ]"
           >
-            Menunggu
+            {{ t('approval.waiting') }}
           </button>
           <button
             @click="switchTab('riwayat')"
@@ -240,7 +236,7 @@ onMounted(async () => {
                 : 'text-gray-600 hover:text-gray-800',
             ]"
           >
-            Riwayat
+            {{ t('approval.historyTab') }}
           </button>
         </div>
       </div>
@@ -257,7 +253,7 @@ onMounted(async () => {
           <!-- Left: Pending Cards -->
           <div class="flex-1 space-y-4">
             <div v-if="pendingList.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
-              Tidak ada pengajuan yang menunggu persetujuan
+              {{ t('approval.noPending') }}
             </div>
 
             <div
@@ -282,37 +278,37 @@ onMounted(async () => {
                     </div>
                     <span class="flex items-center gap-1.5 text-xs font-medium text-yellow-600 bg-yellow-50 px-2.5 py-1 rounded-full">
                       <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
-                      MENUNGGU
+                      {{ t('status.pending').toUpperCase() }}
                     </span>
                   </div>
 
                   <!-- Info Grid -->
                   <div class="grid grid-cols-5 gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Jenis Cuti</p>
+                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.jenisCuti') }}</p>
                       <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.jenis_cuti }}</p>
                     </div>
                     <div>
-                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Tanggal</p>
+                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.dateRange') }}</p>
                       <p class="text-xs font-medium text-gray-700 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
                     </div>
                     <div>
-                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Durasi</p>
-                      <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.durasi }} Hari</p>
+                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.duration') }}</p>
+                      <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.durasi }} {{ t('history.days') }}</p>
                     </div>
                     <div>
-                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Delegasi Tugas</p>
+                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.delegasiTugas') }}</p>
                       <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.pengganti || '-' }}</p>
                     </div>
                     <div>
-                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">Sisa Cuti</p>
+                      <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.remainingLeave') }}</p>
                       <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.sisa_cuti }}</p>
                     </div>
                   </div>
 
                   <!-- Alasan -->
                   <div class="mb-4">
-                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium mb-1">Alasan Cuti</p>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium mb-1">{{ t('approval.leaveReason') }}</p>
                     <p class="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{{ item.alasan || '-' }}</p>
                   </div>
 
@@ -326,7 +322,7 @@ onMounted(async () => {
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                       </svg>
-                      Tolak
+                      {{ t('approval.reject') }}
                     </button>
                     <button
                       @click="openApproveModal(item)"
@@ -336,7 +332,7 @@ onMounted(async () => {
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                       </svg>
-                      Setujui
+                      {{ t('approval.approve') }}
                     </button>
                   </div>
                 </div>
@@ -348,19 +344,19 @@ onMounted(async () => {
           <div class="w-full lg:w-72 flex flex-col gap-4">
             <!-- Ringkasan Tim -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-              <h3 class="text-sm font-bold text-gray-800 mb-1">Ringkasan Tim</h3>
-              <p class="text-xs text-gray-400 mb-4">Bulan {{ new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) }}</p>
+              <h3 class="text-sm font-bold text-gray-800 mb-1">{{ t('approval.summary') }}</h3>
+              <p class="text-xs text-gray-400 mb-4">{{ t('approval.month') }} {{ new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) }}</p>
               <div class="space-y-3">
                 <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-600">Total Pengajuan</span>
+                  <span class="text-sm text-gray-600">{{ t('approval.totalSubmissions') }}</span>
                   <span class="text-lg font-bold text-gray-800">{{ ringkasan?.total_pengajuan ?? '-' }}</span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-600">Menunggu Persetujuan</span>
+                  <span class="text-sm text-gray-600">{{ t('approval.waitingApproval') }}</span>
                   <span class="text-lg font-bold text-gray-800">{{ ringkasan?.menunggu_persetujuan ?? '-' }}</span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-600">Sedang Cuti</span>
+                  <span class="text-sm text-gray-600">{{ t('approval.onLeave') }}</span>
                   <span class="text-lg font-bold text-gray-800">{{ ringkasan?.sedang_cuti ?? '-' }}</span>
                 </div>
               </div>
@@ -381,7 +377,7 @@ onMounted(async () => {
               v-model="searchQuery"
               @input="handleSearch"
               type="text"
-              placeholder="Cari nama karyawan, jenis cuti..."
+              :placeholder="t('approval.searchPlaceholder')"
               class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -389,7 +385,7 @@ onMounted(async () => {
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            Filter
+            {{ t('approval.filter') }}
           </button>
         </div>
 
@@ -399,18 +395,18 @@ onMounted(async () => {
             <table class="w-full">
               <thead>
                 <tr class="bg-gray-50 border-b border-gray-200">
-                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tanggal Cuti</th>
-                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Karyawan</th>
-                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Jenis Cuti</th>
-                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Keterangan</th>
-                  <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Jml Hari</th>
-                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Backup</th>
-                  <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('approval.dateRange') }}</th>
+                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('approval.karyawan') }}</th>
+                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('approval.jenisCuti') }}</th>
+                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('approval.keterangan') }}</th>
+                  <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('approval.jmlHari') }}</th>
+                  <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('approval.backup') }}</th>
+                  <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('approval.status') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
                 <tr v-if="historyList.length === 0">
-                  <td colspan="7" class="text-center py-8 text-gray-400 text-sm">Tidak ada data</td>
+                  <td colspan="7" class="text-center py-8 text-gray-400 text-sm">{{ t('approval.noData') }}</td>
                 </tr>
                 <tr
                   v-for="(item, index) in historyList"
@@ -445,7 +441,7 @@ onMounted(async () => {
           <!-- Pagination -->
           <div class="flex items-center justify-between px-4 py-3 border-t border-gray-100">
             <p class="text-xs text-gray-500">
-              Menampilkan {{ historyList.length > 0 ? ((currentPage - 1) * 10 + 1) : 0 }}-{{ Math.min(currentPage * 10, totalItems) }} dari {{ totalItems }} data
+              {{ t('approval.showing') }} {{ historyList.length > 0 ? ((currentPage - 1) * 10 + 1) : 0 }}-{{ Math.min(currentPage * 10, totalItems) }} {{ t('approval.of') }} {{ totalItems }} {{ t('approval.data') }}
             </p>
             <div class="flex items-center gap-1">
               <button
@@ -495,7 +491,7 @@ onMounted(async () => {
         >
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-bold text-gray-800">Konfirmasi Persetujuan</h3>
+              <h3 class="text-lg font-bold text-gray-800">{{ t('approval.approveConfirm') }}</h3>
               <button
                 @click="closeApproveModal"
                 class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -507,14 +503,14 @@ onMounted(async () => {
             </div>
 
             <p class="text-sm text-gray-500 mb-4">
-              Anda akan menyetujui pengajuan cuti dari <span class="font-semibold text-gray-800">{{ approveTarget?.nama }}</span>.
-              Apakah Anda yakin ingin menyetujui?
+              {{ t('approval.approveMessage') }} <span class="font-semibold text-gray-800">{{ approveTarget?.nama }}</span>.
+              {{ t('approval.approveQuestion') }}
             </p>
 
             <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
-              <p><span class="text-gray-500">Jenis Cuti:</span> <span class="font-medium text-gray-800">{{ approveTarget?.jenis_cuti }}</span></p>
-              <p><span class="text-gray-500">Tanggal:</span> <span class="font-medium text-gray-800">{{ approveTarget ? formatDateRange(approveTarget.tanggal_mulai, approveTarget.tanggal_selesai) : '' }}</span></p>
-              <p><span class="text-gray-500">Durasi:</span> <span class="font-medium text-gray-800">{{ approveTarget?.durasi }} Hari</span></p>
+              <p><span class="text-gray-500">{{ t('approval.jenisCuti') }}:</span> <span class="font-medium text-gray-800">{{ approveTarget?.jenis_cuti }}</span></p>
+              <p><span class="text-gray-500">{{ t('approval.dateRange') }}:</span> <span class="font-medium text-gray-800">{{ approveTarget ? formatDateRange(approveTarget.tanggal_mulai, approveTarget.tanggal_selesai) : '' }}</span></p>
+              <p><span class="text-gray-500">{{ t('approval.duration') }}:</span> <span class="font-medium text-gray-800">{{ approveTarget?.durasi }} {{ t('history.days') }}</span></p>
             </div>
 
             <div class="flex items-center justify-end gap-3">
@@ -522,14 +518,14 @@ onMounted(async () => {
                 @click="closeApproveModal"
                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               >
-                Batal
+                {{ t('common.cancel') }}
               </button>
               <button
                 @click="handleApprove"
                 :disabled="processingId !== null"
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {{ processingId ? 'Menyetujui...' : 'Setujui' }}
+                {{ processingId ? t('approval.approving') : t('approval.approve') }}
               </button>
             </div>
           </div>
@@ -547,7 +543,7 @@ onMounted(async () => {
         >
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-bold text-gray-800">Penolakan Cuti</h3>
+              <h3 class="text-lg font-bold text-gray-800">{{ t('approval.rejectTitle') }}</h3>
               <button
                 @click="closeRejectModal"
                 class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -559,17 +555,17 @@ onMounted(async () => {
             </div>
 
             <p class="text-sm text-gray-500 mb-4">
-              Anda akan menolak permintaan dari karyawan. Tolong berikan alasan atas keputusan ini. Alasan ini akan dikirim ke karyawan tersebut.
+              {{ t('approval.rejectMessage') }}
             </p>
 
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-1">
-                Alasan Penolakan <span class="text-red-500">*</span>
+                {{ t('approval.rejectReason') }} <span class="text-red-500">*</span>
               </label>
               <textarea
                 v-model="rejectAlasan"
                 rows="3"
-                placeholder="contoh: Ada meeting dengan client"
+                :placeholder="t('approval.rejectPlaceholder')"
                 class="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               ></textarea>
             </div>
@@ -579,14 +575,14 @@ onMounted(async () => {
                 @click="closeRejectModal"
                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               >
-                Batal
+                {{ t('common.cancel') }}
               </button>
               <button
                 @click="handleReject"
                 :disabled="!rejectAlasan.trim() || rejectLoading"
                 class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {{ rejectLoading ? 'Mengirim...' : 'Konfirmasi Tolak' }}
+                {{ rejectLoading ? t('approval.rejecting') : t('approval.confirmReject') }}
               </button>
             </div>
           </div>

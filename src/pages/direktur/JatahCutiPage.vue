@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   direkturApi,
   type DepartemenItem,
@@ -8,6 +9,7 @@ import { authApi } from "../../services/auth.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 import type { CurrentUser } from "../../types";
 
+const { t } = useI18n();
 const { showError } = useErrorPopup();
 
 interface EmployeeLeaveItem {
@@ -158,7 +160,7 @@ const handleSaveAdjustment = async () => {
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-          Manajemen Jatah Cuti
+          {{ t('leaveQuota.managementTitle') }}
         </h1>
         <p class="text-sm text-gray-500 mt-1">
           Pantau dan kelola alokasi cuti tahunan, cuti khusus, dan sisa saldo untuk seluruh karyawan.

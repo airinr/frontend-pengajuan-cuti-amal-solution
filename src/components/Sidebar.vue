@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { authApi } from "../services/auth.service";
 import type { CurrentUser } from "../types";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   open: boolean;
@@ -28,40 +31,40 @@ interface MenuSection {
   items: MenuItem[];
 }
 
-const baseSections: MenuSection[] = [
+const baseSections = computed<MenuSection[]>(() => [
   {
     items: [
-      { label: "Dashboard", icon: "grid", route: "/karyawan/dashboard" },
+      { label: t('nav.dashboard'), icon: "grid", route: "/karyawan/dashboard" },
     ],
   },
   {
-    title: "CUTI",
+    title: t('nav.cuti'),
     items: [
-      { label: "Pengajuan Cuti", icon: "file-plus", route: "/karyawan/pengajuan-cuti" },
-      { label: "Status Pengajuan Cuti", icon: "clock", route: "/karyawan/status-pengajuan" },
+      { label: t('nav.pengajuanCuti'), icon: "file-plus", route: "/karyawan/pengajuan-cuti" },
+      { label: t('nav.statusPengajuan'), icon: "clock", route: "/karyawan/status-pengajuan" },
     ],
   },
   {
     items: [
-      { label: "Riwayat Cuti", icon: "history", route: "/karyawan/riwayat-cuti" },
-      { label: "Kalender Cuti", icon: "calendar", route: "/karyawan/kalender-cuti" },
-      { label: "Profil", icon: "user", route: "/karyawan/profil" },
+      { label: t('nav.riwayatCuti'), icon: "history", route: "/karyawan/riwayat-cuti" },
+      { label: t('nav.kalenderCuti'), icon: "calendar", route: "/karyawan/kalender-cuti" },
+      { label: t('nav.profil'), icon: "user", route: "/karyawan/profil" },
     ],
   },
-];
+]);
 
-const bekerjaSection: MenuSection = {
-  title: "BEKERJA",
+const bekerjaSection = computed<MenuSection>(() => ({
+  title: t('nav.bekerja'),
   items: [
-    { label: "Pengajuan Bekerja", icon: "briefcase", route: "/karyawan/pengajuan-bekerja" },
-    { label: "Status Pengajuan Bekerja", icon: "clock-check", route: "/karyawan/status-pengajuan-kerja" },
+    { label: t('nav.pengajuanBekerja'), icon: "briefcase", route: "/karyawan/pengajuan-bekerja" },
+    { label: t('nav.statusPengajuanBekerja'), icon: "clock-check", route: "/karyawan/status-pengajuan-kerja" },
   ],
-};
+}));
 
 const menuSections = computed(() => {
-  const sections = [...baseSections];
+  const sections = [...baseSections.value];
   if (user.value && user.value.id_departemen === 3) {
-    sections.splice(2, 0, bekerjaSection);
+    sections.splice(2, 0, bekerjaSection.value);
   }
   return sections;
 });
@@ -117,7 +120,7 @@ onMounted(async () => {
           <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
             <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/>
           </svg>
-          AjuanCuti
+          {{ t('app.name') }}
         </h1>
         <button
           @click="emit('close')"
