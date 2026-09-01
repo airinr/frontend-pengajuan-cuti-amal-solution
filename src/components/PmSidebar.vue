@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { authApi } from "../services/auth.service";
 import type { CurrentUser } from "../types";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   open: boolean;
@@ -17,19 +20,20 @@ const router = useRouter();
 
 const user = ref<CurrentUser | null>(null);
 
-const managerMenu = [
-  { label: "Dashboard", icon: "grid", route: "/pm/dashboard" },
-  { label: "Persetujuan", icon: "check-circle", route: "/pm/persetujuan" },
-  { label: "Rekap Cuti Tim", icon: "clipboard", route: "/pm/rekap-cuti-tim" },
-  { label: "Kalender Tim", icon: "calendar", route: "/pm/kalender-tim" },
-];
+const managerMenu = computed(() => [
+  { label: t('nav.dashboard'), icon: "grid", route: "/pm/dashboard" },
+  { label: t('approval.leaveApproval'), icon: "check-circle", route: "/pm/persetujuan" },
+  { label: t('approval.workApproval'), icon: "briefcase", route: "/pm/persetujuan-bekerja" },
+  { label: t('nav.rekapCutiTim'), icon: "clipboard", route: "/pm/rekap-cuti-tim" },
+  { label: t('nav.kalenderTim'), icon: "calendar", route: "/pm/kalender-tim" },
+]);
 
-const personalMenu = [
-  { label: "Pengajuan Saya", icon: "file-plus", route: "/pm/pengajuan-cuti" },
-  { label: "Status Pengajuan", icon: "clipboard-list", route: "/pm/status-pengajuan" },
-  { label: "Riwayat Cuti", icon: "history", route: "/pm/riwayat-cuti" },
-  { label: "Profil", icon: "user", route: "/pm/profil" },
-];
+const personalMenu = computed(() => [
+  { label: t('nav.pengajuanSaya'), icon: "file-plus", route: "/pm/pengajuan-cuti" },
+  { label: t('nav.statusPengajuan'), icon: "clipboard-list", route: "/pm/status-pengajuan" },
+  { label: t('nav.riwayatCuti'), icon: "history", route: "/pm/riwayat-cuti" },
+  { label: t('nav.profil'), icon: "user", route: "/pm/profil" },
+]);
 
 const isActive = (itemRoute: string) => {
   return route.path === itemRoute;
@@ -74,29 +78,47 @@ onMounted(async () => {
     <aside
       :class="[
         'fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:z-auto',
-        open ? 'translate-x-0' : '-translate-x-full'
+        open ? 'translate-x-0' : '-translate-x-full',
       ]"
     >
-      <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+      <div
+        class="p-6 border-b border-gray-100 flex items-center justify-between"
+      >
         <h1 class="text-xl font-bold text-blue-600 flex items-center gap-2">
           <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/>
+            <path
+              d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"
+            />
           </svg>
-          AjuanCuti
+          {{ t('app.name') }}
         </h1>
         <button
           @click="emit('close')"
           class="lg:hidden p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
 
       <nav class="flex-1 p-4 overflow-y-auto">
         <!-- Manager View -->
-        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">Manager View</p>
+        <p
+          class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4"
+        >
+          {{ t('nav.managerView') }}
+        </p>
         <ul class="space-y-1 mb-6">
           <li v-for="item in managerMenu" :key="item.route">
             <button
@@ -109,20 +131,79 @@ onMounted(async () => {
               ]"
             >
               <!-- grid -->
-              <svg v-if="item.icon === 'grid'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              <svg
+                v-if="item.icon === 'grid'"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                />
               </svg>
               <!-- check-circle -->
-              <svg v-else-if="item.icon === 'check-circle'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                v-else-if="item.icon === 'check-circle'"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               <!-- clipboard -->
-              <svg v-else-if="item.icon === 'clipboard'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              <svg
+                v-else-if="item.icon === 'clipboard'"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
               </svg>
               <!-- calendar -->
-              <svg v-else-if="item.icon === 'calendar'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg
+                v-else-if="item.icon === 'calendar'"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <!-- briefcase -->
+              <svg
+                v-else-if="item.icon === 'briefcase'"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
               </svg>
               {{ item.label }}
             </button>
@@ -130,7 +211,11 @@ onMounted(async () => {
         </ul>
 
         <!-- Personal -->
-        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">Personal</p>
+        <p
+          class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4"
+        >
+          {{ t('nav.personal') }}
+        </p>
         <ul class="space-y-1">
           <li v-for="item in personalMenu" :key="item.route">
             <button
@@ -143,20 +228,64 @@ onMounted(async () => {
               ]"
             >
               <!-- file-plus -->
-              <svg v-if="item.icon === 'file-plus'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                v-if="item.icon === 'file-plus'"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
               <!-- clipboard-list -->
-              <svg v-else-if="item.icon === 'clipboard-list'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              <svg
+                v-else-if="item.icon === 'clipboard-list'"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                />
               </svg>
               <!-- history -->
-              <svg v-else-if="item.icon === 'history'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                v-else-if="item.icon === 'history'"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               <!-- user -->
-              <svg v-else-if="item.icon === 'user'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              <svg
+                v-else-if="item.icon === 'user'"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
               </svg>
               {{ item.label }}
             </button>

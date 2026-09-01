@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { authApi } from "../../services/auth.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
 import type { CurrentUser } from "../../types";
 
+const { t, locale } = useI18n();
+const { showError } = useErrorPopup();
 const router = useRouter();
 
 const user = ref<CurrentUser | null>(null);
@@ -27,6 +31,16 @@ const passwordLoading = ref(false);
 const passwordError = ref("");
 const passwordSuccess = ref("");
 
+const showLanguageModal = ref(false);
+
+const currentLanguage = computed(() => locale.value === 'id' ? 'Bahasa Indonesia' : 'English');
+
+const selectLanguage = (lang: string) => {
+  locale.value = lang;
+  localStorage.setItem('locale', lang);
+  showLanguageModal.value = false;
+};
+
 const fetchProfile = async () => {
   loading.value = true;
   try {
@@ -36,8 +50,8 @@ const fetchProfile = async () => {
       email: user.value?.email || "",
       no_telp: user.value?.no_telp || "",
     };
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }
@@ -136,20 +150,20 @@ onMounted(() => {
             <svg class="w-5 h-5 text-[#0f4bb4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
-            <h3 class="text-base font-bold text-gray-900">Informasi Pribadi</h3>
+            <h3 class="text-base font-bold text-gray-900">{{ t('profile.accountInfo') }}</h3>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">NAMA LENGKAP</p>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ t('auth.fullName') }}</p>
               <p class="text-sm font-bold text-gray-900 mt-1">{{ user?.nama }}</p>
             </div>
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">JABATAN</p>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ t('employee.position') }}</p>
               <p class="text-sm font-bold text-gray-900 mt-1 capitalize">{{ user?.role }}</p>
             </div>
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">EMAIL</p>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email</p>
               <input
                 v-model="profileForm.email"
                 type="email"
@@ -158,7 +172,7 @@ onMounted(() => {
               />
             </div>
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">NOMOR TELEPON</p>
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ t('employee.phone') }}</p>
               <input
                 v-model="profileForm.no_telp"
                 type="text"
@@ -175,7 +189,7 @@ onMounted(() => {
             <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            <h3 class="text-base font-bold text-gray-900">Keamanan & Preferensi</h3>
+            <h3 class="text-base font-bold text-gray-900">{{ t('profile.security') }}</h3>
           </div>
 
           <div class="divide-y divide-gray-50">
@@ -188,7 +202,7 @@ onMounted(() => {
                 <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                <span class="text-xs font-bold text-gray-800">Ubah Kata Sandi</span>
+                <span class="text-xs font-bold text-gray-800">{{ t('profile.changePassword') }}</span>
               </div>
               <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -196,14 +210,17 @@ onMounted(() => {
             </div>
 
             <!-- Bahasa Row -->
-            <div class="py-3.5 flex items-center justify-between hover:bg-gray-50 rounded-xl px-2 -mx-2 transition-colors cursor-pointer">
+            <div
+              @click="showLanguageModal = true"
+              class="py-3.5 flex items-center justify-between hover:bg-gray-50 rounded-xl px-2 -mx-2 transition-colors cursor-pointer"
+            >
               <div class="flex items-center gap-3">
                 <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
                 <div>
-                  <p class="text-xs font-bold text-gray-800">Bahasa</p>
-                  <p class="text-[10px] text-gray-400 font-medium">Bahasa Indonesia</p>
+                  <p class="text-xs font-bold text-gray-800">{{ t('profile.language') }}</p>
+                  <p class="text-[10px] text-gray-400 font-medium">{{ currentLanguage }}</p>
                 </div>
               </div>
               <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,7 +246,7 @@ onMounted(() => {
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            Keluar Akun
+            {{ t('profile.logout') }}
           </button>
 
           <!-- Simpan Perubahan Button -->
@@ -238,7 +255,7 @@ onMounted(() => {
             :disabled="profileLoading"
             class="px-6 py-2.5 bg-[#0f4bb4] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
           >
-            {{ profileLoading ? 'Menyimpan...' : 'Simpan Perubahan' }}
+            {{ profileLoading ? t('profile.saving') : t('profile.saveChanges') }}
           </button>
         </div>
       </div>
@@ -250,7 +267,7 @@ onMounted(() => {
       class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
     >
       <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-        <h3 class="text-base font-bold text-gray-900">Ubah Kata Sandi</h3>
+        <h3 class="text-base font-bold text-gray-900">{{ t('profile.changePassword') }}</h3>
 
         <div v-if="passwordError" class="p-3 bg-red-50 text-red-600 rounded-xl text-xs">
           {{ passwordError }}
@@ -261,7 +278,7 @@ onMounted(() => {
 
         <div class="space-y-3">
           <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">Kata Sandi Lama</label>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">{{ t('profile.oldPassword') }}</label>
             <input
               v-model="passwordForm.password_lama"
               type="password"
@@ -269,7 +286,7 @@ onMounted(() => {
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">Kata Sandi Baru</label>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">{{ t('profile.newPassword') }}</label>
             <input
               v-model="passwordForm.password_baru"
               type="password"
@@ -277,7 +294,7 @@ onMounted(() => {
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">Konfirmasi Kata Sandi Baru</label>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">{{ t('profile.confirmNewPassword') }}</label>
             <input
               v-model="passwordForm.konfirmasi"
               type="password"
@@ -290,14 +307,66 @@ onMounted(() => {
             @click="showPasswordModal = false"
             class="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200"
           >
-            Batal
+            {{ t('common.cancel') }}
           </button>
           <button
             @click="handleChangePassword"
             :disabled="passwordLoading"
             class="px-4 py-2 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl cursor-pointer disabled:opacity-50"
           >
-            {{ passwordLoading ? "Menyimpan..." : "Simpan" }}
+            {{ passwordLoading ? t('profile.saving') : t('profile.changePassword') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Language Modal -->
+    <div
+      v-if="showLanguageModal"
+      class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      @click.self="showLanguageModal = false"
+    >
+      <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-base font-bold text-gray-900">{{ t('profile.language') }}</h3>
+          <button @click="showLanguageModal = false" class="text-gray-400 hover:text-gray-600 cursor-pointer">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="space-y-2">
+          <button
+            @click="selectLanguage('id')"
+            :class="[
+              'w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left',
+              locale === 'id' ? 'bg-blue-50 border-2 border-[#0f4bb4]' : 'border-2 border-gray-200 hover:bg-gray-50'
+            ]"
+          >
+            <span class="text-2xl">🇮🇩</span>
+            <div>
+              <p class="text-xs font-bold text-gray-800">Bahasa Indonesia</p>
+            </div>
+            <svg v-if="locale === 'id'" class="w-4 h-4 text-[#0f4bb4] ml-auto" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+            </svg>
+          </button>
+
+          <button
+            @click="selectLanguage('en')"
+            :class="[
+              'w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left',
+              locale === 'en' ? 'bg-blue-50 border-2 border-[#0f4bb4]' : 'border-2 border-gray-200 hover:bg-gray-50'
+            ]"
+          >
+            <span class="text-2xl">🇬🇧</span>
+            <div>
+              <p class="text-xs font-bold text-gray-800">English</p>
+            </div>
+            <svg v-if="locale === 'en'" class="w-4 h-4 text-[#0f4bb4] ml-auto" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+            </svg>
           </button>
         </div>
       </div>

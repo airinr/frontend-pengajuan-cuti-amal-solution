@@ -73,14 +73,19 @@ export interface RingkasanKaryawan {
 }
 
 export interface KaryawanItem {
+  id_user?: number;
   nama: string;
   departemen: string;
   jabatan: string;
   email: string;
   status: string;
+  role?: string;
+  no_telp?: string;
+  tanggal_bergabung?: string;
 }
 
 export interface DepartemenItem {
+  id_departemen: number;
   nama_departemen: string;
   jumlah_karyawan: number;
 }

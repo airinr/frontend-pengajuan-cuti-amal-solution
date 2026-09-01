@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   direkturApi,
   type KaryawanItem,
   type DepartemenItem,
 } from "../../services/direktur.service";
+import { authApi } from "../../services/auth.service";
+import { departmentApi } from "../../services/department.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+
+const { t } = useI18n();
+const { showError } = useErrorPopup();
 
 const activeTab = ref<"karyawan" | "departemen">("karyawan");
 const searchKaryawan = ref("");
@@ -28,15 +35,22 @@ const filterDept = ref("semua");
 // Karyawan Modal States
 const showAddKaryawanModal = ref(false);
 const showEditKaryawanModal = ref(false);
+const showAddPassword = ref(false);
+const showSuccessPopup = ref(false);
 const editingKaryawan = ref<KaryawanItem | null>(null);
 const karyawanForm = ref({
-  id_karyawan: "",
+  username: "",
   nama: "",
+  password: "",
+  role: "karyawan",
   email: "",
-  id_departemen: 0,
+  id_departemen: 1,
   departemen: "",
   jabatan: "",
-  status: "aktif",
+  id_pm: null as number | null,
+  no_telp: "",
+  tanggal_bergabung: "",
+  status: "Aktif",
 });
 const karyawanSubmitting = ref(false);
 
@@ -54,10 +68,11 @@ const departemenSubmitting = ref(false);
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [summaryRes, karyawanRes, departemenRes] = await Promise.allSettled([
+    const [summaryRes, karyawanRes, departemenRes, dropdownRes] = await Promise.allSettled([
       direkturApi.getDataKaryawanSummary(),
       direkturApi.getDataKaryawan(),
       direkturApi.getDataDepartemen(),
+      departmentApi.getAll(),
     ]);
 
     if (summaryRes.status === "fulfilled" && summaryRes.value.data) {
@@ -68,10 +83,12 @@ const fetchData = async () => {
     }
     if (departemenRes.status === "fulfilled" && Array.isArray(departemenRes.value.data)) {
       departemenList.value = departemenRes.value.data;
-      departemenOptions.value = departemenRes.value.data;
     }
-  } catch {
-    // silent fail
+    if (dropdownRes.status === "fulfilled" && Array.isArray(dropdownRes.value.data)) {
+      departemenOptions.value = dropdownRes.value.data;
+    }
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }
@@ -154,14 +171,20 @@ const handleAddClick = () => {
 const openAddKaryawan = () => {
   editingKaryawan.value = null;
   karyawanForm.value = {
-    id_karyawan: "",
+    username: "",
     nama: "",
+    password: "",
+    role: "karyawan",
     email: "",
-    id_departemen: departemenOptions.value[0]?.id_departemen || 0,
+    id_departemen: departemenOptions.value[0]?.id_departemen || 1,
     departemen: departemenOptions.value[0]?.nama_departemen || "",
     jabatan: "",
-    status: "aktif",
+    id_pm: null,
+    no_telp: "",
+    tanggal_bergabung: "",
+    status: "Aktif",
   };
+  showAddPassword.value = false;
   showAddKaryawanModal.value = true;
 };
 
@@ -171,29 +194,36 @@ const openEditKaryawan = (item: KaryawanItem) => {
     (d) => d.nama_departemen === item.departemen,
   );
   karyawanForm.value = {
-    id_karyawan: item.id_karyawan,
+    username: "",
     nama: item.nama,
+    password: "",
+    role: item.role || "karyawan",
     email: item.email,
     id_departemen: dept?.id_departemen || 0,
     departemen: item.departemen,
     jabatan: item.jabatan,
-    status: item.status,
+    id_pm: item.id_pm || null,
+    no_telp: item.no_telp || "",
+    tanggal_bergabung: item.tanggal_bergabung || "",
+    status: item.status || "Aktif",
   };
   showEditKaryawanModal.value = true;
 };
 
 const saveNewKaryawan = async () => {
-  if (!karyawanForm.value.nama || !karyawanForm.value.email) return;
+  if (!karyawanForm.value.username || !karyawanForm.value.nama || !karyawanForm.value.password) return;
   karyawanSubmitting.value = true;
   try {
-    await direkturApi.createKaryawan({
-      id_karyawan: karyawanForm.value.id_karyawan,
+    await authApi.registerAdmin({
+      username: karyawanForm.value.username,
       nama: karyawanForm.value.nama,
-      email: karyawanForm.value.email,
+      password: karyawanForm.value.password,
+      role: karyawanForm.value.role,
       id_departemen: karyawanForm.value.id_departemen,
-      jabatan: karyawanForm.value.jabatan,
+      id_pm: karyawanForm.value.id_pm,
     });
     showAddKaryawanModal.value = false;
+    showSuccessPopup.value = true;
     await fetchData();
   } catch {
     // silent fail
@@ -203,21 +233,24 @@ const saveNewKaryawan = async () => {
 };
 
 const saveEditKaryawan = async () => {
-  if (!editingKaryawan.value || !karyawanForm.value.nama || !karyawanForm.value.email) return;
+  if (!editingKaryawan.value || !karyawanForm.value.nama) return;
   karyawanSubmitting.value = true;
   try {
-    await direkturApi.updateKaryawan(editingKaryawan.value.id_user, {
+    await authApi.updateKaryawan(editingKaryawan.value.id_user, {
       nama: karyawanForm.value.nama,
-      email: karyawanForm.value.email,
+      role: karyawanForm.value.role,
       id_departemen: karyawanForm.value.id_departemen,
-      jabatan: karyawanForm.value.jabatan,
+      id_pm: karyawanForm.value.id_pm,
+      email: karyawanForm.value.email,
+      no_telp: karyawanForm.value.no_telp,
+      tanggal_bergabung: karyawanForm.value.tanggal_bergabung || new Date().toISOString().split('T')[0],
       status: karyawanForm.value.status,
     });
     showEditKaryawanModal.value = false;
     editingKaryawan.value = null;
     await fetchData();
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     karyawanSubmitting.value = false;
   }
@@ -293,7 +326,7 @@ const handleDeptChange = (event: Event) => {
     <!-- Header -->
     <div>
       <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-        Data Karyawan
+        {{ t('employee.title') }}
       </h1>
       <p class="text-sm text-gray-500 mt-1">
         Kelola informasi personalia, alokasi departemen, dan penugasan Project Manager dalam satu dasbor terpusat.
@@ -305,7 +338,7 @@ const handleDeptChange = (event: Event) => {
       <!-- Total Karyawan -->
       <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-          TOTAL KARYAWAN
+          {{ t('dashboard.totalEmployees') }}
         </p>
         <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-2">
           {{ summary.total_karyawan }}
@@ -579,17 +612,17 @@ const handleDeptChange = (event: Event) => {
         <!-- Form Fields -->
         <div class="space-y-3.5 text-xs">
           <div>
-            <label class="block font-medium text-gray-800 mb-1">ID Karyawan</label>
+            <label class="block font-medium text-gray-800 mb-1">Username <span class="text-red-500">*</span></label>
             <input
-              v-model="karyawanForm.id_karyawan"
+              v-model="karyawanForm.username"
               type="text"
-              placeholder="Contoh: 010000"
+              placeholder="Masukkan username"
               class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
             />
           </div>
 
           <div>
-            <label class="block font-medium text-gray-800 mb-1">Nama Karyawan</label>
+            <label class="block font-medium text-gray-800 mb-1">Nama Karyawan <span class="text-red-500">*</span></label>
             <input
               v-model="karyawanForm.nama"
               type="text"
@@ -599,13 +632,37 @@ const handleDeptChange = (event: Event) => {
           </div>
 
           <div>
-            <label class="block font-medium text-gray-800 mb-1">Email</label>
-            <input
-              v-model="karyawanForm.email"
-              type="email"
-              placeholder="nama@company.com"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
-            />
+            <label class="block font-medium text-gray-800 mb-1">Password <span class="text-red-500">*</span></label>
+            <div class="relative">
+              <input
+                v-model="karyawanForm.password"
+                :type="showAddPassword ? 'text' : 'password'"
+                placeholder="Masukkan password"
+                class="w-full px-3.5 py-2.5 pr-10 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
+              />
+              <button type="button" @click="showAddPassword = !showAddPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg v-if="showAddPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-medium text-gray-800 mb-1">Role</label>
+            <div class="relative">
+              <select
+                v-model="karyawanForm.role"
+                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4] text-gray-700 cursor-pointer pr-10"
+              >
+                <option value="karyawan">Karyawan</option>
+                <option value="pm">Project Manager</option>
+                <option value="hr">HR</option>
+                <option value="direktur">Direktur</option>
+              </select>
+              <svg class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
 
           <div>
@@ -632,11 +689,11 @@ const handleDeptChange = (event: Event) => {
           </div>
 
           <div>
-            <label class="block font-medium text-gray-800 mb-1">Jabatan</label>
+            <label class="block font-medium text-gray-800 mb-1">Email</label>
             <input
-              v-model="karyawanForm.jabatan"
-              type="text"
-              placeholder="Masukkan jabatan"
+              v-model="karyawanForm.email"
+              type="email"
+              placeholder="nama@company.com"
               class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
             />
           </div>
@@ -686,26 +743,34 @@ const handleDeptChange = (event: Event) => {
 
         <!-- Form 2 Columns Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <!-- Col 1: ID Karyawan -->
+          <!-- Col 1: Nama Lengkap -->
           <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">ID Karyawan</label>
-            <input
-              v-model="karyawanForm.id_karyawan"
-              type="text"
-              disabled
-              class="w-full px-3.5 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-xs text-gray-500 outline-none cursor-not-allowed"
-            />
-          </div>
-
-          <!-- Col 2: Nama Lengkap -->
-          <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">Nama Lengkap</label>
+            <label class="block font-semibold text-gray-800 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
             <input
               v-model="karyawanForm.nama"
               type="text"
               placeholder="Masukkan nama lengkap"
               class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4]"
             />
+          </div>
+
+          <!-- Col 2: Role -->
+          <div>
+            <label class="block font-semibold text-gray-800 mb-1.5">Role</label>
+            <div class="relative">
+              <select
+                v-model="karyawanForm.role"
+                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4] cursor-pointer pr-10"
+              >
+                <option value="karyawan">Karyawan</option>
+                <option value="pm">Project Manager</option>
+                <option value="hr">HR</option>
+                <option value="direktur">Direktur</option>
+              </select>
+              <svg class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
 
           <!-- Col 3: Alamat Email -->
@@ -742,18 +807,43 @@ const handleDeptChange = (event: Event) => {
             </div>
           </div>
 
-          <!-- Col 5: Jabatan -->
+          <!-- Col 5: No. Telepon -->
           <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">Jabatan</label>
+            <label class="block font-semibold text-gray-800 mb-1.5">No. Telepon</label>
             <input
-              v-model="karyawanForm.jabatan"
+              v-model="karyawanForm.no_telp"
               type="text"
-              placeholder="Masukkan jabatan"
+              placeholder="Masukkan nomor telepon"
               class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4]"
             />
           </div>
 
-          <!-- Empty Col 6 for alignment -->
+          <!-- Col 6: Status -->
+          <div>
+            <label class="block font-semibold text-gray-800 mb-1.5">Status</label>
+            <div class="relative">
+              <select
+                v-model="karyawanForm.status"
+                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4] cursor-pointer pr-10"
+              >
+                <option value="Aktif">Aktif</option>
+                <option value="Cuti">Cuti</option>
+              </select>
+              <svg class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Col 7: Tanggal Bergabung -->
+          <div>
+            <label class="block font-semibold text-gray-800 mb-1.5">Tanggal Bergabung</label>
+            <input
+              v-model="karyawanForm.tanggal_bergabung"
+              type="date"
+              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4]"
+            />
+          </div>
           <div></div>
 
           <!-- Col 7 & 8: Status Karyawan Radio Buttons -->
@@ -993,6 +1083,29 @@ const handleDeptChange = (event: Event) => {
             Terapkan Filter
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Success Popup -->
+    <div
+      v-if="showSuccessPopup"
+      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      @click.self="showSuccessPopup = false"
+    >
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+        <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Berhasil Ditambahkan!</h3>
+        <p class="text-sm text-gray-500 mb-6">Karyawan baru telah berhasil didaftarkan.</p>
+        <button
+          @click="showSuccessPopup = false"
+          class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+        >
+          Tutup
+        </button>
       </div>
     </div>
   </div>

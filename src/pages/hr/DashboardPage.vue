@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import {
   hrApi,
   type DashboardStats,
@@ -10,37 +11,30 @@ import {
   karyawanApi,
   type ActivityItem,
 } from "../../services/karyawan.service";
+import { getNetworkErrorMessage } from "../../lib/api";
 
+const { t } = useI18n();
 const router = useRouter();
 
 const stats = ref<DashboardStats | null>(null);
 const cutiMendatang = ref<CutiMendatangItem[]>([]);
 const activities = ref<ActivityItem[]>([]);
 const loading = ref(true);
+const error = ref<string | null>(null);
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
-  if (hour < 12) return "Selamat Pagi";
-  if (hour < 18) return "Selamat Siang";
-  return "Selamat Malam";
+  if (hour < 12) return t('greeting.morning');
+  if (hour < 18) return t('greeting.afternoon');
+  return t('greeting.evening');
 });
 
 const formatDateRange = (start: string, end: string) => {
   const s = new Date(start);
   const e = new Date(end);
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "Mei",
-    "Jun",
-    "Jul",
-    "Agu",
-    "Sep",
-    "Okt",
-    "Nov",
-    "Des",
+    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
   ];
   if (s.getMonth() === e.getMonth()) {
     return `${s.getDate()} - ${e.getDate()} ${months[s.getMonth()]}`;
@@ -61,7 +55,9 @@ const goToKalender = () => {
   router.push("/hr/kalender-libur");
 };
 
-onMounted(async () => {
+const fetchData = async () => {
+  loading.value = true;
+  error.value = null;
   try {
     const [statsRes, mendatangRes, activityRes] = await Promise.allSettled([
       hrApi.getDashboardStats(),
@@ -73,22 +69,22 @@ onMounted(async () => {
       cutiMendatang.value = mendatangRes.value.data || [];
     if (activityRes.status === "fulfilled")
       activities.value = activityRes.value.data || [];
-  } catch {
-    // silent fail
+  } catch (err: any) {
+    error.value = getNetworkErrorMessage(err);
   } finally {
     loading.value = false;
   }
-});
+};
+
+onMounted(fetchData);
 </script>
 
 <template>
   <div class="space-y-4 lg:space-y-6">
-    <!-- Header -->
     <div>
-      <h1 class="text-xl lg:text-2xl font-bold text-gray-800">Dashboard HR</h1>
+      <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('dashboard.title') || 'Dashboard HR' }}</h1>
       <p class="text-sm text-gray-500">
-        Ringkasan aktivitas cuti dan persetujuan yang membutuhkan perhatian Anda
-        hari ini.
+        {{ t('dashboard.leaveSummary') }}
       </p>
     </div>
 
@@ -98,10 +94,20 @@ onMounted(async () => {
       ></div>
     </div>
 
+    <div v-else-if="error" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+      <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      </div>
+      <p class="text-gray-600 text-sm mb-4">{{ error }}</p>
+      <button @click="fetchData" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+        {{ t('common.retry') }}
+      </button>
+    </div>
+
     <template v-else>
-      <!-- Stats Cards -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Total Karyawan -->
         <div
           class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
         >
@@ -127,7 +133,7 @@ onMounted(async () => {
               <p
                 class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium"
               >
-                Total Karyawan
+                {{ t('dashboard.totalEmployees') }}
               </p>
               <p class="text-2xl lg:text-3xl font-bold text-gray-800">
                 {{ stats?.total_karyawan ?? "-" }}
@@ -136,7 +142,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Menunggu HR -->
         <div
           class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 relative"
         >
@@ -162,7 +167,7 @@ onMounted(async () => {
                 <p
                   class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium"
                 >
-                  Menunggu
+                  {{ t('status.waiting') }}
                 </p>
                 <div class="flex items-center gap-2">
                   <p class="text-2xl lg:text-3xl font-bold text-gray-800">
@@ -191,7 +196,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Cuti Bulan Ini -->
         <div
           class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
         >
@@ -226,7 +230,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Cuti Mendatang -->
         <div
           class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
         >
@@ -252,7 +255,7 @@ onMounted(async () => {
               <p
                 class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium"
               >
-                Cuti Mendatang
+                {{ t('dashboard.upcomingLeave') }}
               </p>
               <p class="text-2xl lg:text-3xl font-bold text-gray-800">
                 {{ stats?.total_cuti_bulan_depan ?? "-" }}
@@ -262,22 +265,20 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Content Section -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        <!-- Cuti Karyawan Mendatang -->
         <div
           class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100"
         >
           <div class="p-4 lg:p-6 border-b border-gray-100">
             <div class="flex justify-between items-center">
               <h3 class="font-semibold text-gray-800">
-                Cuti Karyawan Mendatang
+                {{ t('dashboard.teamLeaveUpcoming') }}
               </h3>
               <button
                 @click="goToKalender"
                 class="text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
               >
-                Lihat Kalender
+                {{ t('dashboard.viewCalendar') }}
               </button>
             </div>
           </div>
@@ -286,7 +287,7 @@ onMounted(async () => {
               v-if="cutiMendatang.length === 0"
               class="text-center text-gray-400 text-sm py-4"
             >
-              Tidak ada cuti mendatang
+              {{ t('dashboard.noTeamLeave') }}
             </div>
             <div v-else class="space-y-4">
               <div
@@ -331,17 +332,16 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Aktivitas Terbaru -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100">
           <div class="p-4 lg:p-6 border-b border-gray-100">
-            <h3 class="font-semibold text-gray-800">Aktivitas Terbaru</h3>
+            <h3 class="font-semibold text-gray-800">{{ t('dashboard.latestActivities') }}</h3>
           </div>
           <div class="p-4 lg:p-6">
             <div
               v-if="activities.length === 0"
               class="text-center text-gray-400 text-sm py-4"
             >
-              Belum ada aktivitas
+              {{ t('dashboard.noActivities') }}
             </div>
             <div v-else class="space-y-4">
               <div

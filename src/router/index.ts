@@ -9,10 +9,13 @@ import StatusPengajuanPage from '../pages/karyawan/StatusPengajuanPage.vue'
 import RiwayatCutiPage from '../pages/karyawan/RiwayatCutiPage.vue'
 import KalenderCutiPage from '../pages/karyawan/KalenderCutiPage.vue'
 import ProfilPage from '../pages/karyawan/ProfilPage.vue'
+import PengajuanTetapBekerjaPage from '../pages/karyawan/PengajuanTetapBekerjaPage.vue'
+import StatusPengajuanKerjaPage from '../pages/karyawan/StatusPengajuanKerjaPage.vue'
 
 import PmLayout from '../layouts/PmLayout.vue'
 import PmDashboardPage from '../pages/pm/DashboardPage.vue'
 import PmPersetujuanPage from '../pages/pm/PersetujuanPage.vue'
+import PmPersetujuanBekerjaPage from '../pages/pm/PersetujuanBekerjaPage.vue'
 import PmRekapCutiTimPage from '../pages/pm/RekapCutiTimPage.vue'
 import PmKalenderTimPage from '../pages/pm/KalenderTimPage.vue'
 
@@ -89,6 +92,16 @@ const routes: RouteRecordRaw[] = [
         path: 'profil',
         name: 'KaryawanProfil',
         component: ProfilPage
+      },
+      {
+        path: 'pengajuan-bekerja',
+        name: 'KaryawanPengajuanBekerja',
+        component: PengajuanTetapBekerjaPage
+      },
+      {
+        path: 'status-pengajuan-kerja',
+        name: 'KaryawanStatusPengajuanKerja',
+        component: StatusPengajuanKerjaPage
       }
     ]
   },
@@ -110,6 +123,11 @@ const routes: RouteRecordRaw[] = [
         path: 'persetujuan',
         name: 'PmPersetujuan',
         component: PmPersetujuanPage
+      },
+      {
+        path: 'persetujuan-bekerja',
+        name: 'PmPersetujuanBekerja',
+        component: PmPersetujuanBekerjaPage
       },
       {
         path: 'rekap-cuti-tim',

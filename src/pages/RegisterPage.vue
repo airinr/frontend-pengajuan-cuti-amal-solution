@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import api from "../lib/api";
 import { authApi } from "../services/auth.service";
+import { useErrorPopup } from "../composables/useErrorPopup";
 import type { RegisterRequest } from "../types";
 
+const { t } = useI18n();
+const { showError } = useErrorPopup();
 const router = useRouter();
 
 const emit = defineEmits<{
@@ -47,8 +51,8 @@ onMounted(async () => {
     if (deptRes.status === "fulfilled")
       departments.value = deptRes.value.data || [];
     if (pmRes.status === "fulfilled") pmList.value = pmRes.value.data || [];
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 });
 
@@ -57,12 +61,12 @@ const handleSubmit = async (e: Event) => {
   error.value = null;
 
   if (form.value.password !== confirmPassword.value) {
-    error.value = "Password dan konfirmasi password tidak cocok";
+    error.value = t('error.passwordMismatch');
     return;
   }
 
   if (!agreeTerms.value) {
-    error.value = "Anda harus menyetujui syarat dan ketentuan";
+    error.value = t('error.agreeTerms');
     return;
   }
 
@@ -71,7 +75,7 @@ const handleSubmit = async (e: Event) => {
     await authApi.register(form.value);
     showSuccessPopup.value = true;
   } catch (err: any) {
-    error.value = err.response?.data?.detail || "Gagal mendaftarkan akun";
+    error.value = err.response?.data?.detail || t('error.registerFailed');
   } finally {
     loading.value = false;
   }
@@ -101,9 +105,9 @@ const handleSubmit = async (e: Event) => {
             </svg>
           </div>
         </div>
-        <h1 class="text-2xl font-bold text-gray-800">Buat Akun Baru</h1>
-        <p class="text-gray-500 mt-1">
-          Bergabung dengan sistem manajemen cuti kami.
+        <h1 class="text-2xl font-bold text-gray-800">{{ t('auth.createAccount') }}</h1>
+        <p class="text-sm text-gray-500 mb-6">
+          {{ t('auth.joinMessage') }}
         </p>
       </div>
 
@@ -118,7 +122,7 @@ const handleSubmit = async (e: Event) => {
         <form @submit="handleSubmit" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >Nama Lengkap</label
+              >{{ t('auth.fullName') }}</label
             >
             <div class="relative">
               <span
@@ -182,7 +186,7 @@ const handleSubmit = async (e: Event) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >Kata Sandi</label
+              >{{ t('auth.password') }}</label
             >
             <div class="relative">
               <span
@@ -255,7 +259,7 @@ const handleSubmit = async (e: Event) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >Konfirmasi Kata Sandi</label
+              >{{ t('auth.confirmPassword') }}</label
             >
             <div class="relative">
               <span
@@ -327,7 +331,7 @@ const handleSubmit = async (e: Event) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >Pilih Departemen</label
+              >{{ t('auth.selectDepartment') }}</label
             >
             <div class="relative">
               <span
@@ -352,7 +356,7 @@ const handleSubmit = async (e: Event) => {
                 class="w-full pl-10 pr-4 py-3 bg-gray-50 border-0 rounded-xl text-gray-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all appearance-none cursor-pointer"
                 required
               >
-                <option :value="0" disabled>Pilih Departemen Anda</option>
+                <option :value="0" disabled>{{ t('auth.selectDepartment') }}</option>
                 <option
                   v-for="dept in departments"
                   :key="dept.id_departemen"
@@ -383,7 +387,7 @@ const handleSubmit = async (e: Event) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >Pilih Project Manager</label
+              >{{ t('auth.selectPM') }}</label
             >
             <div class="relative">
               <span
@@ -407,7 +411,7 @@ const handleSubmit = async (e: Event) => {
                 v-model="form.id_pm"
                 class="w-full pl-10 pr-4 py-3 bg-gray-50 border-0 rounded-xl text-gray-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all appearance-none cursor-pointer"
               >
-                <option :value="null">Pilih PM</option>
+                <option :value="null">{{ t('auth.selectPM') }}</option>
                 <option
                   v-for="pm in pmList"
                   :key="pm.id_user"
@@ -443,21 +447,7 @@ const handleSubmit = async (e: Event) => {
               class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
             <span class="text-sm text-gray-500">
-              Saya setuju dengan
-              <button
-                type="button"
-                class="text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
-              >
-                Syarat
-              </button>
-              dan
-              <button
-                type="button"
-                class="text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
-              >
-                Ketentuan
-              </button>
-              yang berlaku.
+              {{ t('auth.agreeTerms') }}
             </span>
           </label>
 
@@ -471,7 +461,7 @@ const handleSubmit = async (e: Event) => {
               class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"
             />
             <template v-else>
-              Daftar Sekarang
+              {{ t('auth.registerButton') }}
               <svg
                 class="w-5 h-5"
                 fill="none"
@@ -491,13 +481,13 @@ const handleSubmit = async (e: Event) => {
       </div>
 
       <p class="mt-6 text-center text-sm text-gray-500">
-        Sudah punya akun?
-        <button
-          type="button"
-          @click="router.push('/login')"
-          class="text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
-        >
-          Masuk di sini
+        {{ t('auth.haveAccount') }}
+          <button
+            type="button"
+            @click="router.push('/login')"
+            class="text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
+          >
+            {{ t('auth.loginLink') }}
         </button>
       </p>
     </div>
@@ -515,13 +505,13 @@ const handleSubmit = async (e: Event) => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
       </div>
-      <h3 class="text-lg font-semibold text-gray-800 mb-2">Registrasi Berhasil!</h3>
-      <p class="text-sm text-gray-500 mb-6">Akun Anda berhasil dibuat. Silakan masuk untuk melanjutkan.</p>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('auth.register') }} {{ t('common.success') }}!</h3>
+      <p class="text-sm text-gray-500 mb-6">{{ t('auth.joinMessage') }}</p>
       <button
         @click="router.push('/login')"
         class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
       >
-        Masuk
+        {{ t('auth.loginButton') }}
       </button>
     </div>
   </div>

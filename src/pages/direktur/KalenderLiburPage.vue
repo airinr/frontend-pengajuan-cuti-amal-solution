@@ -1,29 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useCalendarNames } from "../../composables/useCalendarNames";
+
+const { t } = useI18n();
+const { showError } = useErrorPopup();
+const { dayNamesMini, monthNamesLong } = useCalendarNames();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
 const currentYear = ref(today.getFullYear());
 const holidays = ref<Holiday[]>([]);
 const loading = ref(true);
-
-const monthNames = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-];
-
-const dayNames = ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"];
 
 const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -104,14 +94,13 @@ const holidaysThisMonth = computed(() => {
 
 const holidaysByMonth = computed(() => {
   const map = new Map<string, (Holiday & { dayName: string; dayNum: string })[]>();
-  const dayNamesShort = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
   holidays.value.forEach((h) => {
     const d = new Date(h.date);
-    const key = `${monthNames[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
+    const key = `${monthNamesLong.value[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
     const item = {
       ...h,
-      dayName: dayNamesShort[d.getDay()],
+      dayName: dayNamesMini.value[d.getDay()],
       dayNum: String(d.getDate()).padStart(2, "0"),
     };
     if (!map.has(key)) {
@@ -146,8 +135,8 @@ const fetchHolidays = async (year: number) => {
     if (res.data?.data) {
       holidays.value = res.data.data;
     }
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }
@@ -213,10 +202,10 @@ onMounted(() => {
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-          Kalender Operasional
+          {{ t('holiday.operationalTitle') }}
         </h1>
         <p class="text-sm text-gray-500 mt-1">
-          Kelola jadwal libur nasional dan cuti bersama tahunan.
+          {{ t('holiday.subtitle') || 'Kelola jadwal libur nasional dan cuti bersama tahunan.' }}
         </p>
       </div>
 
@@ -229,7 +218,7 @@ onMounted(() => {
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Sinkronisasi
+          {{ t('holiday.sync') || 'Sinkronisasi' }}
         </button>
 
         <!-- Tambah Libur button -->
@@ -240,24 +229,24 @@ onMounted(() => {
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          Tambah Libur
+          {{ t('holiday.addHoliday') }}
         </button>
 
         <!-- Top Right Legend Card -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4 text-xs font-medium text-gray-700">
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-full border-2 border-red-500"></span>
-            <span>Libur Nasional</span>
+            <span>{{ t('leave.nationalHoliday') }}</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-full border-2 border-[#0f4bb4]"></span>
-            <span>Cuti Bersama</span>
+            <span>{{ t('leave.collective') }}</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-full border-2 border-[#0f4bb4] flex items-center justify-center">
               <span class="w-1 h-1 bg-[#0f4bb4] rounded-full"></span>
             </span>
-            <span>Hari Ini</span>
+            <span>{{ t('calendar.today') }}</span>
           </div>
         </div>
       </div>
@@ -275,7 +264,7 @@ onMounted(() => {
             </svg>
           </button>
           <h2 class="text-xl font-bold text-gray-900">
-            {{ monthNames[currentMonth] }} {{ currentYear }}
+            {{ monthNamesLong[currentMonth] }} {{ currentYear }}
           </h2>
           <button @click="nextMonth" class="p-1 text-gray-600 hover:text-gray-900 cursor-pointer">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,7 +275,7 @@ onMounted(() => {
 
         <!-- Day Headers -->
         <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-          <div v-for="(d, i) in dayNames" :key="d" :class="i === 0 ? 'text-red-500' : ''">
+          <div v-for="(d, i) in dayNamesMini" :key="d" :class="i === 0 ? 'text-red-500' : ''">
             {{ d }}
           </div>
         </div>
@@ -340,7 +329,7 @@ onMounted(() => {
                 ]"
                 :title="getHolidayOnDate(cell.date)?.name"
               >
-                {{ isLiburNasional(cell.date) ? 'Libur Nasional' : 'Cuti Bersama' }}
+                {{ isLiburNasional(cell.date) ? t('holiday.nationalHoliday') : t('holiday.collectiveLeave') }}
               </span>
             </div>
           </div>
@@ -351,9 +340,9 @@ onMounted(() => {
       <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5 max-h-[640px] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3 sticky top-0 bg-white z-10">
           <h2 class="text-base lg:text-lg font-bold text-gray-900">
-            Daftar Libur & Cuti
+            {{ t('holiday.holidayList') }}
           </h2>
-          <span class="text-xs text-gray-400 font-medium">Tahun {{ currentYear }}</span>
+          <span class="text-xs text-gray-400 font-medium">{{ t('holiday.year') }} {{ currentYear }}</span>
         </div>
 
         <div v-if="loading" class="flex justify-center items-center py-12">
@@ -361,7 +350,7 @@ onMounted(() => {
         </div>
 
         <div v-else-if="holidaysByMonth.length === 0" class="py-12 text-center text-gray-400 text-xs font-medium">
-          Tidak ada data hari libur resmi pada tahun {{ currentYear }}.
+          {{ t('holiday.noHolidayData') }} {{ currentYear }}.
         </div>
 
         <div v-else class="space-y-6">
@@ -400,7 +389,7 @@ onMounted(() => {
                       item.is_cuti_bersama ? 'text-blue-600' : 'text-gray-500'
                     ]"
                   >
-                    {{ item.is_cuti_bersama ? 'Cuti Bersama' : 'Libur Nasional' }}
+                    {{ item.is_cuti_bersama ? t('holiday.collectiveLeave') : t('holiday.nationalHoliday') }}
                   </p>
                 </div>
               </div>
@@ -419,7 +408,7 @@ onMounted(() => {
         <!-- Header -->
         <div class="flex items-center justify-between">
           <h3 class="text-base sm:text-lg font-bold text-gray-900">
-            Tambah Hari Libur
+            {{ t('holiday.addModalTitle') }}
           </h3>
           <button @click="showAddModal = false" class="text-gray-400 hover:text-gray-600 cursor-pointer">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -432,18 +421,18 @@ onMounted(() => {
         <div class="space-y-3.5 text-xs">
           <!-- 1. Nama Hari Libur -->
           <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">Nama Hari Libur</label>
+            <label class="block font-semibold text-gray-800 mb-1.5">{{ t('holiday.holidayNameLabel') }}</label>
             <input
               v-model="liburForm.nama"
               type="text"
-              placeholder="Contoh: Hari Raya Idul Fitri"
+              :placeholder="t('holiday.holidayNamePlaceholder')"
               class="w-full px-3.5 py-2.5 bg-[#f0f5ff]/70 border border-transparent rounded-xl text-xs text-gray-800 outline-none focus:bg-white focus:border-[#0f4bb4] transition-all"
             />
           </div>
 
           <!-- 2. Tanggal -->
           <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">Tanggal (YYYY-MM-DD)</label>
+            <label class="block font-semibold text-gray-800 mb-1.5">{{ t('holiday.dateLabel') }}</label>
             <div class="relative">
               <input
                 v-model="liburForm.tanggal"
@@ -455,7 +444,7 @@ onMounted(() => {
 
           <!-- 3. Jenis Libur -->
           <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">Jenis Libur</label>
+            <label class="block font-semibold text-gray-800 mb-1.5">{{ t('holiday.typeLabel') }}</label>
             <div class="grid grid-cols-2 gap-3">
               <!-- Libur Nasional Card -->
               <label
@@ -473,7 +462,7 @@ onMounted(() => {
                   class="accent-red-500 w-3.5 h-3.5"
                 />
                 <span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
-                <span class="truncate">Libur Nasional</span>
+                <span class="truncate">{{ t('holiday.nationalHoliday') }}</span>
               </label>
 
               <!-- Cuti Bersama Card -->
@@ -492,18 +481,18 @@ onMounted(() => {
                   class="accent-[#0f4bb4] w-3.5 h-3.5"
                 />
                 <span class="w-2 h-2 rounded-full bg-[#0f4bb4] shrink-0"></span>
-                <span class="truncate">Cuti Bersama</span>
+                <span class="truncate">{{ t('holiday.collectiveLeave') }}</span>
               </label>
             </div>
           </div>
 
           <!-- 4. Keterangan -->
           <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">Keterangan</label>
+            <label class="block font-semibold text-gray-800 mb-1.5">{{ t('holiday.descriptionLabel') }}</label>
             <textarea
               v-model="liburForm.keterangan"
               rows="3"
-              placeholder="Tambahkan catatan tambahan..."
+              :placeholder="t('holiday.descriptionPlaceholder')"
               class="w-full p-3 bg-[#f0f5ff]/70 border border-transparent rounded-xl text-xs text-gray-800 outline-none focus:bg-white focus:border-[#0f4bb4] transition-all min-h-[80px]"
             ></textarea>
           </div>
@@ -515,13 +504,13 @@ onMounted(() => {
             @click="showAddModal = false"
             class="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 cursor-pointer"
           >
-            Batal
+            {{ t('holiday.cancel') }}
           </button>
           <button
             @click="handleSaveLibur"
             class="px-7 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer"
           >
-            Simpan
+            {{ t('holiday.save') }}
           </button>
         </div>
       </div>
@@ -540,14 +529,14 @@ onMounted(() => {
         </div>
 
         <div>
-          <h3 class="text-base font-bold text-gray-900">Sinkronisasi Data Libur</h3>
+          <h3 class="text-base font-bold text-gray-900">{{ t('holiday.syncTitle') }}</h3>
           <p class="text-xs text-gray-500 mt-1">
-            Apakah Anda ingin menyinkronkan data hari libur nasional resmi tahun {{ currentYear }} dari server pemerintah?
+            {{ t('holiday.syncDescription') }} {{ currentYear }} {{ t('holiday.syncFromServer') }}
           </p>
         </div>
 
         <div v-if="syncSuccess" class="p-3 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl">
-          ✓ Sinkronisasi data libur berhasil!
+          ✓ {{ t('holiday.syncSuccess') }}
         </div>
 
         <div class="flex items-center gap-2 pt-2">
@@ -555,14 +544,14 @@ onMounted(() => {
             @click="showSyncModal = false"
             class="flex-1 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-xl cursor-pointer"
           >
-            Batal
+            {{ t('holiday.cancel') }}
           </button>
           <button
             @click="handleSyncApi"
             :disabled="isSyncing"
             class="flex-1 py-2 text-xs font-bold text-white bg-[#0f4bb4] rounded-xl cursor-pointer shadow-sm disabled:opacity-50"
           >
-            {{ isSyncing ? "Menyinkronkan..." : "Mulai Sinkronisasi" }}
+            {{ isSyncing ? t('holiday.syncing') : t('holiday.syncStart') }}
           </button>
         </div>
       </div>

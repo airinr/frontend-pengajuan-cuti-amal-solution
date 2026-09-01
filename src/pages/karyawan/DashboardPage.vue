@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { authApi } from '../../services/auth.service'
 import { karyawanApi, type OngoingCuti, type ActivityItem } from '../../services/karyawan.service'
 import { holidayApi, type Holiday } from '../../services/holiday.service'
+import { getNetworkErrorMessage } from '../../lib/api'
 import type { CurrentUser } from '../../types'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const user = ref<CurrentUser | null>(null)
@@ -13,6 +16,7 @@ const ongoingList = ref<OngoingCuti[]>([])
 const upcomingHolidays = ref<Holiday[]>([])
 const activities = ref<ActivityItem[]>([])
 const loading = ref(true)
+const error = ref<string | null>(null)
 
 const totalCuti = computed(() => user.value?.total_cuti ?? '-')
 const sisaCuti = computed(() => user.value?.sisa_cuti ?? '-')
@@ -24,7 +28,7 @@ const terpakai = computed(() => {
 const formatDate = (dateStr: string) => {
   const d = new Date(dateStr)
   const day = d.getDate()
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+  const months = t('months.short')
   return `${day} ${months[d.getMonth()]} ${d.getFullYear()}`
 }
 
@@ -34,11 +38,11 @@ const formatDateRange = (start: string, end: string) => {
 
 const statusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    menunggu_pm: 'Menunggu PM',
-    menunggu_hr: 'Menunggu HR',
-    menunggu_direktur: 'Menunggu Direktur',
-    disetujui: 'Disetujui',
-    ditolak: 'Ditolak',
+    menunggu_pm: t('status.waitingPM'),
+    menunggu_hr: t('status.waitingHR'),
+    menunggu_direktur: t('status.waitingDirector'),
+    disetujui: t('status.approved'),
+    ditolak: t('status.rejected'),
   }
   return labels[status] || status
 }
@@ -54,7 +58,9 @@ const goToPengajuan = () => {
   router.push('/karyawan/pengajuan-cuti')
 }
 
-onMounted(async () => {
+const fetchData = async () => {
+  loading.value = true
+  error.value = null
   try {
     const [userRes, ongoingRes, holidayRes, activitiesRes] = await Promise.allSettled([
       authApi.me(),
@@ -72,31 +78,45 @@ onMounted(async () => {
         .sort((a, b) => a.date.localeCompare(b.date))
     }
     if (activitiesRes.status === 'fulfilled') activities.value = activitiesRes.value.data || []
-  } catch {
-    // silent fail
+  } catch (err: any) {
+    error.value = getNetworkErrorMessage(err)
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(fetchData)
 </script>
 
 <template>
   <div class="space-y-4 lg:space-y-6">
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
       <div>
-        <h1 class="text-xl lg:text-2xl font-bold text-gray-800">Ringkasan Cuti</h1>
-        <p class="text-xs lg:text-sm text-gray-500">Periode Tahun {{ new Date().getFullYear() }}</p>
+        <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('dashboard.leaveSummary') }}</h1>
+        <p class="text-xs lg:text-sm text-gray-500">{{ t('dashboard.yearPeriod') }} {{ new Date().getFullYear() }}</p>
       </div>
       <button
         @click="goToPengajuan"
         class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors cursor-pointer self-start sm:self-auto"
       >
-        + Buat Pengajuan
+        + {{ t('dashboard.createLeave') }}
       </button>
     </div>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+
+    <div v-else-if="error" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+      <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      </div>
+      <p class="text-gray-600 text-sm mb-4">{{ error }}</p>
+      <button @click="fetchData" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+        {{ t('common.retry') }}
+      </button>
     </div>
 
     <template v-else>
@@ -109,8 +129,8 @@ onMounted(async () => {
               </svg>
             </div>
             <div>
-              <p class="text-xs text-gray-500 uppercase">Total Hak Cuti</p>
-              <p class="text-xl lg:text-2xl font-bold text-gray-800">{{ totalCuti }} <span class="text-sm font-normal text-gray-500">Hari</span></p>
+              <p class="text-xs text-gray-500 uppercase">{{ t('dashboard.totalLeave') }}</p>
+              <p class="text-xl lg:text-2xl font-bold text-gray-800">{{ totalCuti }} <span class="text-sm font-normal text-gray-500">{{ t('dashboard.days') }}</span></p>
             </div>
           </div>
         </div>
@@ -123,14 +143,14 @@ onMounted(async () => {
               </svg>
             </div>
             <div>
-              <p class="text-xs text-gray-500 uppercase">Terpakai</p>
-              <p class="text-xl lg:text-2xl font-bold text-gray-800">{{ terpakai }} <span class="text-sm font-normal text-gray-500">Hari</span></p>
+              <p class="text-xs text-gray-500 uppercase">{{ t('dashboard.used') }}</p>
+              <p class="text-xl lg:text-2xl font-bold text-gray-800">{{ terpakai }} <span class="text-sm font-normal text-gray-500">{{ t('dashboard.days') }}</span></p>
             </div>
           </div>
         </div>
 
         <div class="bg-gray-600 rounded-xl p-4 lg:p-6 shadow-sm text-white sm:col-span-2 lg:col-span-1">
-          <p class="text-xs text-gray-200 uppercase tracking-wide mb-1">Sisa Cuti Anda</p>
+          <p class="text-xs text-gray-200 uppercase tracking-wide mb-1">{{ t('dashboard.remainingLeave') }}</p>
           <div class="flex items-center gap-4 lg:gap-6">
             <div class="relative w-16 h-16 lg:w-20 lg:h-20 flex-shrink-0">
               <svg class="w-full h-full -rotate-90" viewBox="0 0 80 80">
@@ -151,7 +171,7 @@ onMounted(async () => {
             </div>
             <div>
               <p class="text-2xl lg:text-3xl font-bold">{{ sisaCuti }} <span class="text-sm lg:text-base font-normal text-gray-200">Hari</span></p>
-              <p class="text-xs text-gray-200 mt-1">Tersisa dari {{ user?.total_cuti || '-' }} hari</p>
+              <p class="text-xs text-gray-200 mt-1">{{ t('dashboard.remainingFrom') }} {{ user?.total_cuti || '-' }} {{ t('dashboard.days') }}</p>
             </div>
           </div>
         </div>
@@ -159,16 +179,15 @@ onMounted(async () => {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div class="lg:col-span-2 space-y-4 lg:space-y-6">
-          <!-- Pengajuan Sedang Diproses -->
           <div class="bg-white rounded-xl shadow-sm border border-gray-100">
             <div class="p-4 lg:p-6 border-b border-gray-100">
               <div class="flex justify-between items-center">
-                <h3 class="font-semibold text-gray-800">Pengajuan Sedang Diproses</h3>
+                <h3 class="font-semibold text-gray-800">{{ t('dashboard.processing') }}</h3>
               </div>
             </div>
             <div class="p-4 lg:p-6">
               <div v-if="ongoingList.length === 0" class="text-center text-gray-400 text-sm py-4">
-                Tidak ada pengajuan yang sedang diproses
+                {{ t('dashboard.noProcessing') }}
               </div>
               <div v-else class="space-y-3">
                 <div
@@ -194,9 +213,8 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Hari Libur Mendatang -->
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
-            <h3 class="font-semibold text-gray-800 mb-4">Hari Libur Mendatang</h3>
+            <h3 class="font-semibold text-gray-800 mb-4">{{ t('dashboard.upcomingHolidays') }}</h3>
             <div v-if="upcomingHolidays.length > 0" class="space-y-2">
               <div
                 v-for="(h, i) in upcomingHolidays"
@@ -218,24 +236,23 @@ onMounted(async () => {
                     h.is_cuti_bersama ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700',
                   ]"
                 >
-                  {{ h.is_cuti_bersama ? 'Cuti Bersama' : 'Libur Nasional' }}
+                  {{ h.is_cuti_bersama ? t('leave.collective') : t('leave.nationalHoliday') }}
                 </span>
               </div>
             </div>
-            <div v-else class="text-center text-gray-400 text-sm">Tidak ada libur mendatang</div>
+            <div v-else class="text-center text-gray-400 text-sm">{{ t('dashboard.noHolidays') }}</div>
           </div>
         </div>
 
-        <!-- Aktivitas Terbaru -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
           <div class="flex items-center gap-2 mb-4">
             <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            <h3 class="font-semibold text-gray-800">Aktivitas Terbaru</h3>
+            <h3 class="font-semibold text-gray-800">{{ t('dashboard.latestActivities') }}</h3>
           </div>
           <div v-if="activities.length === 0" class="text-center text-gray-400 text-sm py-4">
-            Belum ada aktivitas
+            {{ t('dashboard.noActivities') }}
           </div>
           <div v-else class="space-y-3">
             <div

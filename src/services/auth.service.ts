@@ -6,6 +6,26 @@ export interface UserList {
   nama: string
 }
 
+export interface RegisterAdminRequest {
+  username: string
+  nama: string
+  password: string
+  role: string
+  id_departemen: number
+  id_pm?: number | null
+}
+
+export interface UpdateKaryawanRequest {
+  nama: string
+  role: string
+  id_departemen: number
+  id_pm?: number | null
+  email: string
+  no_telp: string
+  tanggal_bergabung: string
+  status: string
+}
+
 export const authApi = {
   login: (data: LoginRequest) => {
     const formData = new URLSearchParams()
@@ -18,6 +38,12 @@ export const authApi = {
 
   register: (data: RegisterRequest) =>
     api.post<RegisterResponse>('/auth/register', data),
+
+  registerAdmin: (data: RegisterAdminRequest) =>
+    api.post('/auth/register-admin', data),
+
+  updateKaryawan: (userId: number, data: UpdateKaryawanRequest) =>
+    api.put(`/hr/karyawan/${userId}`, data),
 
   logout: () =>
     api.post('/auth/logout'),

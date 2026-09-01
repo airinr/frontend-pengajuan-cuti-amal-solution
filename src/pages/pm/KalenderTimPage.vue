@@ -1,23 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import { karyawanApi, type KalenderItem } from "../../services/karyawan.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useCalendarNames } from "../../composables/useCalendarNames";
+
+const { t } = useI18n();
+const { showError } = useErrorPopup();
+const { dayNamesShort, dayNamesFull, monthNamesLong } = useCalendarNames();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
 const currentYear = ref(today.getFullYear());
 const selectedDate = ref<Date>(today);
-
-const monthNames = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
-
-const dayNames = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
-
-const dayFullName = [
-  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu",
-];
 
 const holidays = ref<Holiday[]>([]);
 const teamCalendar = ref<KalenderItem[]>([]);
@@ -95,12 +91,12 @@ const selectedDateTeamLeave = computed(() => getTeamLeaveOnDate(selectedDate.val
 const selectedDateLabel = computed(() => {
   const d = selectedDate.value;
   const dayNum = d.getDate();
-  const monthName = monthNames[d.getMonth()];
+  const monthName = monthNamesLong.value[d.getMonth()];
   const year = d.getFullYear();
   return `${dayNum} ${monthName} ${year}`;
 });
 
-const selectedDateDayName = computed(() => dayFullName[selectedDate.value.getDay()]);
+const selectedDateDayName = computed(() => dayNamesFull.value[selectedDate.value.getDay()]);
 
 const goToToday = () => {
   const now = new Date();
@@ -139,8 +135,8 @@ onMounted(async () => {
     ]);
     holidays.value = holidayRes.data.data || [];
     teamCalendar.value = teamRes.data || [];
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 });
 </script>
@@ -149,8 +145,8 @@ onMounted(async () => {
   <div>
     <!-- Header -->
     <div class="mb-6">
-      <h1 class="text-xl lg:text-2xl font-bold text-gray-800">Kalender Cuti</h1>
-      <p class="text-sm text-gray-500">Pantau jadwal cuti Anda, tim, dan hari libur nasional.</p>
+      <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('calendar.title') }}</h1>
+      <p class="text-sm text-gray-500">{{ t('calendar.subtitle') }}</p>
     </div>
 
     <div class="flex flex-col lg:flex-row gap-6">
@@ -166,7 +162,7 @@ onMounted(async () => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Hari ini
+            {{ t('calendar.today') }}
           </button>
 
           <div class="flex items-center gap-3">
@@ -179,7 +175,7 @@ onMounted(async () => {
               </svg>
             </button>
             <span class="text-base font-semibold text-gray-800 min-w-[160px] text-center">
-              {{ monthNames[currentMonth] }} {{ currentYear }}
+              {{ monthNamesLong[currentMonth] }} {{ currentYear }}
             </span>
             <button
               @click="nextMonth"
@@ -196,7 +192,7 @@ onMounted(async () => {
         <div class="grid grid-cols-7 border border-gray-200 rounded-lg overflow-hidden">
           <!-- Header Hari -->
           <div
-            v-for="day in dayNames"
+            v-for="day in dayNamesShort"
             :key="day"
             class="text-center text-xs font-bold py-3 border-b border-gray-200 text-gray-600 bg-gray-50"
           >
@@ -286,7 +282,7 @@ onMounted(async () => {
           <div>
             <div class="flex items-center gap-2 mb-2">
               <div class="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
-              <span class="text-sm font-semibold text-gray-700">Jadwal Tim</span>
+              <span class="text-sm font-semibold text-gray-700">{{ t('calendar.teamLeave') }}</span>
             </div>
             <div v-if="selectedDateTeamLeave.length > 0" class="space-y-2">
               <div
@@ -308,29 +304,29 @@ onMounted(async () => {
                 </span>
               </div>
             </div>
-            <p v-else class="text-xs text-gray-400 italic">Tidak ada jadwal tim pada tanggal ini</p>
+            <p v-else class="text-xs text-gray-400 italic">{{ t('calendar.noTeamLeave') }}</p>
           </div>
         </div>
 
         <!-- Keterangan / Legenda -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h3 class="text-sm font-bold text-gray-800 mb-3">Keterangan</h3>
+          <h3 class="text-sm font-bold text-gray-800 mb-3">{{ t('approval.keterangan') }}</h3>
           <div class="space-y-2.5">
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span class="text-sm text-gray-600">Cuti Saya</span>
+              <span class="text-sm text-gray-600">{{ t('calendar.myLeave') }}</span>
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span class="text-sm text-gray-600">Libur Nasional</span>
+              <span class="text-sm text-gray-600">{{ t('leave.nationalHoliday') }}</span>
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span class="text-sm text-gray-600">Cuti Bersama</span>
+              <span class="text-sm text-gray-600">{{ t('leave.collective') }}</span>
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-              <span class="text-sm text-gray-600">Jadwal Tim (Disetujui)</span>
+              <span class="text-sm text-gray-600">{{ t('calendar.teamLeave') }} ({{ t('status.approved') }})</span>
             </div>
           </div>
         </div>

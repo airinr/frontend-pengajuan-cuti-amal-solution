@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import { useErrorPopup } from "../composables/useErrorPopup";
 
+const { t } = useI18n();
 const { isVisible, errorMessage, errorCode, closeError } = useErrorPopup();
 </script>
 
@@ -20,7 +22,7 @@ const { isVisible, errorMessage, errorCode, closeError } = useErrorPopup();
               </svg>
             </div>
             <div>
-              <h3 class="text-lg font-bold text-gray-800">Terjadi Kesalahan</h3>
+              <h3 class="text-lg font-bold text-gray-800">{{ t('common.error') }}</h3>
               <p v-if="errorCode" class="text-xs text-gray-400">Error {{ errorCode }}</p>
             </div>
           </div>
@@ -32,7 +34,7 @@ const { isVisible, errorMessage, errorCode, closeError } = useErrorPopup();
               @click="closeError"
               class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors cursor-pointer"
             >
-              Tutup
+              {{ t('common.close') }}
             </button>
           </div>
         </div>

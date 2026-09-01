@@ -1,4 +1,7 @@
 import axios from "axios";
+import i18n from "../i18n";
+
+const { t } = i18n.global;
 
 const api = axios.create({
   baseURL: "/api",
@@ -33,5 +36,24 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+export function getNetworkErrorMessage(error: any): string {
+  if (!error.response) {
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      return t('network.timeout');
+    }
+    if (error.message === 'Network Error' || !navigator.onLine) {
+      return t('network.noConnection');
+    }
+    return t('network.cannotConnect');
+  }
+
+  const status = error.response.status;
+  if (status === 403) return t('network.forbidden');
+  if (status === 404) return t('network.notFound');
+  if (status >= 500) return t('network.serverError');
+
+  return error.response?.data?.detail || error.response?.data?.message || t('network.unknown');
+}
 
 export default api;

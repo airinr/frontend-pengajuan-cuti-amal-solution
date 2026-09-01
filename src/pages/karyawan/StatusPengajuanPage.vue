@@ -1,36 +1,41 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { karyawanApi, type OngoingCuti } from '../../services/karyawan.service'
 import { authApi } from '../../services/auth.service'
+import { useErrorPopup } from '../../composables/useErrorPopup'
+
+const { t } = useI18n()
+const { showError } = useErrorPopup()
 
 const ongoingList = ref<OngoingCuti[]>([])
 const loading = ref(true)
 const userRole = ref<string>('karyawan')
 
-const stepsByRole: Record<string, { label: string; statusKey: string }[]> = {
+const stepsByRole = computed(() => ({
   karyawan: [
-    { label: 'Diajukan', statusKey: 'submitted' },
-    { label: 'Menunggu PM', statusKey: 'pm' },
-    { label: 'Menunggu HRD', statusKey: 'hr' },
-    { label: 'Selesai', statusKey: 'selesai' },
+    { label: t('status.submitted'), statusKey: 'submitted' },
+    { label: t('status.waitingPM'), statusKey: 'pm' },
+    { label: t('status.waitingHR'), statusKey: 'hr' },
+    { label: t('status.completed'), statusKey: 'selesai' },
   ],
   pm: [
-    { label: 'Diajukan', statusKey: 'submitted' },
-    { label: 'Menunggu HRD', statusKey: 'hr' },
-    { label: 'Selesai', statusKey: 'selesai' },
+    { label: t('status.submitted'), statusKey: 'submitted' },
+    { label: t('status.waitingHR'), statusKey: 'hr' },
+    { label: t('status.completed'), statusKey: 'selesai' },
   ],
   hr: [
-    { label: 'Diajukan', statusKey: 'submitted' },
-    { label: 'Menunggu Direktur', statusKey: 'direktur' },
-    { label: 'Selesai', statusKey: 'selesai' },
+    { label: t('status.submitted'), statusKey: 'submitted' },
+    { label: t('status.waitingDirector'), statusKey: 'direktur' },
+    { label: t('status.completed'), statusKey: 'selesai' },
   ],
   direktur: [
-    { label: 'Diajukan', statusKey: 'submitted' },
-    { label: 'Selesai', statusKey: 'selesai' },
+    { label: t('status.submitted'), statusKey: 'submitted' },
+    { label: t('status.completed'), statusKey: 'selesai' },
   ],
-}
+}))
 
-const currentSteps = computed(() => stepsByRole[userRole.value] || stepsByRole.karyawan)
+const currentSteps = computed(() => stepsByRole.value[userRole.value] || stepsByRole.value.karyawan)
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
@@ -65,15 +70,15 @@ const formatDateRange = (start: string, end: string) => {
 
 const getStatusConfig = (status: string) => {
   const configs: Record<string, { label: string; color: string; bgColor: string; borderColor: string }> = {
-    'menunggu_pm': { label: 'Menunggu PM', color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
-    'menunggu_hr': { label: 'Menunggu HRD', color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
-    'menunggu_direktur': { label: 'Menunggu Direktur', color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
-    'disetujui_pm': { label: 'Disetujui PM', color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
-    'disetujui_hr': { label: 'Disetujui HRD', color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
-    'disetujui_direktur': { label: 'Disetujui Direktur', color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
-    'ditolak_pm': { label: 'Ditolak PM', color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
-    'ditolak_hr': { label: 'Ditolak HRD', color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
-    'ditolak_direktur': { label: 'Ditolak Direktur', color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
+    'menunggu_pm': { label: t('status.waitingPM'), color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+    'menunggu_hr': { label: t('status.waitingHR'), color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+    'menunggu_direktur': { label: t('status.waitingDirector'), color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+    'disetujui_pm': { label: t('status.approvedPM'), color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
+    'disetujui_hr': { label: t('status.approvedHR'), color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
+    'disetujui_direktur': { label: t('status.approvedDirector'), color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
+    'ditolak_pm': { label: t('status.rejectedPM'), color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
+    'ditolak_hr': { label: t('status.rejectedHR'), color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
+    'ditolak_direktur': { label: t('status.rejectedDirector'), color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
   }
   return configs[status] || { label: status, color: 'text-gray-600', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' }
 }
@@ -144,7 +149,8 @@ onMounted(async () => {
     ])
     if (cutiRes.status === 'fulfilled') ongoingList.value = cutiRes.value.data
     if (userRes.status === 'fulfilled') userRole.value = userRes.value.data?.role || 'karyawan'
-  } catch {
+  } catch (err) {
+    showError(err)
     ongoingList.value = []
   } finally {
     loading.value = false
@@ -155,10 +161,9 @@ onMounted(async () => {
 <template>
   <div>
     <div class="bg-blue-50 rounded-xl p-6 mb-8">
-      <h1 class="text-2xl font-bold text-gray-800 mb-2">Status Pengajuan Cuti</h1>
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ t('statusPage.title') }}</h1>
       <p class="text-sm text-gray-600">
-        Pantau proses persetujuan pengajuan cuti Anda secara real-time. Hubungi atasan jika
-        status belum berubah dalam 2x24 jam.
+        {{ t('statusPage.subtitle') }}
       </p>
     </div>
 
@@ -167,10 +172,10 @@ onMounted(async () => {
     </div>
 
     <div v-else>
-      <h2 class="text-lg font-semibold text-gray-800 mb-4">Pengajuan Aktif</h2>
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">{{ t('statusPage.activeRequests') }}</h2>
 
       <div v-if="ongoingList.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400 text-sm">
-        Tidak ada pengajuan aktif
+        {{ t('statusPage.noActive') }}
       </div>
 
       <div v-else class="space-y-4 lg:space-y-6">
@@ -210,7 +215,7 @@ onMounted(async () => {
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Status Saat Ini</span>
+                <span>{{ t('statusPage.currentStatus') }}</span>
                 <span class="font-semibold">{{ getStatusConfig(item.status_sekarang).label }}</span>
               </div>
             </div>
@@ -221,7 +226,7 @@ onMounted(async () => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <p class="text-sm font-semibold text-red-600 mb-1">Alasan Penolakan:</p>
+                  <p class="text-sm font-semibold text-red-600 mb-1">{{ t('statusPage.rejectionReason') }}</p>
                   <p class="text-sm text-red-600">{{ item.alasan_penolakan }}</p>
                 </div>
               </div>

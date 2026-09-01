@@ -1,29 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useCalendarNames } from "../../composables/useCalendarNames";
+
+const { t } = useI18n();
+const { showError } = useErrorPopup();
+const { dayNamesShort, dayNamesFull, monthNamesLong } = useCalendarNames();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
 const currentYear = ref(today.getFullYear());
 const holidays = ref<Holiday[]>([]);
 const loading = ref(true);
-
-const monthNames = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-];
-
-const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
 const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -111,19 +101,10 @@ const holidaysByMonth = computed(() => {
 
   holidays.value.forEach((h) => {
     const d = new Date(h.date);
-    const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-    const dayNamesFull = [
-      "Minggu",
-      "Senin",
-      "Selasa",
-      "Rabu",
-      "Kamis",
-      "Jumat",
-      "Sabtu",
-    ];
+    const key = `${monthNamesLong.value[d.getMonth()]} ${d.getFullYear()}`;
     const item = {
       ...h,
-      dayName: dayNamesFull[d.getDay()],
+      dayName: dayNamesFull.value[d.getDay()],
       dayNum: d.getDate(),
     };
     if (!monthMap.has(key)) monthMap.set(key, []);
@@ -160,8 +141,8 @@ const fetchHolidays = async () => {
   try {
     const res = await holidayApi.getByYear(currentYear.value);
     holidays.value = res.data.data || [];
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }
@@ -213,10 +194,10 @@ const handleSimpan = () => {
     >
       <div>
         <h1 class="text-xl lg:text-2xl font-bold text-gray-800">
-          Kalender Operasional
+          {{ t('holiday.operationalTitle') }}
         </h1>
         <p class="text-sm text-gray-500">
-          Kelola jadwal libur nasional dan cuti bersama tahunan.
+          {{ t('holiday.subtitle') || 'Kelola jadwal libur nasional dan cuti bersama tahunan.' }}
         </p>
       </div>
       <div class="flex items-center gap-3">
@@ -236,7 +217,7 @@ const handleSimpan = () => {
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          Sinkronisasi
+          {{ t('holiday.sync') || 'Sinkronisasi' }}
         </button>
         <button
           @click="openModal"
@@ -255,7 +236,7 @@ const handleSimpan = () => {
               d="M12 6v6m0 0v6m0-6h6m-6 0H6"
             />
           </svg>
-          Tambah Libur
+          {{ t('holiday.addHoliday') }}
         </button>
       </div>
     </div>
@@ -285,7 +266,7 @@ const handleSimpan = () => {
             </svg>
           </button>
           <h2 class="text-base font-semibold text-gray-800">
-            {{ monthNames[currentMonth] }} {{ currentYear }}
+            {{ monthNamesLong[currentMonth] }} {{ currentYear }}
           </h2>
           <button
             @click="nextMonth"
@@ -338,7 +319,7 @@ const handleSimpan = () => {
           class="grid grid-cols-7 border border-gray-200 rounded-lg overflow-hidden"
         >
           <div
-            v-for="day in dayNames"
+            v-for="day in dayNamesShort"
             :key="day"
             class="text-center text-xs font-bold py-3 border-b border-gray-200 text-gray-600 bg-gray-50"
           >
@@ -465,9 +446,7 @@ const handleSimpan = () => {
                       ]"
                     >
                       {{
-                        ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"][
-                          new Date(item.date).getDay()
-                        ]
+                        dayNamesFull[new Date(item.date).getDay()]
                       }}
                     </span>
                     <span
