@@ -10,7 +10,7 @@ import { approvalApi, type ApprovalQueueItem } from "../../services/approval.ser
 import { useErrorPopup } from "../../composables/useErrorPopup";
 import { useCalendarNames } from "../../composables/useCalendarNames";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { showError } = useErrorPopup();
 const { monthNamesShort } = useCalendarNames();
 
@@ -345,7 +345,7 @@ onMounted(async () => {
             <!-- Ringkasan Tim -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
               <h3 class="text-sm font-bold text-gray-800 mb-1">{{ t('approval.summary') }}</h3>
-              <p class="text-xs text-gray-400 mb-4">{{ t('approval.month') }} {{ new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) }}</p>
+              <p class="text-xs text-gray-400 mb-4">{{ t('approval.month') }} {{ new Date().toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { month: 'long', year: 'numeric' }) }}</p>
               <div class="space-y-3">
                 <div class="flex justify-between items-center">
                   <span class="text-sm text-gray-600">{{ t('approval.totalSubmissions') }}</span>

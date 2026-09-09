@@ -35,8 +35,8 @@ const formatDateRange = (start: string, end: string) => {
 const getStatusConfig = (status: string) => {
   const configs: Record<string, { label: string; color: string; bgColor: string; borderColor: string }> = {
     menunggu_pm: { label: "Menunggu PM", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
-    disetujui_pm: { label: "Disetujui PM", color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
-    disetujui: { label: "Disetujui", color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
+    disetujui_pm: { label: "Disetujui PM", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
+    disetujui: { label: "Disetujui", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
     ditolak_pm: { label: "Ditolak PM", color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-200" },
   };
   return configs[status] || { label: status, color: "text-gray-600", bgColor: "bg-gray-50", borderColor: "border-gray-200" };
@@ -44,7 +44,7 @@ const getStatusConfig = (status: string) => {
 
 const getStepStatus = (item: PenambahanKerjaItem, stepIndex: number) => {
   const status = item.status;
-  const step = steps[stepIndex];
+  const step = steps.value[stepIndex];
   if (!step) return "pending";
 
   if (status.includes("ditolak")) {
@@ -58,7 +58,27 @@ const getStepStatus = (item: PenambahanKerjaItem, stepIndex: number) => {
   if (status === `menunggu_${step.statusKey}`) return "active";
   if (status === `disetujui_${step.statusKey}` || status === "disetujui") return "completed";
 
+  if (status === "disetujui_pm" && stepIndex === steps.value.length - 1) return "completed";
+
   return "pending";
+};
+
+const getStepDate = (item: PenambahanKerjaItem, stepIndex: number) => {
+  const step = steps.value[stepIndex];
+  if (!step) return null;
+  if (stepIndex === 0) return item.tanggal_mulai;
+  if (step.statusKey === "pm") return item.processed_at_pm;
+  return null;
+};
+
+const formatDateShort = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const day = date.getDate();
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const month = months[date.getMonth()];
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${day} ${month}, ${hours}:${minutes}`;
 };
 
 const getCardBorderColor = (item: PenambahanKerjaItem) => {
@@ -144,10 +164,19 @@ onMounted(async () => {
                 >
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
+                <svg
+                  v-else-if="item.status.includes('disetujui')"
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>{{ t('workStatus.currentStatus') }}</span>
+                <span>Status</span>
                 <span class="font-semibold">{{ getStatusConfig(item.status).label }}</span>
               </div>
             </div>
@@ -237,6 +266,9 @@ onMounted(async () => {
                         ? `Ditolak ${step.label.replace("Menunggu ", "")}`
                         : step.label
                   }}
+                </p>
+                <p class="text-[10px] lg:text-xs text-gray-400 text-center">
+                  {{ getStepDate(item, stepIndex) ? formatDateShort(getStepDate(item, stepIndex)!) : '-' }}
                 </p>
               </div>
             </div>

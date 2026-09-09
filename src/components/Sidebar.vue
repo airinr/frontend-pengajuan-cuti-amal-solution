@@ -63,9 +63,7 @@ const bekerjaSection = computed<MenuSection>(() => ({
 
 const menuSections = computed(() => {
   const sections = [...baseSections.value];
-  if (user.value && user.value.id_departemen === 3) {
-    sections.splice(2, 0, bekerjaSection.value);
-  }
+  sections.splice(2, 0, bekerjaSection.value);
   return sections;
 });
 
@@ -241,8 +239,8 @@ onMounted(async () => {
             <p class="text-sm font-medium text-gray-800 truncate">
               {{ user?.nama || "Loading..." }}
             </p>
-            <p class="text-xs text-gray-500 truncate">
-              {{ user?.username ? `${user.username}@company.com` : "" }}
+            <p v-if="user?.email" class="text-xs text-gray-500 truncate">
+              {{ user.email }}
             </p>
           </div>
         </div>

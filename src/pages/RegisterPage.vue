@@ -122,7 +122,7 @@ const handleSubmit = async (e: Event) => {
         <form @submit="handleSubmit" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >{{ t('auth.fullName') }}</label
+              >{{ t('auth.fullName') }} <span class="text-red-500">*</span></label
             >
             <div class="relative">
               <span
@@ -154,7 +154,7 @@ const handleSubmit = async (e: Event) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >Username</label
+              >Username <span class="text-red-500">*</span></label
             >
             <div class="relative">
               <span
@@ -186,7 +186,7 @@ const handleSubmit = async (e: Event) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >{{ t('auth.password') }}</label
+              >{{ t('auth.password') }} <span class="text-red-500">*</span></label
             >
             <div class="relative">
               <span
@@ -259,7 +259,7 @@ const handleSubmit = async (e: Event) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >{{ t('auth.confirmPassword') }}</label
+              >{{ t('auth.confirmPassword') }} <span class="text-red-500">*</span></label
             >
             <div class="relative">
               <span

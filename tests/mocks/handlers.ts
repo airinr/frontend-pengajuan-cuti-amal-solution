@@ -380,12 +380,14 @@ export async function setupMockRoutes(page: Page): Promise<void> {
       return route.fulfill(
         jsonResponse([
           {
+            id_log_cuti: 10,
             jenis_cuti: 'Cuti Tahunan',
             durasi: 3,
             keterangan_cuti: 'Libur keluarga',
             tanggal_mulai: '2026-09-01',
             tanggal_selesai: '2026-09-03',
             status_sekarang: 'menunggu_pm',
+            pengganti: 7,
             diproses_pm: 0,
             diproses_hr: 0,
             diproses_direktur: 0,

@@ -102,7 +102,21 @@ onMounted(fetchData);
     </div>
 
     <template v-else>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div
+          class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
+        >
+          <p
+            class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1"
+          >
+            {{ t('dashboard.totalLeave') }}
+          </p>
+          <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+            {{ stats?.jatah_cuti ?? "-" }}
+            <span class="text-sm font-normal text-gray-500">            {{ t('dashboard.days') }}</span>
+          </p>
+        </div>
+
         <div
           class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
         >
@@ -353,7 +367,7 @@ onMounted(fetchData);
                   </svg>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm text-gray-700">{{ item.keterangan }}</p>
+                  <p class="text-sm text-gray-700">{{ item.keterangan.replace(/\b(\w+)\s+\1\b/gi, '$1') }}</p>
                   <p class="text-xs text-gray-400 mt-0.5">{{ item.tanggal }}</p>
                 </div>
               </div>

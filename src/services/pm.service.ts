@@ -2,6 +2,7 @@ import api from "../lib/api";
 
 export interface DashboardStats {
   sisa_cuti: number;
+  jatah_cuti: number;
   cuti_terpakai: number;
   tim_menunggu_appoval: number;
   total_pengajuan_tim: number;

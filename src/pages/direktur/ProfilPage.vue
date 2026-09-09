@@ -33,11 +33,13 @@ const passwordSuccess = ref("");
 
 const showLanguageModal = ref(false);
 
-const currentLanguage = computed(() => locale.value === 'id' ? 'Bahasa Indonesia' : 'English');
+const currentLanguage = computed(() =>
+  locale.value === "id" ? "Bahasa Indonesia" : "English",
+);
 
 const selectLanguage = (lang: string) => {
   locale.value = lang;
-  localStorage.setItem('locale', lang);
+  localStorage.setItem("locale", lang);
   showLanguageModal.value = false;
 };
 
@@ -76,11 +78,16 @@ const handleChangePassword = async () => {
     passwordSuccess.value = "Kata sandi berhasil diubah";
     setTimeout(() => {
       showPasswordModal.value = false;
-      passwordForm.value = { password_lama: "", password_baru: "", konfirmasi: "" };
+      passwordForm.value = {
+        password_lama: "",
+        password_baru: "",
+        konfirmasi: "",
+      };
       passwordSuccess.value = "";
     }, 1200);
   } catch (err: any) {
-    passwordError.value = err.response?.data?.detail || "Gagal mengubah kata sandi";
+    passwordError.value =
+      err.response?.data?.detail || "Gagal mengubah kata sandi";
   } finally {
     passwordLoading.value = false;
   }
@@ -116,17 +123,29 @@ onMounted(() => {
 <template>
   <div class="space-y-6 max-w-7xl mx-auto">
     <div v-if="loading" class="flex justify-center items-center py-20">
-      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-[#0f4bb4]"></div>
+      <div
+        class="animate-spin rounded-full h-10 w-10 border-b-2 border-[#0f4bb4]"
+      ></div>
     </div>
 
     <!-- Main 2-Column Layout -->
     <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       <!-- Left Column: Avatar & Role Card (4 Cols) -->
-      <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col items-center text-center">
+      <div
+        class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col items-center text-center"
+      >
         <!-- Circle Avatar Placeholder -->
-        <div class="w-32 h-32 rounded-full border-4 border-gray-100 bg-gray-50/50 flex items-center justify-center mb-6 text-gray-300 shadow-xs">
-          <svg class="w-16 h-16 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+        <div
+          class="w-32 h-32 rounded-full border-4 border-gray-100 bg-gray-50/50 flex items-center justify-center mb-6 text-gray-300 shadow-xs"
+        >
+          <svg
+            class="w-16 h-16 text-gray-300"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+            />
           </svg>
         </div>
 
@@ -134,36 +153,60 @@ onMounted(() => {
         <p class="text-xs text-gray-500 mt-1 mb-4">{{ user?.role }}</p>
 
         <!-- Administrator Aktif Badge -->
-        <div class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0f4bb4] text-white rounded-full text-[10px] font-bold tracking-wider uppercase shadow-sm">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-          ADMINISTRATOR AKTIF
-        </div>
       </div>
 
       <!-- Right Column: Informasi Pribadi & Keamanan (8 Cols) -->
       <div class="lg:col-span-8 space-y-6">
         <!-- 1. Informasi Pribadi Card -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-7">
+        <div
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-7"
+        >
           <div class="flex items-center gap-2 mb-6">
-            <svg class="w-5 h-5 text-[#0f4bb4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <svg
+              class="w-5 h-5 text-[#0f4bb4]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
             </svg>
-            <h3 class="text-base font-bold text-gray-900">{{ t('profile.accountInfo') }}</h3>
+            <h3 class="text-base font-bold text-gray-900">
+              {{ t("profile.accountInfo") }}
+            </h3>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ t('auth.fullName') }}</p>
-              <p class="text-sm font-bold text-gray-900 mt-1">{{ user?.nama }}</p>
+              <p
+                class="text-[10px] font-bold text-gray-400 uppercase tracking-wider"
+              >
+                {{ t("auth.fullName") }}
+              </p>
+              <p class="text-sm font-bold text-gray-900 mt-1">
+                {{ user?.nama }}
+              </p>
             </div>
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ t('employee.position') }}</p>
-              <p class="text-sm font-bold text-gray-900 mt-1 capitalize">{{ user?.role }}</p>
+              <p
+                class="text-[10px] font-bold text-gray-400 uppercase tracking-wider"
+              >
+                {{ t("employee.position") }}
+              </p>
+              <p class="text-sm font-bold text-gray-900 mt-1 capitalize">
+                {{ user?.role }}
+              </p>
             </div>
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email</p>
+              <p
+                class="text-[10px] font-bold text-gray-400 uppercase tracking-wider"
+              >
+                Email
+              </p>
               <input
                 v-model="profileForm.email"
                 type="email"
@@ -172,7 +215,11 @@ onMounted(() => {
               />
             </div>
             <div>
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ t('employee.phone') }}</p>
+              <p
+                class="text-[10px] font-bold text-gray-400 uppercase tracking-wider"
+              >
+                {{ t("employee.phone") }}
+              </p>
               <input
                 v-model="profileForm.no_telp"
                 type="text"
@@ -184,28 +231,68 @@ onMounted(() => {
         </div>
 
         <!-- 2. Keamanan & Preferensi Card -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-7 space-y-4">
+        <div
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-7 space-y-4"
+        >
           <div class="flex items-center gap-2 mb-2">
-            <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            <svg
+              class="w-5 h-5 text-gray-800"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+              />
             </svg>
-            <h3 class="text-base font-bold text-gray-900">{{ t('profile.security') }}</h3>
+            <h3 class="text-base font-bold text-gray-900">
+              {{ t("profile.security") }}
+            </h3>
           </div>
 
           <div class="divide-y divide-gray-50">
             <!-- Ubah Kata Sandi Row -->
             <div
-              @click="showPasswordModal = true; passwordError = ''; passwordSuccess = ''"
+              @click="
+                showPasswordModal = true;
+                passwordError = '';
+                passwordSuccess = '';
+              "
               class="py-3.5 flex items-center justify-between hover:bg-gray-50 rounded-xl px-2 -mx-2 transition-colors cursor-pointer"
             >
               <div class="flex items-center gap-3">
-                <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                <svg
+                  class="w-4 h-4 text-gray-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
                 </svg>
-                <span class="text-xs font-bold text-gray-800">{{ t('profile.changePassword') }}</span>
+                <span class="text-xs font-bold text-gray-800">{{
+                  t("profile.changePassword")
+                }}</span>
               </div>
-              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                class="w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </div>
 
@@ -215,26 +302,56 @@ onMounted(() => {
               class="py-3.5 flex items-center justify-between hover:bg-gray-50 rounded-xl px-2 -mx-2 transition-colors cursor-pointer"
             >
               <div class="flex items-center gap-3">
-                <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                <svg
+                  class="w-4 h-4 text-gray-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                  />
                 </svg>
                 <div>
-                  <p class="text-xs font-bold text-gray-800">{{ t('profile.language') }}</p>
-                  <p class="text-[10px] text-gray-400 font-medium">{{ currentLanguage }}</p>
+                  <p class="text-xs font-bold text-gray-800">
+                    {{ t("profile.language") }}
+                  </p>
+                  <p class="text-[10px] text-gray-400 font-medium">
+                    {{ currentLanguage }}
+                  </p>
                 </div>
               </div>
-              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                class="w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </div>
           </div>
         </div>
 
         <!-- 3. Bottom Action Buttons -->
-        <div v-if="successMessage" class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-semibold">
+        <div
+          v-if="successMessage"
+          class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-semibold"
+        >
           {{ successMessage }}
         </div>
-        <div v-if="errorMessage" class="p-3 bg-red-50 text-red-600 rounded-xl text-xs">
+        <div
+          v-if="errorMessage"
+          class="p-3 bg-red-50 text-red-600 rounded-xl text-xs"
+        >
           {{ errorMessage }}
         </div>
         <div class="flex items-center justify-end gap-3 pt-2">
@@ -243,10 +360,20 @@ onMounted(() => {
             @click="handleLogout"
             class="flex items-center gap-2 px-5 py-2.5 bg-[#fee2e2] hover:bg-red-200 text-[#ef4444] rounded-xl text-xs font-bold transition-colors cursor-pointer"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
             </svg>
-            {{ t('profile.logout') }}
+            {{ t("profile.logout") }}
           </button>
 
           <!-- Simpan Perubahan Button -->
@@ -255,7 +382,9 @@ onMounted(() => {
             :disabled="profileLoading"
             class="px-6 py-2.5 bg-[#0f4bb4] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
           >
-            {{ profileLoading ? t('profile.saving') : t('profile.saveChanges') }}
+            {{
+              profileLoading ? t("profile.saving") : t("profile.saveChanges")
+            }}
           </button>
         </div>
       </div>
@@ -267,18 +396,28 @@ onMounted(() => {
       class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
     >
       <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-        <h3 class="text-base font-bold text-gray-900">{{ t('profile.changePassword') }}</h3>
+        <h3 class="text-base font-bold text-gray-900">
+          {{ t("profile.changePassword") }}
+        </h3>
 
-        <div v-if="passwordError" class="p-3 bg-red-50 text-red-600 rounded-xl text-xs">
+        <div
+          v-if="passwordError"
+          class="p-3 bg-red-50 text-red-600 rounded-xl text-xs"
+        >
           {{ passwordError }}
         </div>
-        <div v-if="passwordSuccess" class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-semibold">
+        <div
+          v-if="passwordSuccess"
+          class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-semibold"
+        >
           {{ passwordSuccess }}
         </div>
 
         <div class="space-y-3">
           <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">{{ t('profile.oldPassword') }}</label>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">{{
+              t("profile.oldPassword")
+            }}</label>
             <input
               v-model="passwordForm.password_lama"
               type="password"
@@ -286,7 +425,9 @@ onMounted(() => {
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">{{ t('profile.newPassword') }}</label>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">{{
+              t("profile.newPassword")
+            }}</label>
             <input
               v-model="passwordForm.password_baru"
               type="password"
@@ -294,7 +435,9 @@ onMounted(() => {
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">{{ t('profile.confirmNewPassword') }}</label>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">{{
+              t("profile.confirmNewPassword")
+            }}</label>
             <input
               v-model="passwordForm.konfirmasi"
               type="password"
@@ -307,14 +450,18 @@ onMounted(() => {
             @click="showPasswordModal = false"
             class="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200"
           >
-            {{ t('common.cancel') }}
+            {{ t("common.cancel") }}
           </button>
           <button
             @click="handleChangePassword"
             :disabled="passwordLoading"
             class="px-4 py-2 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl cursor-pointer disabled:opacity-50"
           >
-            {{ passwordLoading ? t('profile.saving') : t('profile.changePassword') }}
+            {{
+              passwordLoading
+                ? t("profile.saving")
+                : t("profile.changePassword")
+            }}
           </button>
         </div>
       </div>
@@ -328,10 +475,25 @@ onMounted(() => {
     >
       <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-base font-bold text-gray-900">{{ t('profile.language') }}</h3>
-          <button @click="showLanguageModal = false" class="text-gray-400 hover:text-gray-600 cursor-pointer">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <h3 class="text-base font-bold text-gray-900">
+            {{ t("profile.language") }}
+          </h3>
+          <button
+            @click="showLanguageModal = false"
+            class="text-gray-400 hover:text-gray-600 cursor-pointer"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -341,15 +503,24 @@ onMounted(() => {
             @click="selectLanguage('id')"
             :class="[
               'w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left',
-              locale === 'id' ? 'bg-blue-50 border-2 border-[#0f4bb4]' : 'border-2 border-gray-200 hover:bg-gray-50'
+              locale === 'id'
+                ? 'bg-blue-50 border-2 border-[#0f4bb4]'
+                : 'border-2 border-gray-200 hover:bg-gray-50',
             ]"
           >
             <span class="text-2xl">🇮🇩</span>
             <div>
               <p class="text-xs font-bold text-gray-800">Bahasa Indonesia</p>
             </div>
-            <svg v-if="locale === 'id'" class="w-4 h-4 text-[#0f4bb4] ml-auto" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+            <svg
+              v-if="locale === 'id'"
+              class="w-4 h-4 text-[#0f4bb4] ml-auto"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
+              />
             </svg>
           </button>
 
@@ -357,15 +528,24 @@ onMounted(() => {
             @click="selectLanguage('en')"
             :class="[
               'w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left',
-              locale === 'en' ? 'bg-blue-50 border-2 border-[#0f4bb4]' : 'border-2 border-gray-200 hover:bg-gray-50'
+              locale === 'en'
+                ? 'bg-blue-50 border-2 border-[#0f4bb4]'
+                : 'border-2 border-gray-200 hover:bg-gray-50',
             ]"
           >
             <span class="text-2xl">🇬🇧</span>
             <div>
               <p class="text-xs font-bold text-gray-800">English</p>
             </div>
-            <svg v-if="locale === 'en'" class="w-4 h-4 text-[#0f4bb4] ml-auto" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+            <svg
+              v-if="locale === 'en'"
+              class="w-4 h-4 text-[#0f4bb4] ml-auto"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
+              />
             </svg>
           </button>
         </div>

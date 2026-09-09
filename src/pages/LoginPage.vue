@@ -83,7 +83,7 @@ const handleSubmit = async (e: Event) => {
         <form @submit="handleSubmit" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >{{ t('auth.username') }}</label
+              >{{ t('auth.username') }} <span class="text-red-500">*</span></label
             >
             <div class="relative">
               <span
@@ -116,7 +116,7 @@ const handleSubmit = async (e: Event) => {
           <div>
             <div class="flex justify-between items-center mb-1.5">
               <label class="text-sm font-medium text-gray-700"
-                >{{ t('auth.password') }}</label
+                >{{ t('auth.password') }} <span class="text-red-500">*</span></label
               >
               <button
                 type="button"

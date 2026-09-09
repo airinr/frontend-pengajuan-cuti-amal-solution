@@ -35,8 +35,18 @@ const formatDateRange = (start: string, end: string) => {
   const s = new Date(start);
   const e = new Date(end || start);
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "Mei",
+    "Jun",
+    "Jul",
+    "Agu",
+    "Sep",
+    "Okt",
+    "Nov",
+    "Des",
   ];
   if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
     return `${s.getDate()} - ${e.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
@@ -91,16 +101,23 @@ const filteredLog = computed(() => {
 });
 
 const currentData = computed(() => {
-  const data = activeTab.value === "rekapitulasi" ? filteredRekap.value : filteredLog.value;
+  const data =
+    activeTab.value === "rekapitulasi"
+      ? filteredRekap.value
+      : filteredLog.value;
   const start = (currentPage.value - 1) * itemsPerPage;
   return data.slice(start, start + itemsPerPage);
 });
 
 const totalItems = computed(() => {
-  return activeTab.value === "rekapitulasi" ? filteredRekap.value.length : filteredLog.value.length;
+  return activeTab.value === "rekapitulasi"
+    ? filteredRekap.value.length
+    : filteredLog.value.length;
 });
 
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage) || 1);
+const totalPages = computed(
+  () => Math.ceil(totalItems.value / itemsPerPage) || 1,
+);
 
 const switchTab = (tab: "rekapitulasi" | "log") => {
   activeTab.value = tab;
@@ -116,7 +133,9 @@ watch([selectedYear, selectedStatus], () => {
   currentPage.value = 1;
 });
 
-const canExport = computed(() => userRole.value === "hr" || userRole.value === "direktur");
+const canExport = computed(
+  () => userRole.value === "hr" || userRole.value === "direktur",
+);
 
 const exportRekapCsv = async () => {
   exporting.value = true;
@@ -173,15 +192,17 @@ onMounted(async () => {
     <!-- Header -->
     <div>
       <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-        {{ t('leaveLog.title') }}
+        {{ t("leaveLog.title") }}
       </h1>
       <p class="text-sm text-gray-500 mt-1">
-        {{ t('leaveLog.subtitle') }}
+        {{ t("leaveLog.subtitle") }}
       </p>
     </div>
 
     <!-- Filter Bar Card -->
-    <div class="bg-white rounded-2xl p-4 lg:p-5 shadow-sm border border-gray-100">
+    <div
+      class="bg-white rounded-2xl p-4 lg:p-5 shadow-sm border border-gray-100"
+    >
       <div class="flex flex-col lg:flex-row items-center justify-between gap-4">
         <!-- Left: Segmented Switcher -->
         <div class="flex bg-[#e8eef9] p-1 rounded-xl shrink-0">
@@ -194,7 +215,7 @@ onMounted(async () => {
                 : 'text-gray-600 hover:text-gray-900',
             ]"
           >
-            {{ t('leaveLog.rekapTab') }}
+            {{ t("leaveLog.rekapTab") }}
           </button>
           <button
             @click="switchTab('log')"
@@ -205,14 +226,24 @@ onMounted(async () => {
                 : 'text-gray-600 hover:text-gray-900',
             ]"
           >
-            {{ t('leaveLog.logTab') }}
+            {{ t("leaveLog.logTab") }}
           </button>
         </div>
 
         <!-- Center: Search Input -->
         <div class="relative flex-1 max-w-md w-full">
-          <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <svg
+            class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
           <input
             v-model="searchQuery"
@@ -273,61 +304,113 @@ onMounted(async () => {
           <!-- Export CSV Button -->
           <button
             v-if="canExport"
-            @click="activeTab === 'rekapitulasi' ? exportRekapCsv() : exportLogCsv()"
+            @click="
+              activeTab === 'rekapitulasi' ? exportRekapCsv() : exportLogCsv()
+            "
             :disabled="exporting"
             class="flex items-center gap-2 px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-full hover:bg-green-700 transition-colors cursor-pointer disabled:opacity-50"
           >
-            <svg v-if="!exporting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <svg
+              v-if="!exporting"
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             </svg>
-            <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <svg
+              v-else
+              class="w-4 h-4 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
             </svg>
-            {{ exporting ? t('common.loading') : t('leaveLog.exportCSV') }}
+            {{ exporting ? t("common.loading") : t("leaveLog.exportCSV") }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- Table Card -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div
+      class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+    >
       <!-- Loading Indicator -->
       <div v-if="loading" class="flex justify-center items-center py-16">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f4bb4]"></div>
+        <div
+          class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f4bb4]"
+        ></div>
       </div>
 
       <template v-else>
         <!-- Rekapitulasi Table -->
         <div v-if="activeTab === 'rekapitulasi'" class="overflow-x-auto">
           <table class="w-full text-left text-xs">
-            <thead class="bg-gray-50/80 border-b border-gray-100 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+            <thead
+              class="bg-gray-50/80 border-b border-gray-100 text-[10px] font-bold text-gray-600 uppercase tracking-wider"
+            >
               <tr>
-                <th class="py-3.5 px-6">{{ t('leaveLog.no') }}</th>
-                <th class="py-3.5 px-6">{{ t('leaveLog.employee') }}</th>
-                <th class="py-3.5 px-6">{{ t('employee.department') }}</th>
-                <th class="py-3.5 px-6">{{ t('approval.dateRange') }}</th>
-                <th class="py-3.5 px-6 text-center">{{ t('leaveLog.totalPerYear') }}</th>
-                <th class="py-3.5 px-6 text-center">{{ t('leaveLog.remainingPerYear') }}</th>
+                <th class="py-3.5 px-6">{{ t("leaveLog.no") }}</th>
+                <th class="py-3.5 px-6">{{ t("leaveLog.employee") }}</th>
+                <th class="py-3.5 px-6">{{ t("employee.department") }}</th>
+                <th class="py-3.5 px-6 text-center">
+                  {{ t("leaveLog.totalPerYear") }}
+                </th>
+                <th class="py-3.5 px-6 text-center">
+                  {{ t("leaveLog.remainingPerYear") }}
+                </th>
               </tr>
             </thead>
             <tbody v-if="currentData.length === 0">
               <tr>
                 <td colspan="6" class="py-12 text-center text-gray-400 text-xs">
-                  {{ t('common.noData') }}
+                  {{ t("common.noData") }}
                 </td>
               </tr>
             </tbody>
-            <tbody v-else class="divide-y divide-gray-50 font-medium text-gray-700">
-              <tr v-for="(row, idx) in (currentData as RekapItem[])" :key="idx" class="hover:bg-gray-50/60 transition-colors">
-                <td class="py-4 px-6">{{ (currentPage - 1) * itemsPerPage + idx + 1 }}</td>
+            <tbody
+              v-else
+              class="divide-y divide-gray-50 font-medium text-gray-700"
+            >
+              <tr
+                v-for="(row, idx) in currentData as RekapItem[]"
+                :key="idx"
+                class="hover:bg-gray-50/60 transition-colors"
+              >
+                <td class="py-4 px-6">
+                  {{ (currentPage - 1) * itemsPerPage + idx + 1 }}
+                </td>
                 <td class="py-4 px-6 font-bold text-gray-900 leading-tight">
                   {{ row.nama }}
                 </td>
-                <td class="py-4 px-6 text-gray-600">{{ row.nama_departemen || '-' }}</td>
-                <td class="py-4 px-6 text-gray-600">{{ formatDateRange(row.tanggal_mulai, row.tanggal_selesai) }}</td>
-                <td class="py-4 px-6 text-center font-semibold text-gray-800">{{ row.total_cuti }}</td>
-                <td class="py-4 px-6 text-center font-bold text-gray-900">{{ row.sisa_cuti }}</td>
+                <td class="py-4 px-6 text-gray-600">
+                  {{ row.nama_departemen || "-" }}
+                </td>
+                <td class="py-4 px-6 text-center font-semibold text-gray-800">
+                  {{ row.total_cuti }}
+                </td>
+                <td class="py-4 px-6 text-center font-bold text-gray-900">
+                  {{ row.sisa_cuti }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -336,7 +419,9 @@ onMounted(async () => {
         <!-- Log Cuti Table -->
         <div v-else class="overflow-x-auto">
           <table class="w-full text-left text-xs">
-            <thead class="bg-gray-50/80 border-b border-gray-100 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+            <thead
+              class="bg-gray-50/80 border-b border-gray-100 text-[10px] font-bold text-gray-600 uppercase tracking-wider"
+            >
               <tr>
                 <th class="py-3.5 px-6">NO.</th>
                 <th class="py-3.5 px-6">KARYAWAN</th>
@@ -356,19 +441,36 @@ onMounted(async () => {
                 </td>
               </tr>
             </tbody>
-            <tbody v-else class="divide-y divide-gray-50 font-medium text-gray-700">
-              <tr v-for="(item, idx) in (currentData as LogCutiItem[])" :key="idx" class="hover:bg-gray-50/60 transition-colors">
-                <td class="py-4 px-6">{{ (currentPage - 1) * itemsPerPage + idx + 1 }}</td>
+            <tbody
+              v-else
+              class="divide-y divide-gray-50 font-medium text-gray-700"
+            >
+              <tr
+                v-for="(item, idx) in currentData as LogCutiItem[]"
+                :key="idx"
+                class="hover:bg-gray-50/60 transition-colors"
+              >
+                <td class="py-4 px-6">
+                  {{ (currentPage - 1) * itemsPerPage + idx + 1 }}
+                </td>
                 <td class="py-4 px-6 font-bold text-gray-900 leading-tight">
                   {{ item.nama }}
                 </td>
                 <td class="py-4 px-6 text-gray-600">
-                  {{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}
+                  {{
+                    formatDateRange(item.tanggal_mulai, item.tanggal_selesai)
+                  }}
                 </td>
-                <td class="py-4 px-6 text-gray-900 font-semibold">{{ item.durasi }} Hari</td>
+                <td class="py-4 px-6 text-gray-900 font-semibold">
+                  {{ item.durasi }} Hari
+                </td>
                 <td class="py-4 px-6 text-gray-600">{{ item.jenis_cuti }}</td>
-                <td class="py-4 px-6 text-gray-600 max-w-[200px] truncate">{{ item.keterangan || '-' }}</td>
-                <td class="py-4 px-6 text-gray-600">{{ item.pengganti || '-' }}</td>
+                <td class="py-4 px-6 text-gray-600 max-w-[200px] truncate">
+                  {{ item.keterangan || "-" }}
+                </td>
+                <td class="py-4 px-6 text-gray-600">
+                  {{ item.pengganti || "-" }}
+                </td>
                 <td class="py-4 px-6">
                   <span
                     :class="[
@@ -376,29 +478,51 @@ onMounted(async () => {
                       item.status.includes('disetujui')
                         ? 'bg-[#dbeafe] text-[#0f4bb4]'
                         : item.status.includes('ditolak')
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-yellow-100 text-yellow-700',
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700',
                     ]"
                   >
                     <span
                       :class="[
                         'w-1.5 h-1.5 rounded-full',
-                        item.status.includes('disetujui') ? 'bg-[#0f4bb4]' : item.status.includes('ditolak') ? 'bg-red-500' : 'bg-yellow-500',
+                        item.status.includes('disetujui')
+                          ? 'bg-[#0f4bb4]'
+                          : item.status.includes('ditolak')
+                            ? 'bg-red-500'
+                            : 'bg-yellow-500',
                       ]"
                     ></span>
-                    {{ item.status.includes('disetujui') ? 'Disetujui' : item.status.includes('ditolak') ? 'Ditolak' : item.status.replace('menunggu_', 'Menunggu ').replace('_', ' ').toUpperCase() }}
+                    {{
+                      item.status.includes("disetujui")
+                        ? "Disetujui"
+                        : item.status.includes("ditolak")
+                          ? "Ditolak"
+                          : item.status
+                              .replace("menunggu_", "Menunggu ")
+                              .replace("_", " ")
+                              .toUpperCase()
+                    }}
                   </span>
                 </td>
-                <td class="py-4 px-6 text-gray-600">{{ item.hr_approved_by || '-' }}</td>
+                <td class="py-4 px-6 text-gray-600">
+                  {{ item.hr_approved_by || "-" }}
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <!-- Footer Pagination -->
-        <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+        <div
+          class="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500"
+        >
           <p>
-            Menampilkan {{ totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0 }}-{{ Math.min(currentPage * itemsPerPage, totalItems) }} dari {{ totalItems }} {{ activeTab === 'log' ? 'log cuti' : 'data rekapitulasi' }}
+            Menampilkan
+            {{ totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0 }}-{{
+              Math.min(currentPage * itemsPerPage, totalItems)
+            }}
+            dari {{ totalItems }}
+            {{ activeTab === "log" ? "log cuti" : "data rekapitulasi" }}
           </p>
           <div v-if="totalPages > 1" class="flex items-center gap-1.5">
             <button
@@ -406,8 +530,18 @@ onMounted(async () => {
               :disabled="currentPage === 1"
               class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
             <button
@@ -418,7 +552,7 @@ onMounted(async () => {
                 'w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors cursor-pointer',
                 currentPage === page
                   ? 'bg-[#0f4bb4] text-white shadow-sm'
-                  : 'hover:bg-gray-100 text-gray-700'
+                  : 'hover:bg-gray-100 text-gray-700',
               ]"
             >
               {{ page }}
@@ -428,8 +562,18 @@ onMounted(async () => {
               :disabled="currentPage === totalPages"
               class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>

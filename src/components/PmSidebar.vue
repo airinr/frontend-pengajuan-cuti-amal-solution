@@ -25,7 +25,7 @@ const managerMenu = computed(() => [
   { label: t('approval.leaveApproval'), icon: "check-circle", route: "/pm/persetujuan" },
   { label: t('approval.workApproval'), icon: "briefcase", route: "/pm/persetujuan-bekerja" },
   { label: t('nav.rekapCutiTim'), icon: "clipboard", route: "/pm/rekap-cuti-tim" },
-  { label: t('nav.kalenderTim'), icon: "calendar", route: "/pm/kalender-tim" },
+  { label: t('nav.kalenderCuti'), icon: "calendar", route: "/pm/kalender-tim" },
 ]);
 
 const personalMenu = computed(() => [
@@ -304,8 +304,8 @@ onMounted(async () => {
             <p class="text-sm font-medium text-gray-800 truncate">
               {{ user?.nama || "Loading..." }}
             </p>
-            <p class="text-xs text-gray-500 truncate">
-              {{ user?.username ? `${user.username}@company.com` : "" }}
+            <p v-if="user?.email" class="text-xs text-gray-500 truncate">
+              {{ user.email }}
             </p>
           </div>
         </div>

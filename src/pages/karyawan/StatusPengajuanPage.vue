@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { karyawanApi, type OngoingCuti } from '../../services/karyawan.service'
 import { authApi } from '../../services/auth.service'
 import { useErrorPopup } from '../../composables/useErrorPopup'
 
 const { t } = useI18n()
+const router = useRouter()
 const { showError } = useErrorPopup()
 
 const ongoingList = ref<OngoingCuti[]>([])
@@ -14,24 +16,24 @@ const userRole = ref<string>('karyawan')
 
 const stepsByRole = computed(() => ({
   karyawan: [
-    { label: t('status.submitted'), statusKey: 'submitted' },
-    { label: t('status.waitingPM'), statusKey: 'pm' },
-    { label: t('status.waitingHR'), statusKey: 'hr' },
-    { label: t('status.completed'), statusKey: 'selesai' },
+    { label: t('status.submitted'), statusKey: 'submitted', completedLabel: t('status.submitted'), rejectedLabel: t('status.rejected') },
+    { label: t('status.waitingPM'), statusKey: 'pm', completedLabel: t('status.approvedPM'), rejectedLabel: t('status.rejectedPM') },
+    { label: t('status.waitingHR'), statusKey: 'hr', completedLabel: t('status.approvedHR'), rejectedLabel: t('status.rejectedHR') },
+    { label: t('status.completed'), statusKey: 'selesai', completedLabel: t('status.completed'), rejectedLabel: t('status.rejected') },
   ],
   pm: [
-    { label: t('status.submitted'), statusKey: 'submitted' },
-    { label: t('status.waitingHR'), statusKey: 'hr' },
-    { label: t('status.completed'), statusKey: 'selesai' },
+    { label: t('status.submitted'), statusKey: 'submitted', completedLabel: t('status.submitted'), rejectedLabel: t('status.rejected') },
+    { label: t('status.waitingHR'), statusKey: 'hr', completedLabel: t('status.approvedHR'), rejectedLabel: t('status.rejectedHR') },
+    { label: t('status.completed'), statusKey: 'selesai', completedLabel: t('status.completed'), rejectedLabel: t('status.rejected') },
   ],
   hr: [
-    { label: t('status.submitted'), statusKey: 'submitted' },
-    { label: t('status.waitingDirector'), statusKey: 'direktur' },
-    { label: t('status.completed'), statusKey: 'selesai' },
+    { label: t('status.submitted'), statusKey: 'submitted', completedLabel: t('status.submitted'), rejectedLabel: t('status.rejected') },
+    { label: t('status.waitingDirector'), statusKey: 'direktur', completedLabel: t('status.approvedDirector'), rejectedLabel: t('status.rejectedDirector') },
+    { label: t('status.completed'), statusKey: 'selesai', completedLabel: t('status.completed'), rejectedLabel: t('status.rejected') },
   ],
   direktur: [
-    { label: t('status.submitted'), statusKey: 'submitted' },
-    { label: t('status.completed'), statusKey: 'selesai' },
+    { label: t('status.submitted'), statusKey: 'submitted', completedLabel: t('status.submitted'), rejectedLabel: t('status.rejected') },
+    { label: t('status.completed'), statusKey: 'selesai', completedLabel: t('status.completed'), rejectedLabel: t('status.rejected') },
   ],
 }))
 
@@ -98,6 +100,8 @@ const getStepStatus = (item: OngoingCuti, stepIndex: number) => {
 
   if (stepIndex === 0) return 'completed'
 
+  if (status === 'disetujui_hr' || status === 'disetujui_direktur') return 'completed'
+
   const prevStep = steps[stepIndex - 1]
   if (prevStep.statusKey === 'submitted') {
     if (status === `menunggu_${step.statusKey}`) return 'active'
@@ -141,13 +145,30 @@ const getCardBorderColor = (item: OngoingCuti) => {
   return 'border-l-blue-400'
 }
 
+const goToEdit = (item: OngoingCuti) => {
+  sessionStorage.setItem('editCuti', JSON.stringify({
+    id: item.id_log_cuti,
+    tanggal_mulai: item.tanggal_mulai,
+    tanggal_selesai: item.tanggal_selesai,
+    keterangan_cuti: item.keterangan_cuti,
+    pengganti: item.pengganti,
+  }))
+  router.push('/karyawan/pengajuan-cuti')
+}
+
 onMounted(async () => {
   try {
     const [cutiRes, userRes] = await Promise.allSettled([
       karyawanApi.getOngoingCuti(),
       authApi.me(),
     ])
-    if (cutiRes.status === 'fulfilled') ongoingList.value = cutiRes.value.data
+    if (cutiRes.status === 'fulfilled') {
+      ongoingList.value = (cutiRes.value.data || [])
+        .filter((item) => !item.status_sekarang.includes('disetujui_hr') && item.status_sekarang !== 'disetujui_direktur')
+        .sort((a, b) => 
+          new Date(b.tanggal_mulai).getTime() - new Date(a.tanggal_mulai).getTime()
+        )
+    }
     if (userRes.status === 'fulfilled') userRole.value = userRes.value.data?.role || 'karyawan'
   } catch (err) {
     showError(err)
@@ -225,10 +246,19 @@ onMounted(async () => {
                 <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <div>
+                <div class="flex-1">
                   <p class="text-sm font-semibold text-red-600 mb-1">{{ t('statusPage.rejectionReason') }}</p>
                   <p class="text-sm text-red-600">{{ item.alasan_penolakan }}</p>
                 </div>
+                <button
+                  @click="goToEdit(item)"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer border border-blue-200"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  {{ t('leave.editRequest') }}
+                </button>
               </div>
             </div>
 
@@ -275,9 +305,9 @@ onMounted(async () => {
                   getStepStatus(item, stepIndex) === 'completed' ? 'text-gray-800' : 'text-gray-400'
                 ]">
                   {{ getStepStatus(item, stepIndex) === 'completed' && step.statusKey !== 'submitted'
-                    ? (step.statusKey === 'selesai' ? 'Selesai' : `Disetujui ${step.label.replace('Menunggu ', '')}`)
+                    ? (step.statusKey === 'selesai' ? t('status.completed') : step.completedLabel)
                     : getStepStatus(item, stepIndex) === 'rejected'
-                      ? `Ditolak ${step.label.replace('Menunggu ', '')}`
+                      ? step.rejectedLabel
                       : step.label }}
                 </p>
                 <p class="text-[10px] lg:text-xs text-gray-400 text-center">
@@ -291,3 +321,14 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

@@ -7,7 +7,7 @@ import { useCalendarNames } from "../../composables/useCalendarNames";
 
 const { t } = useI18n();
 const { showError } = useErrorPopup();
-const { dayNamesMini, monthNamesLong } = useCalendarNames();
+const { dayNamesMini, monthNamesLong, getDayMini } = useCalendarNames();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -100,7 +100,7 @@ const holidaysByMonth = computed(() => {
     const key = `${monthNamesLong.value[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
     const item = {
       ...h,
-      dayName: dayNamesMini.value[d.getDay()],
+      dayName: getDayMini(d),
       dayNum: String(d.getDate()).padStart(2, "0"),
     };
     if (!map.has(key)) {
@@ -421,7 +421,7 @@ onMounted(() => {
         <div class="space-y-3.5 text-xs">
           <!-- 1. Nama Hari Libur -->
           <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">{{ t('holiday.holidayNameLabel') }}</label>
+            <label class="block font-semibold text-gray-800 mb-1.5">{{ t('holiday.holidayNameLabel') }} <span class="text-red-500">*</span></label>
             <input
               v-model="liburForm.nama"
               type="text"
@@ -432,7 +432,7 @@ onMounted(() => {
 
           <!-- 2. Tanggal -->
           <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">{{ t('holiday.dateLabel') }}</label>
+            <label class="block font-semibold text-gray-800 mb-1.5">{{ t('holiday.dateLabel') }} <span class="text-red-500">*</span></label>
             <div class="relative">
               <input
                 v-model="liburForm.tanggal"

@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 
 import { authApi, type UserList } from "../../services/auth.service";
-import { karyawanApi } from "../../services/karyawan.service";
+import { karyawanApi, type OngoingCuti } from "../../services/karyawan.service";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import type { CurrentUser } from "../../types";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 import { useCalendarNames } from "../../composables/useCalendarNames";
 
 const { t } = useI18n();
+const route = useRoute();
 const { showError } = useErrorPopup();
 const { dayNamesMini, monthNamesLong } = useCalendarNames();
 
@@ -21,9 +23,13 @@ const successMessage = ref("");
 const errorMessage = ref("");
 const warningMessage = ref("");
 const holidays = ref<Holiday[]>([]);
+const ongoingCuti = ref<OngoingCuti[]>([]);
 const showDropdown = ref(false);
 const searchQuery = ref("");
 const showSuccessPopup = ref(false);
+
+const editMode = ref(false);
+const editingItemId = ref<number | null>(null);
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -38,6 +44,7 @@ const form = ref({
 });
 
 const selectedDates = ref<string[]>([]);
+const originalDates = ref<string[]>([]);
 
 const filteredUsers = computed(() => {
   if (!searchQuery.value) return users.value;
@@ -113,19 +120,17 @@ const isDateSelected = (date: Date) => {
   return selectedDates.value.includes(formatDate(date));
 };
 
+const isOriginalDate = (date: Date) => {
+  return editMode.value && originalDates.value.includes(formatDate(date));
+};
+
 const isToday = (date: Date) => {
   return formatDate(date) === formatDate(today);
 };
 
 const isPastDate = (date: Date) => {
-  const todayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-  const minDate = new Date(todayStart);
-  minDate.setDate(minDate.getDate() + 10);
-  return date < minDate;
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return date <= todayStart;
 };
 
 const isHoliday = (date: Date) => {
@@ -148,28 +153,16 @@ const MAX_CUTI_DAYS = 4;
 
 const selectedDaysCount = computed(() => selectedDates.value.length);
 
+const hasOngoingCuti = computed(() => {
+  return ongoingCuti.value.some((item) => !item.status_sekarang.includes("ditolak"));
+});
+
 const handleDateClick = (day: {
   day: number;
   currentMonth: boolean;
   date: Date;
 }) => {
-  if (!day.currentMonth || isHoliday(day.date)) return;
-
-  const todayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-  const minDate = new Date(todayStart);
-  minDate.setDate(minDate.getDate() + 10);
-
-  if (day.date < minDate) {
-    warningMessage.value = t('error.minAdvance');
-    setTimeout(() => {
-      warningMessage.value = "";
-    }, 3000);
-    return;
-  }
+  if (!day.currentMonth || isHoliday(day.date) || isPastDate(day.date)) return;
 
   const dateStr = formatDate(day.date);
   const index = selectedDates.value.indexOf(dateStr);
@@ -225,14 +218,43 @@ const calculateDuration = () => {
 
 onMounted(async () => {
   try {
-    const [userRes, holidayRes, usersRes] = await Promise.all([
+    const [userRes, holidayRes, usersRes, ongoingRes] = await Promise.all([
       authApi.me(),
       holidayApi.getByYear(currentYear.value),
       authApi.getAllUsers(),
+      karyawanApi.getOngoingCuti(),
     ]);
     user.value = userRes.data;
     holidays.value = holidayRes.data.data || [];
     users.value = usersRes.data || [];
+    ongoingCuti.value = ongoingRes.data || [];
+
+    if (route.query.edit || sessionStorage.getItem('editCuti')) {
+      const editData = sessionStorage.getItem('editCuti');
+      if (editData) {
+        const data = JSON.parse(editData);
+        editMode.value = true;
+        editingItemId.value = data.id;
+        form.value.tanggal_mulai = data.tanggal_mulai || "";
+        form.value.tanggal_selesai = data.tanggal_selesai || "";
+        form.value.keterangan_cuti = data.keterangan_cuti || "";
+        form.value.pengganti = data.pengganti || null;
+
+        if (form.value.tanggal_mulai) selectedDates.value.push(form.value.tanggal_mulai);
+        if (form.value.tanggal_selesai && form.value.tanggal_selesai !== form.value.tanggal_mulai) {
+          selectedDates.value.push(form.value.tanggal_selesai);
+        }
+        selectedDates.value.sort();
+        originalDates.value = [...selectedDates.value];
+
+        if (form.value.pengganti) {
+          const found = users.value.find((u) => u.id_user === form.value.pengganti);
+          if (found) searchQuery.value = found.nama;
+        }
+
+        sessionStorage.removeItem('editCuti');
+      }
+    }
   } catch {
     // silent fail
   } finally {
@@ -244,13 +266,13 @@ const handleSubmit = async () => {
   errorMessage.value = "";
   successMessage.value = "";
 
-  if (!form.value.tanggal_mulai || !form.value.tanggal_selesai) {
-    errorMessage.value = t('error.selectDate');
+  if (hasOngoingCuti.value) {
+    errorMessage.value = "Anda masih memiliki pengajuan cuti yang sedang diproses. Silakan tunggu hingga pengajuan selesai.";
     return;
   }
 
-  if (!form.value.pengganti) {
-    errorMessage.value = t('error.selectBackup');
+  if (!form.value.tanggal_mulai || !form.value.tanggal_selesai) {
+    errorMessage.value = t('error.selectDate');
     return;
   }
 
@@ -266,12 +288,21 @@ const handleSubmit = async () => {
 
   submitting.value = true;
   try {
-    await karyawanApi.createCuti({
-      tanggal_mulai: form.value.tanggal_mulai,
-      tanggal_selesai: form.value.tanggal_selesai,
-      keterangan_cuti: form.value.keterangan_cuti,
-      pengganti: form.value.pengganti,
-    });
+    if (editMode.value && editingItemId.value) {
+      await karyawanApi.updateCuti(editingItemId.value, {
+        tanggal_mulai: form.value.tanggal_mulai,
+        tanggal_selesai: form.value.tanggal_selesai,
+        keterangan_cuti: form.value.keterangan_cuti,
+        pengganti: form.value.pengganti,
+      });
+    } else {
+      await karyawanApi.createCuti({
+        tanggal_mulai: form.value.tanggal_mulai,
+        tanggal_selesai: form.value.tanggal_selesai,
+        keterangan_cuti: form.value.keterangan_cuti,
+        pengganti: form.value.pengganti,
+      });
+    }
     showSuccessPopup.value = true;
     form.value = {
       tanggal_mulai: "",
@@ -282,6 +313,8 @@ const handleSubmit = async () => {
     };
     selectedDates.value = [];
     searchQuery.value = "";
+    editMode.value = false;
+    editingItemId.value = null;
   } catch (err) {
     showError(err);
   } finally {
@@ -296,6 +329,16 @@ const handleSubmit = async () => {
     <p class="text-sm text-gray-500 mb-6">
       {{ t('leave.subtitle') }}
     </p>
+
+    <div v-if="hasOngoingCuti" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start gap-3">
+      <svg class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      </svg>
+      <div>
+        <p class="text-sm font-medium text-yellow-800">Anda memiliki pengajuan cuti yang sedang diproses</p>
+        <p class="text-xs text-yellow-600 mt-1">Silakan tunggu hingga pengajuan selesai sebelum mengajukan cuti baru.</p>
+      </div>
+    </div>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
       <div
@@ -399,9 +442,9 @@ const handleSubmit = async () => {
                       !isDateSelected(day.date) &&
                       'bg-red-50',
                     day.currentMonth &&
-                      !isPastDate(day.date) &&
                       !isDateSelected(day.date) &&
                       !isHoliday(day.date) &&
+                      !isPastDate(day.date) &&
                       'hover:bg-blue-100 cursor-pointer',
                     isDateSelected(day.date) &&
                       'bg-blue-900 text-white font-medium',
@@ -413,7 +456,7 @@ const handleSubmit = async () => {
                       isDateSelected(day.date) && 'bg-blue-900 text-white',
                       !isDateSelected(day.date) &&
                         day.currentMonth &&
-                        (index % 7 === 0 || index % 7 === 6) &&
+                        (day.date.getDay() === 0 || day.date.getDay() === 6) &&
                         'text-red-400',
                     ]"
                   >
@@ -504,7 +547,7 @@ const handleSubmit = async () => {
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2"
-                >{{ t('leave.leaveReason') }}</label
+                >{{ t('leave.leaveReason') }} <span class="text-red-500">*</span></label
               >
               <textarea
                 v-model="form.keterangan_cuti"
@@ -562,7 +605,7 @@ const handleSubmit = async () => {
             <div class="mt-4 flex justify-end">
               <button
                 @click="handleSubmit"
-                :disabled="submitting || !form.setuju_aturan"
+                :disabled="submitting || !form.setuju_aturan || hasOngoingCuti"
                 class="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <svg
@@ -694,17 +737,17 @@ const handleSubmit = async () => {
         </div>
 
         <!-- Sisa Cuti -->
-        <div class="bg-gray-600 rounded-xl shadow-sm p-6 text-white">
-          <p class="text-xs text-gray-200 uppercase tracking-wide mb-1">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
             {{ t('leave.remainingLeave') }}
           </p>
-          <p class="text-4xl font-bold mb-4">
+          <p class="text-4xl font-bold text-gray-800 mb-4">
             {{ user?.sisa_cuti || 0 }}
-            <span class="text-lg font-normal text-gray-200">{{ t('dashboard.days') }}</span>
+            <span class="text-lg font-normal text-gray-500">{{ t('dashboard.days') }}</span>
           </p>
-          <div class="w-full bg-gray-400 rounded-full h-2 mb-3">
+          <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
             <div
-              class="bg-white rounded-full h-2"
+              class="bg-blue-500 rounded-full h-2"
               :style="{
                 width:
                   (((user?.total_cuti || 0) - (user?.sisa_cuti || 0)) /
@@ -714,7 +757,7 @@ const handleSubmit = async () => {
               }"
             ></div>
           </div>
-          <div class="flex justify-between text-xs text-gray-200">
+          <div class="flex justify-between text-xs text-gray-500">
             <span
               >{{ t('leave.used') }}:
               {{ (user?.total_cuti || 0) - (user?.sisa_cuti || 0) }}</span

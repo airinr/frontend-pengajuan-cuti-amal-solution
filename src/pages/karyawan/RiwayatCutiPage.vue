@@ -22,18 +22,14 @@ const years = computed(() => {
 
 const statusOptions = computed(() => [
   { value: 'semua', label: t('history.allStatus') },
-  { value: 'disetujui_pm', label: t('status.approvedPM') },
-  { value: 'disetujui_direktur', label: t('status.approvedDirector') },
-  { value: 'menunggu_pm', label: t('status.waitingPM') },
-  { value: 'menunggu_direktur', label: t('status.waitingDirector') },
-  { value: 'ditolak', label: t('status.rejected') },
+  { value: 'disetujui_hr', label: t('status.approvedHR') },
 ])
 
 const filteredRiwayat = computed(() => {
   return riwayat.value.filter(item => {
     const itemYear = new Date(item.tanggal_mulai).getFullYear()
     const yearMatch = itemYear === selectedYear.value
-    const statusMatch = selectedStatus.value === 'semua' || item.status === selectedStatus.value
+    const statusMatch = item.status === 'disetujui_hr'
     return yearMatch && statusMatch
   })
 })

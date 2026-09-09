@@ -15,12 +15,14 @@ export interface RiwayatCuti {
 }
 
 export interface OngoingCuti {
+  id_log_cuti: number;
   jenis_cuti: string;
   durasi: number;
   keterangan_cuti: string;
   tanggal_mulai: string;
   tanggal_selesai: string;
   status_sekarang: string;
+  pengganti: number | null;
   diproses_pm: number;
   diproses_hr: number;
   diproses_direktur: number;
@@ -58,6 +60,9 @@ export const karyawanApi = {
 
   createCuti: (data: CreateKaryawanLeaveRequest) =>
     api.post<KaryawanLeaveResponse>("/karyawan/cuti", data),
+
+  updateCuti: (id: number, data: CreateKaryawanLeaveRequest) =>
+    api.put<KaryawanLeaveResponse>(`/karyawan/cuti/${id}`, data),
 
   getMyCalendar: () => api.get<KalenderItem[]>("/karyawan/kalender-cuti-saya"),
 

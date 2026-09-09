@@ -7,7 +7,7 @@ import { useCalendarNames } from "../../composables/useCalendarNames";
 
 const { t } = useI18n();
 const { showError } = useErrorPopup();
-const { dayNamesShort, dayNamesFull, monthNamesLong } = useCalendarNames();
+const { dayNamesShort, dayNamesFull, monthNamesLong, getDayFull } = useCalendarNames();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -104,7 +104,7 @@ const holidaysByMonth = computed(() => {
     const key = `${monthNamesLong.value[d.getMonth()]} ${d.getFullYear()}`;
     const item = {
       ...h,
-      dayName: dayNamesFull.value[d.getDay()],
+      dayName: getDayFull(d),
       dayNum: d.getDate(),
     };
     if (!monthMap.has(key)) monthMap.set(key, []);
@@ -446,7 +446,7 @@ const handleSimpan = () => {
                       ]"
                     >
                       {{
-                        dayNamesFull[new Date(item.date).getDay()]
+                        getDayFull(new Date(item.date))
                       }}
                     </span>
                     <span
@@ -514,18 +514,18 @@ const handleSimpan = () => {
             <div class="space-y-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Nama Hari Libur</label
+                  >{{ t('holiday.holidayNameLabel') }} <span class="text-red-500">*</span></label
                 >
                 <input
                   v-model="formNama"
                   type="text"
-                  placeholder="Contoh: Hari Raya Idul Fitri"
+                  :placeholder="t('holiday.holidayNamePlaceholder')"
                   class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1"
-                  >Tanggal</label
+                  >{{ t('holiday.dateLabel') }} <span class="text-red-500">*</span></label
                 >
                 <input
                   v-model="formTanggal"

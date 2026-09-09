@@ -13,11 +13,26 @@ export function useCalendarNames() {
   const { locale } = useI18n();
   const msgs = computed(() => localeMessages[locale.value] || fallback);
 
+  const dayNamesShort = computed(() => msgs.value.days.short);
+  const dayNamesMini = computed(() => msgs.value.days.mini);
+  const dayNamesFull = computed(() => msgs.value.days.full);
+  const monthNamesLong = computed(() => msgs.value.months.long);
+  const monthNamesShort = computed(() => msgs.value.months.short);
+
+  const getDayIndex = (date: Date) => (date.getDay() + 6) % 7;
+
+  const getDayShort = (date: Date) => dayNamesShort.value[getDayIndex(date)];
+  const getDayMini = (date: Date) => dayNamesMini.value[getDayIndex(date)];
+  const getDayFull = (date: Date) => dayNamesFull.value[getDayIndex(date)];
+
   return {
-    dayNamesShort: computed(() => msgs.value.days.short),
-    dayNamesMini: computed(() => msgs.value.days.mini),
-    dayNamesFull: computed(() => msgs.value.days.full),
-    monthNamesLong: computed(() => msgs.value.months.long),
-    monthNamesShort: computed(() => msgs.value.months.short),
+    dayNamesShort,
+    dayNamesMini,
+    dayNamesFull,
+    monthNamesLong,
+    monthNamesShort,
+    getDayShort,
+    getDayMini,
+    getDayFull,
   };
 }

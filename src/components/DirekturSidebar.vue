@@ -177,8 +177,8 @@ onMounted(async () => {
             <p class="text-sm font-medium text-gray-800 truncate">
               {{ user?.nama || "Loading..." }}
             </p>
-            <p class="text-xs text-gray-500 truncate">
-              {{ user?.username ? `${user.username}@company.com` : "" }}
+            <p v-if="user?.email" class="text-xs text-gray-500 truncate">
+              {{ user.email }}
             </p>
           </div>
         </div>

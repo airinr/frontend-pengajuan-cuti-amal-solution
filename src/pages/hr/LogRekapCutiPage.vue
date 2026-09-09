@@ -43,30 +43,43 @@ const formatDateRange = (start: string, end: string) => {
 
 const filteredRekap = computed(() => {
   return rekapList.value.filter((item) => {
-    const matchSearch = !searchQuery.value || item.nama.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchSearch =
+      !searchQuery.value ||
+      item.nama.toLowerCase().includes(searchQuery.value.toLowerCase());
     return matchSearch;
   });
 });
 
 const filteredLog = computed(() => {
   return logList.value.filter((item) => {
-    const matchSearch = !searchQuery.value || item.nama.toLowerCase().includes(searchQuery.value.toLowerCase());
-    const matchStatus = selectedStatus.value === "semua" || item.status.includes(selectedStatus.value);
+    const matchSearch =
+      !searchQuery.value ||
+      item.nama.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchStatus =
+      selectedStatus.value === "semua" ||
+      item.status.includes(selectedStatus.value);
     return matchSearch && matchStatus;
   });
 });
 
 const currentData = computed(() => {
-  const data = activeTab.value === "rekapitulasi" ? filteredRekap.value : filteredLog.value;
+  const data =
+    activeTab.value === "rekapitulasi"
+      ? filteredRekap.value
+      : filteredLog.value;
   const start = (currentPage.value - 1) * itemsPerPage;
   return data.slice(start, start + itemsPerPage);
 });
 
 const totalItems = computed(() => {
-  return activeTab.value === "rekapitulasi" ? filteredRekap.value.length : filteredLog.value.length;
+  return activeTab.value === "rekapitulasi"
+    ? filteredRekap.value.length
+    : filteredLog.value.length;
 });
 
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage) || 1);
+const totalPages = computed(
+  () => Math.ceil(totalItems.value / itemsPerPage) || 1,
+);
 
 const fetchData = async () => {
   loading.value = true;
@@ -75,7 +88,8 @@ const fetchData = async () => {
       hrApi.getRekap(),
       hrApi.getLogCuti(),
     ]);
-    if (rekapRes.status === "fulfilled") rekapList.value = rekapRes.value.data || [];
+    if (rekapRes.status === "fulfilled")
+      rekapList.value = rekapRes.value.data || [];
     if (logRes.status === "fulfilled") logList.value = logRes.value.data || [];
   } catch (err) {
     showError(err);
@@ -147,7 +161,9 @@ const exportLogCsv = async () => {
   }
 };
 
-const canExport = computed(() => userRole.value === "hr" || userRole.value === "direktur");
+const canExport = computed(
+  () => userRole.value === "hr" || userRole.value === "direktur",
+);
 
 onMounted(async () => {
   loading.value = true;
@@ -167,8 +183,10 @@ onMounted(async () => {
   <div>
     <!-- Header -->
     <div class="mb-6">
-      <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('leaveLog.title') }}</h1>
-      <p class="text-sm text-gray-500">{{ t('leaveLog.subtitle') }}</p>
+      <h1 class="text-xl lg:text-2xl font-bold text-gray-800">
+        {{ t("leaveLog.title") }}
+      </h1>
+      <p class="text-sm text-gray-500">{{ t("leaveLog.subtitle") }}</p>
     </div>
 
     <!-- Toolbar -->
@@ -185,7 +203,7 @@ onMounted(async () => {
                 : 'text-gray-600 hover:text-gray-800',
             ]"
           >
-            {{ t('leaveLog.rekapTab') }}
+            {{ t("leaveLog.rekapTab") }}
           </button>
           <button
             @click="switchTab('log')"
@@ -196,14 +214,24 @@ onMounted(async () => {
                 : 'text-gray-600 hover:text-gray-800',
             ]"
           >
-            {{ t('leaveLog.logTab') }}
+            {{ t("leaveLog.logTab") }}
           </button>
         </div>
 
         <!-- Search -->
         <div class="relative flex-1 max-w-xs">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <svg
+            class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
           <input
             v-model="searchQuery"
@@ -223,59 +251,101 @@ onMounted(async () => {
         </select>
 
         <!-- Status Filter (hanya untuk Log tab) -->
-        <div v-if="activeTab === 'log'" class="flex bg-gray-100 rounded-lg p-0.5">
+        <div
+          v-if="activeTab === 'log'"
+          class="flex bg-gray-100 rounded-lg p-0.5"
+        >
           <button
             @click="selectedStatus = 'semua'"
             :class="[
               'px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer',
-              selectedStatus === 'semua' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-800',
+              selectedStatus === 'semua'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:text-gray-800',
             ]"
           >
-            {{ t('leaveLog.all') }}
+            {{ t("leaveLog.all") }}
           </button>
           <button
             @click="selectedStatus = 'disetujui'"
             :class="[
               'px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer',
-              selectedStatus === 'disetujui' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-800',
+              selectedStatus === 'disetujui'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:text-gray-800',
             ]"
           >
-            {{ t('leaveLog.approved') }}
+            {{ t("leaveLog.approved") }}
           </button>
           <button
             @click="selectedStatus = 'ditolak'"
             :class="[
               'px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer',
-              selectedStatus === 'ditolak' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-800',
+              selectedStatus === 'ditolak'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:text-gray-800',
             ]"
           >
-            {{ t('leaveLog.rejected') }}
+            {{ t("leaveLog.rejected") }}
           </button>
         </div>
 
         <!-- Export CSV Button -->
         <button
           v-if="canExport"
-          @click="activeTab === 'rekapitulasi' ? exportRekapCsv() : exportLogCsv()"
+          @click="
+            activeTab === 'rekapitulasi' ? exportRekapCsv() : exportLogCsv()
+          "
           :disabled="exporting"
           class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors cursor-pointer disabled:opacity-50"
         >
-          <svg v-if="!exporting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <svg
+            v-if="!exporting"
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
           </svg>
-          <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          <svg
+            v-else
+            class="w-4 h-4 animate-spin"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
           </svg>
-          {{ exporting ? t('leaveLog.exporting') : t('leaveLog.exportCSV') }}
+          {{ exporting ? t("leaveLog.exporting") : t("leaveLog.exportCSV") }}
         </button>
       </div>
     </div>
 
     <!-- Content -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div
+      class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+    >
       <div v-if="loading" class="flex justify-center items-center py-12">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div
+          class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+        ></div>
       </div>
 
       <template v-else>
@@ -284,36 +354,72 @@ onMounted(async () => {
           <table class="w-full">
             <thead>
               <tr class="bg-gray-50 border-b border-gray-200">
-                <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-12">{{ t('leaveLog.no') }}</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.employee') }}</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.department') }}</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.date') }}</th>
-                <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.totalPerYear') }}</th>
-                <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.remainingPerYear') }}</th>
+                <th
+                  class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-12"
+                >
+                  {{ t("leaveLog.no") }}
+                </th>
+                <th
+                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.employee") }}
+                </th>
+                <th
+                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.department") }}
+                </th>
+                <th
+                  class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.totalPerYear") }}
+                </th>
+                <th
+                  class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.remainingPerYear") }}
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-if="currentData.length === 0">
-                <td colspan="6" class="text-center py-8 text-gray-400 text-sm">{{ t('leaveLog.noData') }}</td>
+                <td colspan="6" class="text-center py-8 text-gray-400 text-sm">
+                  {{ t("leaveLog.noData") }}
+                </td>
               </tr>
               <tr
                 v-for="(item, index) in currentData"
                 :key="index"
                 class="hover:bg-gray-50 transition-colors"
               >
-                <td class="px-4 py-3 text-sm text-gray-500 text-center">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 text-center">
+                  {{ (currentPage - 1) * itemsPerPage + index + 1 }}
+                </td>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center text-white text-[10px] font-medium">
+                    <div
+                      class="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center text-white text-[10px] font-medium"
+                    >
                       {{ getInitials(item.nama) }}
                     </div>
-                    <span class="text-sm font-medium text-gray-800">{{ item.nama }}</span>
+                    <span class="text-sm font-medium text-gray-800">{{
+                      item.nama
+                    }}</span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ item.nama_departemen }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600 text-center">{{ item.total_cuti }}</td>
-                <td class="px-4 py-3 text-sm font-medium text-center" :class="item.sisa_cuti <= 2 ? 'text-red-600' : 'text-gray-800'">
+                <td class="px-4 py-3 text-sm text-gray-600">
+                  {{ item.nama_departemen }}
+                </td>
+
+                <td class="px-4 py-3 text-sm text-gray-600 text-center">
+                  {{ item.total_cuti }}
+                </td>
+                <td
+                  class="px-4 py-3 text-sm font-medium text-center"
+                  :class="
+                    item.sisa_cuti <= 2 ? 'text-red-600' : 'text-gray-800'
+                  "
+                >
                   {{ item.sisa_cuti }}
                 </td>
               </tr>
@@ -326,62 +432,144 @@ onMounted(async () => {
           <table class="w-full">
             <thead>
               <tr class="bg-gray-50 border-b border-gray-200">
-                <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-12">{{ t('leaveLog.no') }}</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.employee') }}</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.leaveDate') }}</th>
-                <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.duration') }}</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.leaveType') }}</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.description') }}</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.backup') }}</th>
-                <th class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.status') }}</th>
-                <th class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.hrApprover') }}</th>
+                <th
+                  class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-12"
+                >
+                  {{ t("leaveLog.no") }}
+                </th>
+                <th
+                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.employee") }}
+                </th>
+                <th
+                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.leaveDate") }}
+                </th>
+                <th
+                  class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.duration") }}
+                </th>
+                <th
+                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.leaveType") }}
+                </th>
+                <th
+                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.description") }}
+                </th>
+                <th
+                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.backup") }}
+                </th>
+                <th
+                  class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.status") }}
+                </th>
+                <th
+                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("leaveLog.hrApprover") }}
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-if="currentData.length === 0">
-                <td colspan="9" class="text-center py-8 text-gray-400 text-sm">{{ t('leaveLog.noData') }}</td>
+                <td colspan="9" class="text-center py-8 text-gray-400 text-sm">
+                  {{ t("leaveLog.noData") }}
+                </td>
               </tr>
               <tr
-                v-for="(item, index) in (currentData as LogCutiItem[])"
+                v-for="(item, index) in currentData as LogCutiItem[]"
                 :key="item.id_log_cuti"
                 class="hover:bg-gray-50 transition-colors"
               >
-                <td class="px-4 py-3 text-sm text-gray-500 text-center">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 text-center">
+                  {{ (currentPage - 1) * itemsPerPage + index + 1 }}
+                </td>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center text-white text-[10px] font-medium">
+                    <div
+                      class="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center text-white text-[10px] font-medium"
+                    >
                       {{ getInitials(item.nama) }}
                     </div>
-                    <span class="text-sm font-medium text-gray-800">{{ item.nama }}</span>
+                    <span class="text-sm font-medium text-gray-800">{{
+                      item.nama
+                    }}</span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600 text-center">{{ item.durasi }} {{ t('leaveLog.days') }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ item.jenis_cuti }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{{ item.keterangan || '-' }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ item.pengganti || '-' }}</td>
+                <td class="px-4 py-3 text-sm text-gray-600">
+                  {{
+                    formatDateRange(item.tanggal_mulai, item.tanggal_selesai)
+                  }}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600 text-center">
+                  {{ item.durasi }} {{ t("leaveLog.days") }}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600">
+                  {{ item.jenis_cuti }}
+                </td>
+                <td
+                  class="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate"
+                >
+                  {{ item.keterangan || "-" }}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600">
+                  {{ item.pengganti || "-" }}
+                </td>
                 <td class="px-4 py-3 text-center">
                   <span
                     :class="[
                       'inline-block text-[10px] px-2.5 py-1 rounded-full font-medium',
-                      item.status.includes('disetujui') ? 'bg-green-100 text-green-700' :
-                      item.status.includes('ditolak') ? 'bg-red-100 text-red-700' :
-                      'bg-yellow-100 text-yellow-700',
+                      item.status.includes('disetujui')
+                        ? 'bg-green-100 text-green-700'
+                        : item.status.includes('ditolak')
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700',
                     ]"
                   >
-                    {{ item.status.includes('disetujui') ? t('leaveLog.approved') : item.status.includes('ditolak') ? t('leaveLog.rejected') : item.status.replace('menunggu_', t('status.waiting') + ' ').replace('_', ' ').toUpperCase() }}
+                    {{
+                      item.status.includes("disetujui")
+                        ? t("leaveLog.approved")
+                        : item.status.includes("ditolak")
+                          ? t("leaveLog.rejected")
+                          : item.status
+                              .replace("menunggu_", t("status.waiting") + " ")
+                              .replace("_", " ")
+                              .toUpperCase()
+                    }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">{{ item.hr_approved_by || '-' }}</td>
+                <td class="px-4 py-3 text-sm text-gray-600">
+                  {{ item.hr_approved_by || "-" }}
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <!-- Pagination -->
-        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+        <div
+          class="flex items-center justify-between px-4 py-3 border-t border-gray-100"
+        >
           <p class="text-xs text-gray-500">
-            {{ t('leaveLog.showing') }} {{ currentData.length > 0 ? ((currentPage - 1) * itemsPerPage + 1) : 0 }}-{{ Math.min(currentPage * itemsPerPage, totalItems) }} {{ t('leaveLog.of') }} {{ totalItems }} {{ activeTab === 'rekapitulasi' ? t('leaveLog.data') : t('leaveLog.leaveLogData') }}
+            {{ t("leaveLog.showing") }}
+            {{
+              currentData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0
+            }}-{{ Math.min(currentPage * itemsPerPage, totalItems) }}
+            {{ t("leaveLog.of") }} {{ totalItems }}
+            {{
+              activeTab === "rekapitulasi"
+                ? t("leaveLog.data")
+                : t("leaveLog.leaveLogData")
+            }}
           </p>
           <div class="flex items-center gap-1">
             <button
@@ -389,8 +577,18 @@ onMounted(async () => {
               :disabled="currentPage === 1"
               class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 cursor-pointer"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
             <button
@@ -411,8 +609,18 @@ onMounted(async () => {
               :disabled="currentPage === totalPages"
               class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 cursor-pointer"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>

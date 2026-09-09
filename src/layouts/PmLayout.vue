@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, provide, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import PmSidebar from "../components/PmSidebar.vue";
 
 const router = useRouter();
 const route = useRoute();
+const { locale } = useI18n();
 const sidebarOpen = ref(false);
 
 provide("sidebarOpen", sidebarOpen);
@@ -15,6 +17,16 @@ watch(
     sidebarOpen.value = false;
   }
 );
+
+const toggleLocale = () => {
+  const newLocale = locale.value === 'id' ? 'en' : 'id';
+  locale.value = newLocale;
+  localStorage.setItem('locale', newLocale);
+};
+
+const goToProfile = () => {
+  router.push("/pm/profil");
+};
 
 const handleLogout = () => {
   localStorage.removeItem("token");
@@ -38,9 +50,19 @@ const handleLogout = () => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div class="flex items-center gap-4 ml-auto">
+          <div class="flex items-center gap-3 ml-auto">
+            <button
+              @click="toggleLocale"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
+              {{ locale === 'id' ? 'EN' : 'ID' }}
+            </button>
             <div
-              class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium"
+              @click="goToProfile"
+              class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium cursor-pointer hover:bg-blue-700 transition-colors"
             >
               A
             </div>

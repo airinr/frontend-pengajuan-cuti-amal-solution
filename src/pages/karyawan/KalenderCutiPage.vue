@@ -10,7 +10,7 @@ import type { CurrentUser } from "../../types";
 
 const { t } = useI18n();
 const { showError } = useErrorPopup();
-const { dayNamesShort, dayNamesFull, monthNamesLong } = useCalendarNames();
+const { dayNamesShort, dayNamesFull, monthNamesLong, getDayFull } = useCalendarNames();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -90,20 +90,33 @@ const getHolidayName = (date: Date) => {
   return holidays.value.find((h) => h.date === dateStr)?.name || "";
 };
 
+const isApprovedLeave = (status: string) => {
+  return status === 'disetujui' || status.includes('disetujui');
+};
+
 const getMyLeaveOnDate = (date: Date) => {
   const dateStr = formatDate(date);
-  return myCalendar.value.filter((item) => item.tanggal === dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return [];
+  return myCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
 };
 
 const getTeamLeaveOnDate = (date: Date) => {
   const dateStr = formatDate(date);
-  return filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return [];
+  return filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
 };
 
 const getCellLeaves = (date: Date) => {
   const dateStr = formatDate(date);
-  const my = myCalendar.value.filter((item) => item.tanggal === dateStr);
-  const team = filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return { my: [], team: [] };
+  const my = myCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
+  const team = filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
   return { my, team };
 };
 
@@ -112,14 +125,14 @@ const selectedDateTeamLeave = computed(() => getTeamLeaveOnDate(selectedDate.val
 
 const selectedDateLabel = computed(() => {
   const d = selectedDate.value;
-  const dayName = dayNamesFull.value[d.getDay()];
+  const dayName = getDayFull(d);
   const dayNum = d.getDate();
   const monthName = monthNamesLong.value[d.getMonth()];
   const year = d.getFullYear();
   return `${dayNum} ${monthName} ${year}`;
 });
 
-const selectedDateDayName = computed(() => dayNamesFull.value[selectedDate.value.getDay()]);
+const selectedDateDayName = computed(() => getDayFull(selectedDate.value));
 
 const goToToday = () => {
   const now = new Date();
@@ -257,7 +270,7 @@ onMounted(async () => {
                 :key="'my-' + i"
                 class="block text-[8px] leading-tight px-1 py-0.5 bg-blue-500 text-white rounded truncate mb-0.5"
               >
-                Cuti S.
+                Cuti Saya
               </span>
             </div>
 
@@ -271,7 +284,7 @@ onMounted(async () => {
                 :key="'team-' + i"
                 class="block text-[8px] leading-tight px-1 py-0.5 bg-gray-400 text-white rounded truncate mb-0.5"
               >
-                {{ item.nama.split(' ')[0] }}
+                {{ item.nama }}
               </span>
             </div>
 
@@ -285,7 +298,7 @@ onMounted(async () => {
                 :key="'tmix-' + i"
                 class="block text-[8px] leading-tight px-1 py-0.5 bg-gray-400 text-white rounded truncate mb-0.5"
               >
-                {{ item.nama.split(' ')[0] }}.
+                {{ item.nama }}
               </span>
             </div>
 
@@ -300,7 +313,7 @@ onMounted(async () => {
                   isCutiBersama(day.date) ? 'bg-green-500' : 'bg-red-500',
                 ]"
               >
-                {{ isCutiBersama(day.date) ? 'Cuti B.' : getHolidayName(day.date).split(' ').slice(0, 2).join(' ') }}
+                {{ isCutiBersama(day.date) ? 'Cuti Bersama' : getHolidayName(day.date) }}
               </span>
             </div>
           </div>

@@ -1,22 +1,15 @@
 import { test, expect } from '../fixtures/auth'
 
-test.describe('Pengajuan Tetap Bekerja (Dept 3)', () => {
-  test('should show menu items for dept 3 karyawan', async ({ page, loginAs }) => {
-    await loginAs('karyawan_dept3')
+test.describe('Pengajuan Tetap Bekerja', () => {
+  test('should show menu items for all karyawan', async ({ page, loginAs }) => {
+    await loginAs('karyawan')
 
     await expect(page.locator('text=Pengajuan Bekerja').first()).toBeVisible()
     await expect(page.locator('text=Status Pengajuan Bekerja').first()).toBeVisible()
   })
 
-  test('should not show menu items for non-dept 3 karyawan', async ({ page, loginAs }) => {
-    await loginAs('karyawan')
-
-    await expect(page.locator('text=Pengajuan Bekerja').first()).not.toBeVisible()
-    await expect(page.locator('text=Status Pengajuan Bekerja').first()).not.toBeVisible()
-  })
-
   test('should navigate to pengajuan bekerja page', async ({ page, loginAs }) => {
-    await loginAs('karyawan_dept3')
+    await loginAs('karyawan')
 
     await page.locator('text=Pengajuan Bekerja').first().click()
     await page.waitForURL('**/karyawan/pengajuan-bekerja')
@@ -25,7 +18,7 @@ test.describe('Pengajuan Tetap Bekerja (Dept 3)', () => {
   })
 
   test('should display form with cuti bersama dropdown', async ({ page, loginAs }) => {
-    await loginAs('karyawan_dept3')
+    await loginAs('karyawan')
 
     await page.goto('/karyawan/pengajuan-bekerja')
     await page.waitForLoadState('networkidle')
@@ -37,7 +30,7 @@ test.describe('Pengajuan Tetap Bekerja (Dept 3)', () => {
   })
 
   test('should show validation error when submitting empty form', async ({ page, loginAs }) => {
-    await loginAs('karyawan_dept3')
+    await loginAs('karyawan')
 
     await page.goto('/karyawan/pengajuan-bekerja')
     await page.waitForLoadState('networkidle')
@@ -47,7 +40,7 @@ test.describe('Pengajuan Tetap Bekerja (Dept 3)', () => {
   })
 
   test('should show validation error when reason is empty', async ({ page, loginAs }) => {
-    await loginAs('karyawan_dept3')
+    await loginAs('karyawan')
 
     await page.goto('/karyawan/pengajuan-bekerja')
     await page.waitForLoadState('networkidle')
@@ -59,7 +52,7 @@ test.describe('Pengajuan Tetap Bekerja (Dept 3)', () => {
   })
 
   test('should submit successfully', async ({ page, loginAs }) => {
-    await loginAs('karyawan_dept3')
+    await loginAs('karyawan')
 
     await page.goto('/karyawan/pengajuan-bekerja')
     await page.waitForLoadState('networkidle')
@@ -76,7 +69,7 @@ test.describe('Pengajuan Tetap Bekerja (Dept 3)', () => {
 
 test.describe('Status Pengajuan Kerja', () => {
   test('should navigate to status page', async ({ page, loginAs }) => {
-    await loginAs('karyawan_dept3')
+    await loginAs('karyawan')
 
     await page.locator('text=Status Pengajuan Bekerja').first().click()
     await page.waitForURL('**/karyawan/status-pengajuan-kerja')
@@ -85,7 +78,7 @@ test.describe('Status Pengajuan Kerja', () => {
   })
 
   test('should display status list with submissions', async ({ page, loginAs }) => {
-    await loginAs('karyawan_dept3')
+    await loginAs('karyawan')
 
     await page.goto('/karyawan/status-pengajuan-kerja')
     await page.waitForLoadState('networkidle')

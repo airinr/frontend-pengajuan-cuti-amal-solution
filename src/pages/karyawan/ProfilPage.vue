@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { authApi } from '../../services/auth.service'
+import { departmentApi, type Department } from '../../services/department.service'
 import { useErrorPopup } from '../../composables/useErrorPopup'
 import type { CurrentUser } from '../../types'
 
@@ -11,9 +12,15 @@ const { showError } = useErrorPopup()
 const router = useRouter()
 
 const user = ref<CurrentUser | null>(null)
+const departments = ref<Department[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 const successMessage = ref('')
+
+const departmentName = computed(() => {
+  const dept = departments.value.find(d => d.id_departemen === user.value?.id_departemen)
+  return dept?.nama_departemen || '-'
+})
 
 const profileForm = ref({
   email: '',
@@ -46,8 +53,12 @@ const getInitials = (name: string) => {
 
 onMounted(async () => {
   try {
-    const res = await authApi.me()
-    user.value = res.data
+    const [userRes, deptRes] = await Promise.all([
+      authApi.me(),
+      departmentApi.getAll(),
+    ])
+    user.value = userRes.data
+    departments.value = deptRes.data || []
     profileForm.value = {
       email: user.value?.email || '',
       no_telp: user.value?.no_telp || '',
@@ -168,16 +179,7 @@ const handleSaveProfile = async () => {
                   <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
-                  <span class="text-sm text-gray-700">{{ user.id_departemen }}</span>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-500 mb-1">{{ t('employee.joinDate') }}</label>
-                <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span class="text-sm text-gray-700">{{ user.tanggal_bergabung || '-' }}</span>
+                  <span class="text-sm text-gray-700">{{ departmentName }}</span>
                 </div>
               </div>
             </div>

@@ -5,7 +5,10 @@ import {
   direkturApi,
   type RingkasanPersetujuan,
 } from "../../services/direktur.service";
-import { approvalApi, type ApprovalQueueItem } from "../../services/approval.service";
+import {
+  approvalApi,
+  type ApprovalQueueItem,
+} from "../../services/approval.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 
 const { t } = useI18n();
@@ -32,8 +35,18 @@ const formatDateRange = (start: string, end: string) => {
   const s = new Date(start);
   const e = new Date(end || start);
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "Mei",
+    "Jun",
+    "Jul",
+    "Agu",
+    "Sep",
+    "Okt",
+    "Nov",
+    "Des",
   ];
   if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
     return `${s.getDate()} - ${e.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
@@ -47,7 +60,10 @@ const fetchPending = async () => {
       approvalApi.getApprovalQueue(),
       direkturApi.getRingkasan(),
     ]);
-    if (pendingRes.status === "fulfilled" && Array.isArray(pendingRes.value.data)) {
+    if (
+      pendingRes.status === "fulfilled" &&
+      Array.isArray(pendingRes.value.data)
+    ) {
       pendingList.value = pendingRes.value.data;
     }
     if (ringkasanRes.status === "fulfilled" && ringkasanRes.value.data) {
@@ -75,8 +91,13 @@ const confirmApprove = async () => {
   processingId.value = id;
   try {
     await approvalApi.approve(id);
-    pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
-    ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
+    pendingList.value = pendingList.value.filter(
+      (item) => item.id_log_cuti !== id,
+    );
+    ringkasan.value.total_menunggu = Math.max(
+      0,
+      ringkasan.value.total_menunggu - 1,
+    );
     ringkasan.value.disetujui_bulan_ini += 1;
     showApproveModal.value = false;
     selectedItem.value = null;
@@ -93,8 +114,13 @@ const confirmReject = async () => {
   processingId.value = id;
   try {
     await approvalApi.reject(id, rejectReason.value);
-    pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
-    ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
+    pendingList.value = pendingList.value.filter(
+      (item) => item.id_log_cuti !== id,
+    );
+    ringkasan.value.total_menunggu = Math.max(
+      0,
+      ringkasan.value.total_menunggu - 1,
+    );
     ringkasan.value.ditolak_bulan_ini += 1;
     showRejectModal.value = false;
     selectedItem.value = null;
@@ -118,10 +144,10 @@ onMounted(async () => {
     <!-- Header -->
     <div>
       <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-        {{ t('approval.leaveApproval') }}
+        {{ t("approval.leaveApproval") }}
       </h1>
       <p class="text-sm text-gray-500 mt-1">
-        {{ t('approval.manageTeamLeave') }}
+        {{ t("approval.manageTeamLeave") }}
       </p>
     </div>
 
@@ -129,13 +155,25 @@ onMounted(async () => {
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       <!-- Left Column: Pending Leaves List (8 Cols) -->
       <div class="lg:col-span-8 space-y-5">
-        <div v-if="loading" class="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm flex justify-center items-center">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f4bb4]"></div>
+        <div
+          v-if="loading"
+          class="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm flex justify-center items-center"
+        >
+          <div
+            class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f4bb4]"
+          ></div>
         </div>
 
-        <div v-else-if="pendingList.length === 0" class="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
-          <p class="text-base font-semibold text-gray-800">{{ t('approval.noPending') }}</p>
-          <p class="text-sm text-gray-400 mt-1">Semua pengajuan cuti telah selesai diproses.</p>
+        <div
+          v-else-if="pendingList.length === 0"
+          class="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm"
+        >
+          <p class="text-base font-semibold text-gray-800">
+            {{ t("approval.noPending") }}
+          </p>
+          <p class="text-sm text-gray-400 mt-1">
+            Semua pengajuan cuti telah selesai diproses.
+          </p>
         </div>
 
         <div
@@ -154,35 +192,71 @@ onMounted(async () => {
           <div class="bg-[#f0f5ff] rounded-xl p-4 lg:p-5">
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 text-left">
               <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.jenisCuti') }}</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.jenis_cuti }}</p>
-              </div>
-              <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.dateRange') }}</p>
+                <p
+                  class="text-[9px] font-bold text-gray-400 uppercase tracking-wider"
+                >
+                  {{ t("approval.jenisCuti") }}
+                </p>
                 <p class="text-xs font-bold text-gray-900 mt-1">
-                  {{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}
+                  {{ item.jenis_cuti }}
                 </p>
               </div>
               <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.duration') }}</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.durasi }} Hari</p>
+                <p
+                  class="text-[9px] font-bold text-gray-400 uppercase tracking-wider"
+                >
+                  {{ t("approval.dateRange") }}
+                </p>
+                <p class="text-xs font-bold text-gray-900 mt-1">
+                  {{
+                    formatDateRange(item.tanggal_mulai, item.tanggal_selesai)
+                  }}
+                </p>
               </div>
               <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.delegasiTugas') }}</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.pengganti || '-' }}</p>
+                <p
+                  class="text-[9px] font-bold text-gray-400 uppercase tracking-wider"
+                >
+                  {{ t("approval.duration") }}
+                </p>
+                <p class="text-xs font-bold text-gray-900 mt-1">
+                  {{ item.durasi }} Hari
+                </p>
               </div>
               <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.remainingLeave') }}</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.sisa_cuti }} Hari</p>
+                <p
+                  class="text-[9px] font-bold text-gray-400 uppercase tracking-wider"
+                >
+                  {{ t("approval.delegasiTugas") }}
+                </p>
+                <p class="text-xs font-bold text-gray-900 mt-1">
+                  {{ item.pengganti || "-" }}
+                </p>
+              </div>
+              <div>
+                <p
+                  class="text-[9px] font-bold text-gray-400 uppercase tracking-wider"
+                >
+                  {{ t("approval.remainingLeave") }}
+                </p>
+                <p class="text-xs font-bold text-gray-900 mt-1">
+                  {{ item.sisa_cuti }} Hari
+                </p>
               </div>
             </div>
           </div>
 
           <!-- Reason / Notes Section -->
           <div>
-            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">{{ t('approval.leaveReason') }}</p>
-            <div class="bg-[#f0f5ff] rounded-xl p-4 text-xs text-gray-700 leading-relaxed font-normal">
-              {{ item.alasan || '-' }}
+            <p
+              class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2"
+            >
+              {{ t("approval.leaveReason") }}
+            </p>
+            <div
+              class="bg-[#f0f5ff] rounded-xl p-4 text-xs text-gray-700 leading-relaxed font-normal"
+            >
+              {{ item.alasan || "-" }}
             </div>
           </div>
 
@@ -192,47 +266,75 @@ onMounted(async () => {
               @click="openRejectConfirm(item)"
               class="px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
-              <span>{{ t('approval.reject') }}</span>
+              <span>{{ t("approval.reject") }}</span>
             </button>
             <button
               @click="openApproveConfirm(item)"
               class="px-6 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2.5"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
-              <span>{{ t('approval.approve') }}</span>
+              <span>{{ t("approval.approve") }}</span>
             </button>
           </div>
         </div>
       </div>
 
       <!-- Right Column: Ringkasan Persetujuan (4 Cols) -->
-      <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+      <div
+        class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4"
+      >
         <h2 class="text-base lg:text-lg font-bold text-gray-900">
-          {{ t('approval.summary') }}
+          {{ t("approval.summary") }}
         </h2>
 
         <div class="space-y-3 pt-1">
-          <!-- Menunggu -->
-          <div class="bg-[#f0f5ff] rounded-xl p-4 flex items-center justify-between">
-            <span class="text-xs font-semibold text-gray-700">{{ t('approval.waiting') }}</span>
-            <span class="text-xl font-extrabold text-[#0f4bb4]">{{ ringkasan.total_menunggu }}</span>
-          </div>
-
           <!-- Disetujui Bulan Ini -->
-          <div class="bg-[#f0f5ff] rounded-xl p-4 flex items-center justify-between">
-            <span class="text-xs font-semibold text-gray-700">{{ t('approval.disetujuiBulanIni') }}</span>
-            <span class="text-xl font-extrabold text-[#0f4bb4]">{{ ringkasan.disetujui_bulan_ini }}</span>
+          <div
+            class="bg-[#f0f5ff] rounded-xl p-4 flex items-center justify-between"
+          >
+            <span class="text-xs font-semibold text-gray-700">{{
+              t("approval.disetujuiBulanIni")
+            }}</span>
+            <span class="text-xl font-extrabold text-[#0f4bb4]">{{
+              ringkasan.disetujui_bulan_ini
+            }}</span>
           </div>
 
           <!-- Ditolak Bulan Ini -->
-          <div class="bg-[#f0f5ff] rounded-xl p-4 flex items-center justify-between">
-            <span class="text-xs font-semibold text-gray-700">{{ t('approval.ditolakBulanIni') }}</span>
-            <span class="text-xl font-extrabold text-red-600">{{ ringkasan.ditolak_bulan_ini }}</span>
+          <div
+            class="bg-[#f0f5ff] rounded-xl p-4 flex items-center justify-between"
+          >
+            <span class="text-xs font-semibold text-gray-700">{{
+              t("approval.ditolakBulanIni")
+            }}</span>
+            <span class="text-xl font-extrabold text-red-600">{{
+              ringkasan.ditolak_bulan_ini
+            }}</span>
           </div>
         </div>
       </div>
@@ -243,32 +345,52 @@ onMounted(async () => {
       v-if="showApproveModal && selectedItem"
       class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
     >
-      <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-        <div class="w-12 h-12 rounded-full bg-blue-100 text-[#0f4bb4] flex items-center justify-center mx-auto shadow-xs">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+      <div
+        class="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+      >
+        <div
+          class="w-12 h-12 rounded-full bg-blue-100 text-[#0f4bb4] flex items-center justify-center mx-auto shadow-xs"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M5 13l4 4L19 7"
+            />
           </svg>
         </div>
 
         <div class="text-center space-y-1">
-          <h3 class="text-lg font-bold text-gray-900">{{ t('approval.approveConfirm') }}</h3>
+          <h3 class="text-lg font-bold text-gray-900">
+            {{ t("approval.approveConfirm") }}
+          </h3>
           <p class="text-xs text-gray-500">
-            {{ t('approval.approveMessage') }}
+            {{ t("approval.approveMessage") }}
           </p>
         </div>
 
         <div class="bg-gray-50 p-4 rounded-xl space-y-2 text-xs">
           <div class="flex justify-between">
-            <span class="text-gray-500">{{ t('employee.name') }}:</span>
+            <span class="text-gray-500">{{ t("employee.name") }}:</span>
             <span class="font-bold text-gray-900">{{ selectedItem.nama }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500">{{ t('approval.jenisCuti') }}:</span>
-            <span class="font-semibold text-[#0f4bb4]">{{ selectedItem.jenis_cuti }}</span>
+            <span class="text-gray-500">{{ t("approval.jenisCuti") }}:</span>
+            <span class="font-semibold text-[#0f4bb4]">{{
+              selectedItem.jenis_cuti
+            }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500">{{ t('approval.duration') }}:</span>
-            <span class="font-bold text-gray-900">{{ selectedItem.durasi }} Hari</span>
+            <span class="text-gray-500">{{ t("approval.duration") }}:</span>
+            <span class="font-bold text-gray-900"
+              >{{ selectedItem.durasi }} Hari</span
+            >
           </div>
         </div>
 
@@ -277,14 +399,18 @@ onMounted(async () => {
             @click="showApproveModal = false"
             class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
           >
-            {{ t('common.cancel') }}
+            {{ t("common.cancel") }}
           </button>
           <button
             @click="confirmApprove"
             :disabled="processingId !== null"
             class="flex-1 py-2.5 bg-[#0f4bb4] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
           >
-            {{ processingId !== null ? t('approval.approving') : t('approval.approve') }}
+            {{
+              processingId !== null
+                ? t("approval.approving")
+                : t("approval.approve")
+            }}
           </button>
         </div>
       </div>
@@ -295,28 +421,43 @@ onMounted(async () => {
       v-if="showRejectModal && selectedItem"
       class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
     >
-      <div class="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div
+        class="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+      >
         <!-- Header -->
         <div class="flex items-center justify-between">
           <h3 class="text-base sm:text-lg font-bold text-gray-900">
-            {{ t('approval.rejectTitle') }}
+            {{ t("approval.rejectTitle") }}
           </h3>
-          <button @click="showRejectModal = false" class="text-gray-400 hover:text-gray-600 cursor-pointer">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <button
+            @click="showRejectModal = false"
+            class="text-gray-400 hover:text-gray-600 cursor-pointer"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <!-- Description Note -->
         <p class="text-xs text-gray-600 leading-relaxed">
-            {{ t('approval.rejectMessage') }}
+          {{ t("approval.rejectMessage") }}
         </p>
 
         <!-- Form Textarea -->
         <div>
           <label class="block text-xs font-bold text-gray-900 mb-1.5">
-            {{ t('approval.rejectReason') }} <span class="text-red-500">*</span>
+            {{ t("approval.rejectReason") }} <span class="text-red-500">*</span>
           </label>
           <textarea
             v-model="rejectReason"
@@ -332,14 +473,18 @@ onMounted(async () => {
             @click="showRejectModal = false"
             class="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
           >
-            {{ t('common.cancel') }}
+            {{ t("common.cancel") }}
           </button>
           <button
             @click="confirmReject"
             :disabled="!rejectReason.trim() || processingId !== null"
             class="px-5 py-2.5 bg-[#c91818] hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
           >
-            {{ processingId !== null ? t('approval.rejecting') : t('approval.confirmReject') }}
+            {{
+              processingId !== null
+                ? t("approval.rejecting")
+                : t("approval.confirmReject")
+            }}
           </button>
         </div>
       </div>
