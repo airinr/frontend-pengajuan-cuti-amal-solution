@@ -11,7 +11,9 @@ import {
   karyawanApi,
   type ActivityItem,
 } from "../../services/karyawan.service";
+import { authApi } from "../../services/auth.service";
 import { getNetworkErrorMessage } from "../../lib/api";
+import type { CurrentUser } from "../../types";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -19,8 +21,13 @@ const router = useRouter();
 const stats = ref<DashboardStats | null>(null);
 const cutiMendatang = ref<CutiMendatangItem[]>([]);
 const activities = ref<ActivityItem[]>([]);
+const currentUser = ref<CurrentUser | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
+
+const filteredCutiMendatang = computed(() =>
+  cutiMendatang.value.filter((item) => item.nama !== currentUser.value?.nama)
+);
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
@@ -52,23 +59,26 @@ const getInitials = (name: string) => {
 };
 
 const goToKalender = () => {
-  router.push("/hr/kalender-libur");
+  router.push("/hr/kalender-tim");
 };
 
 const fetchData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const [statsRes, mendatangRes, activityRes] = await Promise.allSettled([
+    const [statsRes, mendatangRes, activityRes, userRes] = await Promise.allSettled([
       hrApi.getDashboardStats(),
       hrApi.getCutiMendatang(),
       karyawanApi.getActivities(),
+      authApi.me(),
     ]);
     if (statsRes.status === "fulfilled") stats.value = statsRes.value.data;
     if (mendatangRes.status === "fulfilled")
       cutiMendatang.value = mendatangRes.value.data || [];
     if (activityRes.status === "fulfilled")
       activities.value = activityRes.value.data || [];
+    if (userRes.status === "fulfilled")
+      currentUser.value = userRes.value.data;
   } catch (err: any) {
     error.value = getNetworkErrorMessage(err);
   } finally {
@@ -284,14 +294,14 @@ onMounted(fetchData);
           </div>
           <div class="p-4 lg:p-6">
             <div
-              v-if="cutiMendatang.length === 0"
+              v-if="filteredCutiMendatang.length === 0"
               class="text-center text-gray-400 text-sm py-4"
             >
               {{ t('dashboard.noTeamLeave') }}
             </div>
             <div v-else class="space-y-4">
               <div
-                v-for="(item, i) in cutiMendatang"
+                v-for="(item, i) in filteredCutiMendatang"
                 :key="i"
                 class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >

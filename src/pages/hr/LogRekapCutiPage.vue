@@ -121,6 +121,19 @@ const getInitials = (name: string) => {
     .slice(0, 2);
 };
 
+const getUsagePercentage = (item: RekapItem) => {
+  if (item.total_cuti === 0) return 0;
+  const used = item.total_cuti - item.sisa_cuti;
+  return Math.round((used / item.total_cuti) * 100);
+};
+
+const getBarColor = (item: RekapItem) => {
+  const pct = getUsagePercentage(item);
+  if (pct >= 80) return "bg-red-500";
+  if (pct >= 50) return "bg-yellow-500";
+  return "bg-blue-500";
+};
+
 watch([selectedYear, selectedStatus], () => {
   currentPage.value = 1;
 });
@@ -355,35 +368,35 @@ onMounted(async () => {
             <thead>
               <tr class="bg-gray-50 border-b border-gray-200">
                 <th
-                  class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-12"
+                  class="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  {{ t("leaveLog.no") }}
+                  Nama Lengkap
                 </th>
                 <th
-                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                  class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider max-w-[120px]"
                 >
-                  {{ t("leaveLog.employee") }}
+                  Departemen
                 </th>
                 <th
-                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                  class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  {{ t("leaveLog.department") }}
+                  Durasi
                 </th>
                 <th
-                  class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                  class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  {{ t("leaveLog.totalPerYear") }}
+                  Sisa Cuti
                 </th>
                 <th
-                  class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                  class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  {{ t("leaveLog.remainingPerYear") }}
+                  Status
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100">
+            <tbody class="divide-y divide-gray-50">
               <tr v-if="currentData.length === 0">
-                <td colspan="6" class="text-center py-8 text-gray-400 text-sm">
+                <td colspan="5" class="text-center py-6 text-gray-400 text-sm">
                   {{ t("leaveLog.noData") }}
                 </td>
               </tr>
@@ -392,13 +405,10 @@ onMounted(async () => {
                 :key="index"
                 class="hover:bg-gray-50 transition-colors"
               >
-                <td class="px-4 py-3 text-sm text-gray-500 text-center">
-                  {{ (currentPage - 1) * itemsPerPage + index + 1 }}
-                </td>
-                <td class="px-4 py-3">
+                <td class="px-3 py-2">
                   <div class="flex items-center gap-2">
                     <div
-                      class="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center text-white text-[10px] font-medium"
+                      class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center text-white text-[9px] font-medium"
                     >
                       {{ getInitials(item.nama) }}
                     </div>
@@ -407,20 +417,37 @@ onMounted(async () => {
                     }}</span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
+                <td class="px-2 py-2 text-xs text-gray-600 max-w-[120px] truncate">
                   {{ item.nama_departemen }}
                 </td>
-
-                <td class="px-4 py-3 text-sm text-gray-600 text-center">
-                  {{ item.total_cuti }}
+                <td class="px-3 py-2">
+                  <div class="flex items-center justify-center gap-1.5">
+                    <div class="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        :class="['h-full rounded-full', getBarColor(item)]"
+                        :style="{ width: `${getUsagePercentage(item)}%` }"
+                      ></div>
+                    </div>
+                    <span class="text-[11px] text-gray-600">{{ item.total_cuti - item.sisa_cuti }}/{{ item.total_cuti }}</span>
+                  </div>
                 </td>
                 <td
-                  class="px-4 py-3 text-sm font-medium text-center"
+                  class="px-3 py-2 text-sm font-medium text-center"
                   :class="
                     item.sisa_cuti <= 2 ? 'text-red-600' : 'text-gray-800'
                   "
                 >
                   {{ item.sisa_cuti }}
+                </td>
+                <td class="px-3 py-2 text-center">
+                  <span
+                    :class="[
+                      'inline-block text-[10px] px-2 py-0.5 rounded-full font-medium',
+                      item.sisa_cuti > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
+                    ]"
+                  >
+                    {{ item.sisa_cuti > 0 ? 'Aktif' : 'Habis' }}
+                  </span>
                 </td>
               </tr>
             </tbody>

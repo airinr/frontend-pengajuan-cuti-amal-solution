@@ -14,6 +14,14 @@ export interface RiwayatCuti {
   status: string;
 }
 
+export interface PmApprovalDetail {
+  id_user: number;
+  nama: string;
+  status: string;
+  processed_at: string | null;
+  alasan_penolakan: string | null;
+}
+
 export interface OngoingCuti {
   id_log_cuti: number;
   jenis_cuti: string;
@@ -30,6 +38,7 @@ export interface OngoingCuti {
   processed_at_hr: string | null;
   processed_at_direktur: string | null;
   alasan_penolakan: string | null;
+  approval_pm_detail: PmApprovalDetail[];
 }
 
 export interface KalenderItem {

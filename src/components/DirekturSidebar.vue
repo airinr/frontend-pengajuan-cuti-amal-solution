@@ -26,7 +26,6 @@ const direkturMenu = computed(() => [
   { label: t('nav.logRekapCuti'), icon: "clipboard", route: "/direktur/log-rekap-cuti" },
   { label: t('nav.dataKaryawan'), icon: "users", route: "/direktur/data-karyawan" },
   { label: t('nav.jatahCuti'), icon: "briefcase", route: "/direktur/jatah-cuti" },
-  { label: t('nav.kalenderLibur'), icon: "calendar", route: "/direktur/kalender-libur" },
   { label: t('nav.kalenderTim'), icon: "calendar", route: "/direktur/kalender-tim" },
 ]);
 

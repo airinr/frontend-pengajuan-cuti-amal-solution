@@ -25,7 +25,6 @@ import HrPersetujuanPage from '../pages/hr/PersetujuanPage.vue'
 import HrLogRekapCutiPage from '../pages/hr/LogRekapCutiPage.vue'
 import HrDataKaryawanPage from '../pages/hr/DataKaryawanPage.vue'
 import HrJatahCutiPage from '../pages/hr/JatahCutiPage.vue'
-import HrKalenderLiburPage from '../pages/hr/KalenderLiburPage.vue'
 
 import DirekturLayout from '../layouts/DirekturLayout.vue'
 import DirekturDashboardPage from '../pages/direktur/DashboardPage.vue'
@@ -33,7 +32,6 @@ import DirekturPersetujuanPage from '../pages/direktur/PersetujuanPage.vue'
 import DirekturLogRekapCutiPage from '../pages/direktur/LogRekapCutiPage.vue'
 import DirekturDataKaryawanPage from '../pages/direktur/DataKaryawanPage.vue'
 import DirekturJatahCutiPage from '../pages/direktur/JatahCutiPage.vue'
-import DirekturKalenderLiburPage from '../pages/direktur/KalenderLiburPage.vue'
 import DirekturProfilPage from '../pages/direktur/ProfilPage.vue'
 import KalenderTimPage from '../pages/pm/KalenderTimPage.vue'
 
@@ -196,11 +194,6 @@ const routes: RouteRecordRaw[] = [
         component: HrJatahCutiPage
       },
       {
-        path: 'kalender-libur',
-        name: 'HrKalenderLibur',
-        component: HrKalenderLiburPage
-      },
-      {
         path: 'kalender-tim',
         name: 'HrKalenderTim',
         component: KalenderTimPage
@@ -260,11 +253,6 @@ const routes: RouteRecordRaw[] = [
         path: 'jatah-cuti',
         name: 'DirekturJatahCuti',
         component: DirekturJatahCutiPage
-      },
-      {
-        path: 'kalender-libur',
-        name: 'DirekturKalenderLibur',
-        component: DirekturKalenderLiburPage
       },
       {
         path: 'kalender-tim',

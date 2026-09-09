@@ -70,7 +70,7 @@ const formatDateRange = (start: string, end: string) => {
   return `${s.getDate()} ${monthNames[s.getMonth()]} ${s.getFullYear()} - ${e.getDate()} ${monthNames[e.getMonth()]} ${e.getFullYear()}`
 }
 
-const getStatusConfig = (status: string) => {
+const getStatusConfig = (status: string, item?: OngoingCuti) => {
   const configs: Record<string, { label: string; color: string; bgColor: string; borderColor: string }> = {
     'menunggu_pm': { label: t('status.waitingPM'), color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
     'menunggu_hr': { label: t('status.waitingHR'), color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
@@ -82,7 +82,26 @@ const getStatusConfig = (status: string) => {
     'ditolak_hr': { label: t('status.rejectedHR'), color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
     'ditolak_direktur': { label: t('status.rejectedDirector'), color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
   }
+
+  if (status === 'menunggu_pm' && item?.approval_pm_detail && item.approval_pm_detail.length > 1) {
+    const approved = item.approval_pm_detail.filter(pm => pm.status === 'disetujui').length
+    const total = item.approval_pm_detail.length
+    return { label: `${t('status.waitingPM')} (${approved}/${total})`, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' }
+  }
+
   return configs[status] || { label: status, color: 'text-gray-600', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' }
+}
+
+const hasMultiplePm = (item: OngoingCuti) => {
+  return item.approval_pm_detail && item.approval_pm_detail.length > 1
+}
+
+const getPmApprovalStatus = (item: OngoingCuti) => {
+  if (!item.approval_pm_detail || item.approval_pm_detail.length === 0) return null
+  const approved = item.approval_pm_detail.filter(pm => pm.status === 'disetujui').length
+  const rejected = item.approval_pm_detail.filter(pm => pm.status === 'ditolak').length
+  const total = item.approval_pm_detail.length
+  return { approved, rejected, total }
 }
 
 const getStepStatus = (item: OngoingCuti, stepIndex: number) => {
@@ -226,9 +245,9 @@ onMounted(async () => {
 
               <div :class="[
                 'px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 self-start',
-                getStatusConfig(item.status_sekarang).bgColor,
-                getStatusConfig(item.status_sekarang).color,
-                getStatusConfig(item.status_sekarang).borderColor
+                getStatusConfig(item.status_sekarang, item).bgColor,
+                getStatusConfig(item.status_sekarang, item).color,
+                getStatusConfig(item.status_sekarang, item).borderColor
               ]">
                 <svg v-if="item.status_sekarang.includes('ditolak')" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -237,7 +256,37 @@ onMounted(async () => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>{{ t('statusPage.currentStatus') }}</span>
-                <span class="font-semibold">{{ getStatusConfig(item.status_sekarang).label }}</span>
+                <span class="font-semibold">{{ getStatusConfig(item.status_sekarang, item).label }}</span>
+              </div>
+            </div>
+
+            <!-- Multiple PM Approval Details -->
+            <div v-if="hasMultiplePm(item) && item.status_sekarang === 'menunggu_pm'" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p class="text-sm font-semibold text-blue-800 mb-3">{{ t('status.waitingPM') }}</p>
+              <div class="space-y-2">
+                <div v-for="(pm, i) in item.approval_pm_detail" :key="i" class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div :class="[
+                      'w-6 h-6 rounded-full flex items-center justify-center',
+                      pm.status === 'disetujui' ? 'bg-green-100' : pm.status === 'ditolak' ? 'bg-red-100' : 'bg-gray-100'
+                    ]">
+                      <svg v-if="pm.status === 'disetujui'" class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <svg v-else-if="pm.status === 'ditolak'" class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span v-else class="text-xs text-gray-500">{{ i + 1 }}</span>
+                    </div>
+                    <span class="text-sm text-gray-700">{{ pm.nama }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span v-if="pm.status === 'disetujui'" class="text-xs text-green-600 font-medium">Disetujui</span>
+                    <span v-else-if="pm.status === 'ditolak'" class="text-xs text-red-600 font-medium">Ditolak</span>
+                    <span v-else class="text-xs text-gray-400">Menunggu</span>
+                    <span v-if="pm.processed_at" class="text-[10px] text-gray-400">{{ formatDateShort(pm.processed_at) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
 

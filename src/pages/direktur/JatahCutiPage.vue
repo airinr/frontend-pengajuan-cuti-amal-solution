@@ -40,17 +40,27 @@ const currentUser = ref<CurrentUser | null>(null);
 const showAdjustModal = ref(false);
 const adjustForm = ref({
   tahun: new Date().getFullYear(),
-  jatahCutiTahunan: 12,
+  jatahCutiTahunan: 0,
   keterangan: "",
 });
 const adjustLoading = ref(false);
 const adjustError = ref("");
 const adjustSuccess = ref("");
 
-const years = computed(() => {
-  const current = new Date().getFullYear();
-  return Array.from({ length: 5 }, (_, i) => current - i + 1);
+const isFormValid = computed(() => {
+  return adjustForm.value.jatahCutiTahunan > 0 && adjustForm.value.keterangan.trim() !== "";
 });
+
+const openAdjustModal = () => {
+  adjustForm.value = {
+    tahun: new Date().getFullYear(),
+    jatahCutiTahunan: 0,
+    keterangan: "",
+  };
+  adjustError.value = "";
+  adjustSuccess.value = "";
+  showAdjustModal.value = true;
+};
 
 const fetchData = async () => {
   loading.value = true;
@@ -478,28 +488,8 @@ const handleSaveAdjustment = async () => {
             >
               TAHUN JATAH
             </label>
-            <div class="relative">
-              <select
-                v-model="adjustForm.tahun"
-                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4] cursor-pointer pr-10"
-              >
-                <option v-for="yr in years" :key="yr" :value="yr">
-                  {{ yr }}
-                </option>
-              </select>
-              <svg
-                class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+            <div class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700">
+              {{ adjustForm.tahun }}
             </div>
           </div>
 
@@ -508,7 +498,7 @@ const handleSaveAdjustment = async () => {
             <label
               class="block font-bold text-gray-600 uppercase text-[10px] tracking-wider mb-1.5"
             >
-              JATAH CUTI TAHUNAN
+              JATAH CUTI TAHUNAN <span class="text-red-500">*</span>
             </label>
             <div class="flex items-center gap-2">
               <button
@@ -543,7 +533,7 @@ const handleSaveAdjustment = async () => {
           <label
             class="block font-bold text-gray-600 uppercase text-[10px] tracking-wider mb-1.5"
           >
-            KETERANGAN
+            KETERANGAN <span class="text-red-500">*</span>
           </label>
           <input
             v-model="adjustForm.keterangan"
@@ -577,8 +567,8 @@ const handleSaveAdjustment = async () => {
           </button>
           <button
             @click="handleSaveAdjustment"
-            :disabled="adjustLoading"
-            class="px-6 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
+            :disabled="adjustLoading || !isFormValid"
+            class="px-6 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ adjustLoading ? "Menyimpan..." : "Terapkan Perubahan" }}
           </button>

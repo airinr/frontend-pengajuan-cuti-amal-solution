@@ -26,7 +26,6 @@ const hrMenu = computed(() => [
   { label: t('nav.logRekapCuti'), icon: "clipboard", route: "/hr/log-rekap-cuti" },
   { label: t('nav.dataKaryawan'), icon: "users", route: "/hr/data-karyawan" },
   { label: t('nav.jatahCuti'), icon: "briefcase", route: "/hr/jatah-cuti" },
-  { label: t('nav.kalenderLibur'), icon: "calendar", route: "/hr/kalender-libur" },
   { label: t('nav.kalenderTim'), icon: "calendar", route: "/hr/kalender-tim" },
 ]);
 

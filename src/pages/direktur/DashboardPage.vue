@@ -42,7 +42,7 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 
 const goToKalender = () => {
-  router.push("/direktur/kalender-libur");
+  router.push("/direktur/kalender-tim");
 };
 
 const goToSemuaAktivitas = () => {

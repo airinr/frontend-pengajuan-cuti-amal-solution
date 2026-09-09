@@ -141,4 +141,7 @@ export const hrApi = {
 
   tambahCuti: (data: { id_user: number; jumlah_hari: number; keterangan: string }) =>
     api.post("/hr/tambah-cuti", data),
+
+  getAllPm: () =>
+    api.get<{ id_user: number; nama: string }[]>("/pm"),
 };
