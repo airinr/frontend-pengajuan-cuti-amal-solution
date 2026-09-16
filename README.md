@@ -51,12 +51,8 @@ npm install
 Buat file `.env` di root project:
 
 ```env
-VITE_API_BASE_URL=http://amal-dev.rutherweb.my.id
+VITE_API_BASE_URL=url.ezample
 ```
-
-| Variable | Deskripsi | Default |
-|----------|-----------|---------|
-| `VITE_API_BASE_URL` | URL backend API | `http://amal-dev.rutherweb.my.id` |
 
 ### Development
 
