@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref, provide, watch, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import DirekturSidebar from "../components/DirekturSidebar.vue";
 import { authApi } from "../services/auth.service";
 import type { CurrentUser } from "../types";
 
 const router = useRouter();
 const route = useRoute();
+const { locale } = useI18n();
 const sidebarOpen = ref(false);
 const user = ref<CurrentUser | null>(null);
-
-provide("sidebarOpen", sidebarOpen);
 
 watch(
   () => route.path,
@@ -18,6 +18,12 @@ watch(
     sidebarOpen.value = false;
   }
 );
+
+const toggleLocale = () => {
+  const newLocale = locale.value === 'id' ? 'en' : 'id';
+  locale.value = newLocale;
+  localStorage.setItem('locale', newLocale);
+};
 
 onMounted(async () => {
   try {
@@ -31,7 +37,7 @@ onMounted(async () => {
 
 <template>
   <div class="flex min-h-screen bg-[#f8fafc]">
-    <DirekturSidebar :open="sidebarOpen" @close="sidebarOpen = false" />
+    <DirekturSidebar :open="sidebarOpen" :user="user" @close="sidebarOpen = false" />
 
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Top Navbar / Header -->
@@ -46,7 +52,16 @@ onMounted(async () => {
           </svg>
         </button>
 
-        <div class="flex items-center gap-4 ml-auto">
+        <div class="flex items-center gap-3 ml-auto">
+          <button
+            @click="toggleLocale"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+            </svg>
+            {{ locale === 'id' ? 'EN' : 'ID' }}
+          </button>
           <router-link
             to="/direktur/profil"
             class="w-10 h-10 bg-[#0f4bb4] text-white rounded-full flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity cursor-pointer"

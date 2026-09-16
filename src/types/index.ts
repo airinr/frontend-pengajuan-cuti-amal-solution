@@ -1,4 +1,4 @@
-export type UserRole = 'karyawan' | 'pm' | 'hr' | 'direktur'
+export type UserRole = 'karyawan' | 'pm' | 'hr' | 'direktur' | 'staff_hr'
 
 export interface User {
   id: string
@@ -35,22 +35,6 @@ export interface LoginRequest {
   password: string
 }
 
-export interface RegisterRequest {
-  username: string
-  nama: string
-  password: string
-  id_departemen: number
-  id_pm?: number | null
-}
-
-export interface RegisterResponse {
-  id_user: number
-  username: string
-  nama: string
-  role: string
-  id_departemen: number
-}
-
 export interface AuthResponse {
   access_token: string
   token_type: string
@@ -84,6 +68,9 @@ export interface CurrentUser {
   id_pm: number | null
   total_cuti: number
   sisa_cuti: number
+  email?: string
+  no_telp?: string
+  tanggal_bergabung?: string
   pm: {
     id_user: number
     username: string
@@ -97,10 +84,16 @@ export interface ChangePasswordRequest {
   konfirmasi_password_baru: string
 }
 
+export interface UpdateProfileRequest {
+  email?: string
+  no_telp?: string
+  tanggal_bergabung?: string
+}
+
 export interface CreateKaryawanLeaveRequest {
   tanggal_mulai: string
   tanggal_selesai: string
-  keterangan: string
+  keterangan_cuti: string
   pengganti: number
 }
 

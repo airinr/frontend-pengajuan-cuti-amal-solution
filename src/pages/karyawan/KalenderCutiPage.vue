@@ -1,30 +1,29 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
-import { calendarApi, type KalenderItem } from "../../services/calendar.service";
+import { karyawanApi, type KalenderItem } from "../../services/karyawan.service";
 import { authApi } from "../../services/auth.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useCalendarNames } from "../../composables/useCalendarNames";
+import { getNetworkErrorMessage } from "../../lib/api";
 import type { CurrentUser } from "../../types";
+
+const { t } = useI18n();
+const { showError } = useErrorPopup();
+const { dayNamesShort, dayNamesFull, monthNamesLong, getDayFull } = useCalendarNames();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
 const currentYear = ref(today.getFullYear());
 const selectedDate = ref<Date>(today);
 
-const monthNames = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
-
-const dayNames = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
-
-const dayFullName = [
-  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu",
-];
-
 const holidays = ref<Holiday[]>([]);
 const myCalendar = ref<KalenderItem[]>([]);
 const teamCalendar = ref<KalenderItem[]>([]);
 const currentUser = ref<CurrentUser | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
 
 const filteredTeamCalendar = computed(() =>
   teamCalendar.value.filter((item) => item.nama !== currentUser.value?.nama)
@@ -94,20 +93,33 @@ const getHolidayName = (date: Date) => {
   return holidays.value.find((h) => h.date === dateStr)?.name || "";
 };
 
+const isApprovedLeave = (status: string) => {
+  return status === 'disetujui_hr' || status === 'disetujui_direktur';
+};
+
 const getMyLeaveOnDate = (date: Date) => {
   const dateStr = formatDate(date);
-  return myCalendar.value.filter((item) => item.tanggal === dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return [];
+  return myCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
 };
 
 const getTeamLeaveOnDate = (date: Date) => {
   const dateStr = formatDate(date);
-  return filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return [];
+  return filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
 };
 
 const getCellLeaves = (date: Date) => {
   const dateStr = formatDate(date);
-  const my = myCalendar.value.filter((item) => item.tanggal === dateStr);
-  const team = filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return { my: [], team: [] };
+  const my = myCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
+  const team = filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
   return { my, team };
 };
 
@@ -116,14 +128,14 @@ const selectedDateTeamLeave = computed(() => getTeamLeaveOnDate(selectedDate.val
 
 const selectedDateLabel = computed(() => {
   const d = selectedDate.value;
-  const dayName = dayFullName[d.getDay()];
+  const dayName = getDayFull(d);
   const dayNum = d.getDate();
-  const monthName = monthNames[d.getMonth()];
+  const monthName = monthNamesLong.value[d.getMonth()];
   const year = d.getFullYear();
   return `${dayNum} ${monthName} ${year}`;
 });
 
-const selectedDateDayName = computed(() => dayFullName[selectedDate.value.getDay()]);
+const selectedDateDayName = computed(() => getDayFull(selectedDate.value));
 
 const goToToday = () => {
   const now = new Date();
@@ -155,27 +167,30 @@ const selectDate = (date: Date) => {
 };
 
 onMounted(async () => {
+  loading.value = true;
   try {
-    const [holidayRes, myRes, teamRes, userRes] = await Promise.all([
+    const [holidayRes, myRes, teamRes, userRes] = await Promise.allSettled([
       holidayApi.getByYear(currentYear.value),
-      calendarApi.getMyCalendar(),
-      calendarApi.getTeamCalendar(),
+      karyawanApi.getMyCalendar(),
+      karyawanApi.getTeamCalendar(),
       authApi.me(),
     ]);
-    holidays.value = holidayRes.data.data || [];
-    myCalendar.value = myRes.data || [];
-    teamCalendar.value = teamRes.data || [];
-    currentUser.value = userRes.data;
-  } catch {
-    // silent fail
+    if (holidayRes.status === "fulfilled") holidays.value = holidayRes.value.data.data || [];
+    if (myRes.status === "fulfilled") myCalendar.value = myRes.value.data || [];
+    if (teamRes.status === "fulfilled") teamCalendar.value = teamRes.value.data || [];
+    if (userRes.status === "fulfilled") currentUser.value = userRes.value.data;
+  } catch (err) {
+    error.value = getNetworkErrorMessage(err);
+  } finally {
+    loading.value = false;
   }
 });
 </script>
 
 <template>
   <div>
-    <h1 class="text-xl lg:text-2xl font-bold text-gray-800 mb-2">Kalender Cuti</h1>
-    <p class="text-sm text-gray-500 mb-6">Pantau jadwal cuti Anda, tim, dan hari libur nasional.</p>
+    <h1 class="text-xl lg:text-2xl font-bold text-gray-800 mb-2">{{ t('calendar.title') }}</h1>
+    <p class="text-sm text-gray-500 mb-6">{{ t('calendar.subtitle') }}</p>
 
     <div class="flex flex-col lg:flex-row gap-6">
       <!-- Kalender -->
@@ -190,7 +205,7 @@ onMounted(async () => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Hari ini
+            {{ t('calendar.today') }}
           </button>
 
           <div class="flex items-center gap-3">
@@ -203,7 +218,7 @@ onMounted(async () => {
               </svg>
             </button>
             <span class="text-base font-semibold text-gray-800 min-w-[160px] text-center">
-              {{ monthNames[currentMonth] }} {{ currentYear }}
+              {{ monthNamesLong[currentMonth] }} {{ currentYear }}
             </span>
             <button
               @click="nextMonth"
@@ -220,7 +235,7 @@ onMounted(async () => {
         <div class="grid grid-cols-7 border border-gray-200 rounded-lg overflow-hidden">
           <!-- Header Hari -->
           <div
-            v-for="day in dayNames"
+            v-for="day in dayNamesShort"
             :key="day"
             class="text-center text-xs font-bold py-3 border-b border-gray-200 text-gray-600 bg-gray-50"
           >
@@ -261,7 +276,7 @@ onMounted(async () => {
                 :key="'my-' + i"
                 class="block text-[8px] leading-tight px-1 py-0.5 bg-blue-500 text-white rounded truncate mb-0.5"
               >
-                Cuti S.
+                Cuti Saya
               </span>
             </div>
 
@@ -275,7 +290,7 @@ onMounted(async () => {
                 :key="'team-' + i"
                 class="block text-[8px] leading-tight px-1 py-0.5 bg-gray-400 text-white rounded truncate mb-0.5"
               >
-                {{ item.nama.split(' ')[0] }}
+                {{ item.nama }}
               </span>
             </div>
 
@@ -289,7 +304,7 @@ onMounted(async () => {
                 :key="'tmix-' + i"
                 class="block text-[8px] leading-tight px-1 py-0.5 bg-gray-400 text-white rounded truncate mb-0.5"
               >
-                {{ item.nama.split(' ')[0] }}.
+                {{ item.nama }}
               </span>
             </div>
 
@@ -304,7 +319,7 @@ onMounted(async () => {
                   isCutiBersama(day.date) ? 'bg-green-500' : 'bg-red-500',
                 ]"
               >
-                {{ isCutiBersama(day.date) ? 'Cuti B.' : getHolidayName(day.date).split(' ').slice(0, 2).join(' ') }}
+                {{ isCutiBersama(day.date) ? 'Cuti Bersama' : getHolidayName(day.date) }}
               </span>
             </div>
           </div>
@@ -332,7 +347,7 @@ onMounted(async () => {
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-2">
               <div class="w-2.5 h-2.5 bg-blue-500 rounded-full"></div>
-              <span class="text-sm font-semibold text-gray-700">Cuti Saya</span>
+              <span class="text-sm font-semibold text-gray-700">{{ t('calendar.myLeave') }}</span>
             </div>
             <div v-if="selectedDateMyLeave.length > 0" class="space-y-2">
               <div
@@ -354,14 +369,14 @@ onMounted(async () => {
                 </span>
               </div>
             </div>
-            <p v-else class="text-xs text-gray-400 italic">Tidak ada cuti pada tanggal ini</p>
+            <p v-else class="text-xs text-gray-400 italic">{{ t('calendar.noMyLeave') }}</p>
           </div>
 
           <!-- Jadwal Tim -->
           <div>
             <div class="flex items-center gap-2 mb-2">
               <div class="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
-              <span class="text-sm font-semibold text-gray-700">Jadwal Tim</span>
+              <span class="text-sm font-semibold text-gray-700">{{ t('calendar.teamLeave') }}</span>
             </div>
             <div v-if="selectedDateTeamLeave.length > 0" class="space-y-2">
               <div
@@ -383,29 +398,29 @@ onMounted(async () => {
                 </span>
               </div>
             </div>
-            <p v-else class="text-xs text-gray-400 italic">Tidak ada jadwal tim pada tanggal ini</p>
+            <p v-else class="text-xs text-gray-400 italic">{{ t('calendar.noTeamLeaveOnDate') }}</p>
           </div>
         </div>
 
         <!-- Keterangan / Legenda -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h3 class="text-sm font-bold text-gray-800 mb-3">Keterangan</h3>
+          <h3 class="text-sm font-bold text-gray-800 mb-3">{{ t('calendar.legend') }}</h3>
           <div class="space-y-2.5">
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span class="text-sm text-gray-600">Cuti Saya</span>
+              <span class="text-sm text-gray-600">{{ t('calendar.myLeave') }}</span>
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span class="text-sm text-gray-600">Libur Nasional</span>
+              <span class="text-sm text-gray-600">{{ t('calendar.nationalHoliday') }}</span>
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span class="text-sm text-gray-600">Cuti Bersama</span>
+              <span class="text-sm text-gray-600">{{ t('calendar.collectiveLeave') }}</span>
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-              <span class="text-sm text-gray-600">Jadwal Tim (Disetujui)</span>
+              <span class="text-sm text-gray-600">{{ t('calendar.teamLeaveApproved') }}</span>
             </div>
           </div>
         </div>

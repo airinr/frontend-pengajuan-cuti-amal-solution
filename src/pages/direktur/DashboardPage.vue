@@ -1,313 +1,223 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { direkturApi, type ActivityItem } from "../../services/direktur.service";
+import { useI18n } from "vue-i18n";
+import {
+  direkturApi,
+  type DashboardStats,
+  type CutiMendatangItem,
+} from "../../services/direktur.service";
+import { authApi } from "../../services/auth.service";
+import { getNetworkErrorMessage } from "../../lib/api";
+import type { CurrentUser } from "../../types";
 
+const { t } = useI18n();
 const router = useRouter();
 
-interface DirekturStats {
-  total_karyawan: number;
-  menunggu_direktur: number;
-  cuti_bulan_ini: number;
-  cuti_mendatang: number;
-}
+const stats = ref<DashboardStats | null>(null);
+const cutiMendatang = ref<CutiMendatangItem[]>([]);
+const currentUser = ref<CurrentUser | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
 
-interface CutiMendatangItem {
-  nama: string;
-  jenis_cuti: string;
-  departemen: string;
-  waktu_teks: string;
-  status: string;
-}
+const filteredCutiMendatang = computed(() =>
+  cutiMendatang.value.filter((item) => item.nama !== currentUser.value?.nama)
+);
 
-const stats = ref<DirekturStats>({
-  total_karyawan: 0,
-  menunggu_direktur: 0,
-  cuti_bulan_ini: 0,
-  cuti_mendatang: 0,
+const greeting = computed(() => {
+  const hour = new Date().getHours();
+  if (hour < 12) return t('greeting.morning');
+  if (hour < 18) return t('greeting.afternoon');
+  return t('greeting.evening');
 });
 
-const cutiMendatangList = ref<CutiMendatangItem[]>([]);
-const activities = ref<ActivityItem[]>([]);
-const loading = ref(true);
-
-const goToKalender = () => {
-  router.push("/direktur/kalender-libur");
-};
-
-const goToSemuaAktivitas = () => {
-  router.push("/direktur/log-rekap-cuti");
-};
-
-const formatDateRange = (start: string, end?: string) => {
-  if (!start) return "Mendatang";
+const formatDateRange = (start: string, end: string) => {
   const s = new Date(start);
+  const e = new Date(end);
   const months = [
     "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
     "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
   ];
-  if (!end || start === end) {
-    return `${s.getDate()} ${months[s.getMonth()]}`;
-  }
-  const e = new Date(end);
   if (s.getMonth() === e.getMonth()) {
     return `${s.getDate()} - ${e.getDate()} ${months[s.getMonth()]}`;
   }
   return `${s.getDate()} ${months[s.getMonth()]} - ${e.getDate()} ${months[e.getMonth()]}`;
 };
 
-onMounted(async () => {
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+const goToKalender = () => {
+  router.push("/direktur/kalender-tim");
+};
+
+const fetchData = async () => {
+  loading.value = true;
+  error.value = null;
   try {
-    const [statsRes, mendatangRes, activityRes] = await Promise.allSettled([
+    const [statsRes, mendatangRes, userRes] = await Promise.allSettled([
       direkturApi.getDashboardStats(),
       direkturApi.getCutiMendatang(),
-      direkturApi.getRecentActivity(),
+      authApi.me(),
     ]);
-
-    if (statsRes.status === "fulfilled" && statsRes.value.data) {
-      stats.value = {
-        total_karyawan: statsRes.value.data.total_karyawan ?? 0,
-        menunggu_direktur: statsRes.value.data.menunggu_direktur ?? statsRes.value.data.menunggu_hr ?? 0,
-        cuti_bulan_ini: statsRes.value.data.cuti_bulan_ini ?? 0,
-        cuti_mendatang: statsRes.value.data.cuti_mendatang ?? 0,
-      };
-    }
-
-    if (mendatangRes.status === "fulfilled" && Array.isArray(mendatangRes.value.data)) {
-      cutiMendatangList.value = mendatangRes.value.data.map((item: any) => ({
-        nama: item.nama,
-        jenis_cuti: item.jenis_cuti || "Cuti Tahunan",
-        departemen: item.keterangan || "General",
-        waktu_teks: item.tanggal ? formatDateRange(item.tanggal, item.tanggal_selesai || item.tanggal) : "Mendatang",
-        status: item.status || "Menunggu",
-      }));
-    }
-
-    if (activityRes.status === "fulfilled" && Array.isArray(activityRes.value.data)) {
-      activities.value = activityRes.value.data;
-    }
-  } catch {
-    // silent fail
+    if (statsRes.status === "fulfilled") stats.value = statsRes.value.data;
+    if (mendatangRes.status === "fulfilled")
+      cutiMendatang.value = mendatangRes.value.data || [];
+    if (userRes.status === "fulfilled")
+      currentUser.value = userRes.value.data;
+  } catch (err: any) {
+    error.value = getNetworkErrorMessage(err);
   } finally {
     loading.value = false;
   }
-});
+};
+
+onMounted(fetchData);
 </script>
 
 <template>
-  <div class="space-y-6 max-w-7xl mx-auto">
-    <!-- Header -->
+  <div class="space-y-4 lg:space-y-6">
     <div>
-      <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-        Dashboard Direktur
-      </h1>
-      <p class="text-sm text-gray-500 mt-1">
-        Ringkasan aktivitas cuti dan persetujuan yang membutuhkan perhatian Anda hari ini.
+      <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('dashboard.title') || 'Dashboard Direktur' }}</h1>
+      <p class="text-sm text-gray-500">
+        {{ t('dashboard.leaveSummary') }}
       </p>
     </div>
 
-    <!-- Stats Cards Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
-      <!-- 1. Total Karyawan -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md">
-        <div>
-          <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-sm">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">
-            TOTAL KARYAWAN
-          </p>
-        </div>
-        <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight">
-          {{ stats.total_karyawan }}
-        </p>
-        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50/40 rounded-full blur-xl pointer-events-none"></div>
-      </div>
-
-      <!-- 2. Menunggu Direktur -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md">
-        <div>
-          <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-500 shadow-sm">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12v3l2 2" />
-            </svg>
-          </div>
-          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">
-            MENUNGGU DIREKTUR
-          </p>
-        </div>
-        <p class="text-3xl lg:text-4xl font-extrabold text-red-600 mt-1 tracking-tight">
-          {{ stats.menunggu_direktur }}
-        </p>
-        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-red-50/40 rounded-full blur-xl pointer-events-none"></div>
-      </div>
-
-      <!-- 3. Cuti Bulan Ini -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md">
-        <div>
-          <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">
-            CUTI BULAN INI
-          </p>
-        </div>
-        <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight">
-          {{ stats.cuti_bulan_ini }}
-        </p>
-        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50/40 rounded-full blur-xl pointer-events-none"></div>
-      </div>
-
-      <!-- 4. Cuti Mendatang -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden transition-all duration-200 hover:shadow-md">
-        <div>
-          <div class="w-12 h-12 bg-[#334155] rounded-xl flex items-center justify-center text-white shadow-sm">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 15l2-2-2-2" />
-            </svg>
-          </div>
-          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mt-4">
-            CUTI MENDATANG
-          </p>
-        </div>
-        <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-1 tracking-tight">
-          {{ stats.cuti_mendatang }}
-        </p>
-        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-slate-50/40 rounded-full blur-xl pointer-events-none"></div>
-      </div>
+    <div v-if="loading" class="flex justify-center items-center py-12">
+      <div
+        class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+      ></div>
     </div>
 
-    <!-- Main Content Section: Cuti Mendatang + Aktivitas Terbaru -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
-      <!-- Cuti Karyawan Mendatang (8 Cols) -->
-      <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between min-h-[260px]">
-        <div>
-          <!-- Header Bar -->
-          <div class="flex items-center justify-between pb-4 border-b border-gray-50">
-            <h2 class="text-base lg:text-lg font-bold text-gray-900">
-              Cuti Karyawan Mendatang
-            </h2>
-            <button
-              @click="goToKalender"
-              class="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer transition-colors"
-            >
-              Lihat Kalender
-            </button>
-          </div>
-
-          <!-- Items List -->
-          <div v-if="cutiMendatangList.length === 0" class="py-10 text-center text-gray-400 text-xs font-medium">
-            Tidak ada cuti karyawan mendatang saat ini.
-          </div>
-          <div v-else class="pt-4 space-y-3">
-            <div
-              v-for="(item, index) in cutiMendatangList"
-              :key="index"
-              class="flex items-center justify-between py-2"
-            >
-              <div>
-                <p class="text-sm font-bold text-gray-900 leading-snug">
-                  {{ item.nama }}
-                </p>
-                <p class="text-xs text-gray-400 font-medium mt-0.5">
-                  {{ item.jenis_cuti }} • {{ item.departemen }}
-                </p>
-              </div>
-
-              <div class="flex items-center gap-3 shrink-0">
-                <span class="text-xs font-medium text-gray-500">
-                  {{ item.waktu_teks }}
-                </span>
-                <span
-                  class="inline-block text-[11px] px-2.5 py-0.5 rounded-full font-semibold border bg-blue-50 text-blue-600 border-blue-100"
-                >
-                  {{ item.status }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div v-else-if="error" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+      <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
       </div>
-
-      <!-- Aktivitas Terbaru (5 Cols) -->
-      <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
-        <h2 class="text-base lg:text-lg font-bold text-gray-900 mb-5">
-          Aktivitas Terbaru
-        </h2>
-
-        <!-- Vertical Timeline List -->
-        <div v-if="activities.length === 0" class="py-10 text-center text-gray-400 text-xs font-medium">
-          Belum ada aktivitas terbaru.
-        </div>
-        <div v-else class="relative space-y-6 pl-1">
-          <!-- Continuous vertical line connecting all items -->
-          <div class="absolute left-[19px] top-4 bottom-5 w-[1.5px] bg-gray-100"></div>
-
-          <div
-            v-for="activity in activities.slice(0, 5)"
-            :key="activity.id"
-            class="relative flex items-start gap-3.5 z-10"
-          >
-            <!-- Timeline Icon -->
-            <div
-              :class="[
-                'w-8 h-8 rounded-full flex items-center justify-center shrink-0 border bg-white',
-                activity.tipe === 'approve'
-                  ? 'border-blue-100 text-blue-600 bg-blue-50/50'
-                  : activity.tipe === 'reject'
-                  ? 'border-red-100 text-red-500 bg-red-50/50'
-                  : activity.tipe === 'submit'
-                  ? 'border-gray-200 text-gray-500 bg-gray-50'
-                  : 'border-gray-200 text-gray-500 bg-gray-50'
-              ]"
-            >
-              <!-- Checkmark for approve -->
-              <svg v-if="activity.tipe === 'approve'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-              </svg>
-
-              <!-- Alert/Clipboard for reject or submit -->
-              <svg v-else-if="activity.tipe === 'reject'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M9 3h6a2 2 0 012 2v14a2 2 0 01-2 2H9a2 2 0 01-2-2V5a2 2 0 012-2z" />
-              </svg>
-
-              <!-- Document / edit icon -->
-              <svg v-else-if="activity.tipe === 'submit'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-
-              <!-- Calendar / system icon -->
-              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-
-            <!-- Timeline Content -->
-            <div class="flex-1 min-w-0 pt-0.5">
-              <p class="text-sm font-semibold text-gray-800 leading-snug">
-                {{ activity.deskripsi }}
-              </p>
-              <p class="text-xs text-gray-400 mt-1 font-medium">
-                {{ activity.waktu }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Lihat Semua Aktivitas link -->
-        <button
-          @click="goToSemuaAktivitas"
-          class="w-full text-center text-xs font-semibold text-blue-600 hover:text-blue-700 mt-6 pt-3 border-t border-gray-50 cursor-pointer transition-colors"
-        >
-          Lihat Semua Aktivitas
-        </button>
-      </div>
+      <p class="text-gray-600 text-sm mb-4">{{ error }}</p>
+      <button @click="fetchData" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+        {{ t('common.retry') }}
+      </button>
     </div>
+
+    <template v-else>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+            {{ t('dashboard.totalEmployees') }}
+          </p>
+          <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+            {{ stats?.total_karyawan ?? "-" }}
+            <span class="text-sm font-normal text-gray-500">{{ t('common.total') }}</span>
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 relative">
+          <p class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+            {{ t('status.waiting') }}
+          </p>
+          <div class="flex items-center gap-2">
+            <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+              {{ stats?.menunggu ?? "-" }}
+              <span class="text-sm font-normal text-gray-500">{{ t('common.total') }}</span>
+            </p>
+            <div
+              v-if="stats && stats.menunggu > 0"
+              class="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
+            >
+              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+            Rekap Bulan Ini
+          </p>
+          <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+            {{ stats?.total_pengajuan ?? "-" }}
+            <span class="text-sm font-normal text-gray-500">{{ t('dashboard.submissions') }}</span>
+          </p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs text-green-600 font-medium">{{ stats?.total_pengajuan_diacc ?? 0 }} {{ t('dashboard.approve') }}</span>
+            <span class="text-xs text-red-500 font-medium">{{ stats?.total_pengajuan_ditolak ?? 0 }} {{ t('dashboard.reject') }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div class="p-4 lg:p-6 border-b border-gray-100">
+            <div class="flex justify-between items-center">
+              <h3 class="font-semibold text-gray-800">
+                {{ t('dashboard.teamLeaveUpcoming') }}
+              </h3>
+              <button
+                @click="goToKalender"
+                class="text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
+              >
+                {{ t('dashboard.viewCalendar') }}
+              </button>
+            </div>
+          </div>
+          <div class="p-4 lg:p-6">
+            <div
+              v-if="filteredCutiMendatang.length === 0"
+              class="text-center text-gray-400 text-sm py-4"
+            >
+              {{ t('dashboard.noTeamLeave') }}
+            </div>
+            <div v-else class="space-y-4">
+              <div
+                v-for="(item, i) in filteredCutiMendatang"
+                :key="i"
+                class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                  >
+                    {{ getInitials(item.nama) }}
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">
+                      {{ item.nama }}
+                    </p>
+                    <p class="text-xs text-gray-500">{{ item.jenis_cuti }}</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-gray-500">
+                    {{
+                      formatDateRange(item.tanggal_mulai, item.tanggal_selesai)
+                    }}
+                  </p>
+                  <span
+                    :class="[
+                      'inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-medium',
+                      item.status === 'Disetujui'
+                        ? 'bg-green-100 text-green-700'
+                        : item.status === 'Ditolak'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700',
+                    ]"
+                  >
+                    {{ item.status }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </template>
   </div>
 </template>

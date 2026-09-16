@@ -2,9 +2,10 @@ import api from "../lib/api";
 
 export interface DashboardStats {
   total_karyawan: number;
-  menunggu_hr: number;
-  cuti_bulan_ini: number;
-  cuti_mendatang: number;
+  menunggu: number;
+  total_pengajuan: number;
+  total_pengajuan_diacc: number;
+  total_pengajuan_ditolak: number;
 }
 
 export interface ActivityItem {
@@ -38,26 +39,24 @@ export interface RingkasanPersetujuan {
 }
 
 export interface RekapItem {
-  id_user: number;
   nama: string;
-  departemen: string;
-  tanggal: string;
-  total_cuti_tahun: number;
-  cuti_diambil: number;
+  nama_departemen: string;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  total_cuti: number;
   sisa_cuti: number;
 }
 
 export interface LogCutiItem {
-  id_log_cuti: number;
   nama: string;
   tanggal_mulai: string;
   tanggal_selesai: string;
   durasi: number;
   jenis_cuti: string;
   keterangan: string;
-  backup: string;
+  pengganti: string;
   status: string;
-  hr_approver: string;
+  hr_approved_by: string;
 }
 
 export interface CutiMendatangItem {
@@ -82,11 +81,11 @@ export interface KaryawanItem {
   jabatan: string;
   email: string;
   status: string;
-  nama_pm?: string;
+  nama_pm?: string[];
 }
 
 export interface DepartemenItem {
-  id_departemen?: number;
+  id_departemen: number;
   nama_departemen: string;
   jumlah_karyawan: number;
 }
@@ -129,24 +128,19 @@ export const direkturApi = {
 
   getRecentActivity: () => api.get<ActivityItem[]>("/hr/activity"),
 
-  getPendingApprovals: () =>
-    api.get<PersetujuanItem[]>("/hr/approvals/pending"),
-
   getApprovalHistory: () =>
     api.get<PersetujuanItem[]>("/hr/approvals/history"),
 
   getRingkasan: () => api.get<RingkasanPersetujuan>("/hr/persetujuan"),
 
-  approve: (id: number) => api.post(`/hr/approvals/${id}/approve`),
+  getRekap: () =>
+    api.get<RekapItem[]>("/hr/rekapitulasi"),
 
-  reject: (id: number, alasan: string) =>
-    api.post(`/hr/approvals/${id}/reject`, { alasan }),
+  getLogCuti: () =>
+    api.get<LogCutiItem[]>("/hr/log-cuti"),
 
-  getRekap: (params: { search?: string; tahun?: number; status?: string }) =>
-    api.get<RekapItem[]>("/hr/log-rekap/rekap", { params }),
-
-  getLogCuti: (params: { search?: string; tahun?: number; status?: string }) =>
-    api.get<LogCutiItem[]>("/hr/log-rekap/log", { params }),
+  exportCuti: (year?: number) =>
+    api.get("/hr/export-cuti", { params: { year }, responseType: "blob" }),
 
   getDataKaryawanSummary: () =>
     api.get<RingkasanKaryawan>("/hr/ringkasan-karyawan"),
@@ -174,4 +168,7 @@ export const direkturApi = {
 
   updateDepartemen: (id: number, data: { nama_departemen: string }) =>
     api.put(`/hr/data-departemen/${id}`, data),
+
+  tambahCuti: (data: { id_user: number; jumlah_hari: number; keterangan: string }) =>
+    api.post("/hr/tambah-cuti", data),
 };

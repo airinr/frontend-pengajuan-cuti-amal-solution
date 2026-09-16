@@ -1,34 +1,36 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { leaveApi, type RiwayatCuti } from '../../services/leave.service'
+import { useI18n } from 'vue-i18n'
+import { karyawanApi, type RiwayatCuti } from '../../services/karyawan.service'
+import { useErrorPopup } from '../../composables/useErrorPopup'
+import { useCalendarNames } from '../../composables/useCalendarNames'
 
+const { t } = useI18n()
+const { showError } = useErrorPopup()
+const { monthNamesShort } = useCalendarNames()
 const riwayat = ref<RiwayatCuti[]>([])
 const loading = ref(true)
 const selectedYear = ref(new Date().getFullYear())
-const selectedStatus = ref('semua')
+const sortDirection = ref<'desc' | 'asc'>('desc')
 const currentPage = ref(1)
 const itemsPerPage = 5
 
 const years = computed(() => {
-  const currentYear = new Date().getFullYear()
-  return Array.from({ length: 5 }, (_, i) => currentYear - i)
+  const current = new Date().getFullYear();
+  const startYear = 2026;
+  return Array.from({ length: current - startYear + 1 }, (_, i) => startYear + i);
 })
 
-const statusOptions = [
-  { value: 'semua', label: 'Semua Status' },
-  { value: 'disetujui_pm', label: 'Disetujui PM' },
-  { value: 'disetujui_direktur', label: 'Disetujui Direktur' },
-  { value: 'menunggu_pm', label: 'Menunggu PM' },
-  { value: 'menunggu_direktur', label: 'Menunggu Direktur' },
-  { value: 'ditolak', label: 'Ditolak' },
-]
-
 const filteredRiwayat = computed(() => {
-  return riwayat.value.filter(item => {
+  const filtered = riwayat.value.filter(item => {
     const itemYear = new Date(item.tanggal_mulai).getFullYear()
     const yearMatch = itemYear === selectedYear.value
-    const statusMatch = selectedStatus.value === 'semua' || item.status === selectedStatus.value
-    return yearMatch && statusMatch
+    return yearMatch
+  })
+  return filtered.sort((a, b) => {
+    const dateA = new Date(a.tanggal_pengajuan).getTime()
+    const dateB = new Date(b.tanggal_pengajuan).getTime()
+    return sortDirection.value === 'desc' ? dateB - dateA : dateA - dateB
   })
 })
 
@@ -42,8 +44,7 @@ const paginatedRiwayat = computed(() => {
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
   const day = date.getDate()
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-  const month = monthNames[date.getMonth()]
+  const month = monthNamesShort.value[date.getMonth()]
   const year = date.getFullYear()
   return `${day} ${month} ${year}`
 }
@@ -51,37 +52,32 @@ const formatDate = (dateStr: string) => {
 const formatDateRange = (start: string, end: string) => {
   const s = new Date(start)
   const e = new Date(end)
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 
   if (start === end) {
-    return `${s.getDate()} ${monthNames[s.getMonth()]} ${s.getFullYear()}`
+    return `${s.getDate()} ${monthNamesShort.value[s.getMonth()]} ${s.getFullYear()}`
   }
 
   if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
-    return `${s.getDate()} - ${e.getDate()} ${monthNames[s.getMonth()]} ${s.getFullYear()}`
+    return `${s.getDate()} - ${e.getDate()} ${monthNamesShort.value[s.getMonth()]} ${s.getFullYear()}`
   }
 
-  return `${s.getDate()} ${monthNames[s.getMonth()]} - ${e.getDate()} ${monthNames[e.getMonth()]} ${s.getFullYear()}`
+  return `${s.getDate()} ${monthNamesShort.value[s.getMonth()]} - ${e.getDate()} ${monthNamesShort.value[e.getMonth()]} ${s.getFullYear()}`
 }
 
 const getStatusStyle = (status: string) => {
   const styles: Record<string, string> = {
-    'disetujui_pm': 'bg-blue-50 text-blue-600 border border-blue-200',
-    'disetujui_direktur': 'bg-blue-50 text-blue-600 border border-blue-200',
-    'menunggu_pm': 'bg-yellow-50 text-yellow-600 border border-yellow-200',
-    'menunggu_direktur': 'bg-yellow-50 text-yellow-600 border border-yellow-200',
-    'ditolak': 'bg-red-50 text-red-600 border border-red-200',
+    'disetujui': 'bg-green-100 text-green-700',
+    'disetujui_hr': 'bg-green-100 text-green-700',
+    'disetujui_direktur': 'bg-green-100 text-green-700',
   }
   return styles[status] || 'bg-gray-50 text-gray-600 border border-gray-200'
 }
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    'disetujui_pm': 'Disetujui',
-    'disetujui_direktur': 'Disetujui',
-    'menunggu_pm': 'Menunggu',
-    'menunggu_direktur': 'Menunggu',
-    'ditolak': 'Ditolak',
+    'disetujui': t('status.approved'),
+    'disetujui_hr': t('status.approved'),
+    'disetujui_direktur': t('status.approved'),
   }
   return labels[status] || status
 }
@@ -103,9 +99,10 @@ const goToPage = (page: number) => {
 
 onMounted(async () => {
   try {
-    const res = await leaveApi.getRiwayatCuti()
+    const res = await karyawanApi.getRiwayatCuti()
     riwayat.value = res.data
-  } catch {
+  } catch (err) {
+    showError(err)
     riwayat.value = []
   } finally {
     loading.value = false
@@ -115,8 +112,8 @@ onMounted(async () => {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-800 mb-2">Riwayat Cuti</h1>
-    <p class="text-sm text-gray-500 mb-6">Lacak rekam jejak dan status pengajuan cuti Anda sebelumnya.</p>
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ t('history.title') }}</h1>
+    <p class="text-sm text-gray-500 mb-6">{{ t('history.subtitle') }}</p>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -137,12 +134,11 @@ onMounted(async () => {
 
           <div class="relative w-full sm:w-auto">
             <select
-              v-model="selectedStatus"
+              v-model="sortDirection"
               class="w-full sm:w-auto px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 outline-none cursor-pointer appearance-none pr-8"
             >
-              <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
+              <option value="desc">{{ t('history.newest') }}</option>
+              <option value="asc">{{ t('history.oldest') }}</option>
             </select>
             <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -156,17 +152,17 @@ onMounted(async () => {
         <table class="w-full">
           <thead>
             <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-              <th class="px-6 py-4">Tanggal Cuti</th>
-              <th class="px-6 py-4">Durasi</th>
-              <th class="px-6 py-4">Jenis Cuti</th>
-              <th class="px-6 py-4">Backup</th>
-              <th class="px-6 py-4">Status</th>
+              <th class="px-6 py-4">{{ t('history.leaveDate') }}</th>
+              <th class="px-6 py-4">{{ t('history.duration') }}</th>
+              <th class="px-6 py-4">{{ t('history.leaveType') }}</th>
+              <th class="px-6 py-4">{{ t('history.backup') }}</th>
+              <th class="px-6 py-4">{{ t('history.status') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="paginatedRiwayat.length === 0">
               <td colspan="5" class="px-6 py-12 text-center text-gray-400 text-sm">
-                Tidak ada data riwayat cuti
+                {{ t('history.noHistory') }}
               </td>
             </tr>
             <tr
@@ -175,11 +171,11 @@ onMounted(async () => {
               class="border-b border-gray-50 hover:bg-gray-50 transition-colors"
             >
               <td class="px-6 py-4">
-                <p class="font-medium text-gray-800">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">Diajukan: {{ formatDate(item.tanggal_mulai) }}</p>
+                <p class="text-xs text-gray-400">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_pengajuan) }}</p>
+                <p class="font-medium text-gray-800 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
               </td>
               <td class="px-6 py-4">
-                <span class="text-sm text-gray-700">{{ item.durasi }} Hari</span>
+                <span class="text-sm text-gray-700">{{ item.durasi }} {{ t('history.days') }}</span>
               </td>
               <td class="px-6 py-4">
                 <span class="text-sm text-gray-700 capitalize">{{ item.jenis_cuti }}</span>
@@ -213,7 +209,7 @@ onMounted(async () => {
       <!-- Mobile Cards -->
       <div class="md:hidden">
         <div v-if="paginatedRiwayat.length === 0" class="p-6 text-center text-gray-400 text-sm">
-          Tidak ada data riwayat cuti
+          {{ t('history.noHistory') }}
         </div>
         <div v-else class="divide-y divide-gray-100">
           <div
@@ -223,8 +219,8 @@ onMounted(async () => {
           >
             <div class="flex justify-between items-start">
               <div>
-                <p class="font-medium text-gray-800">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">Diajukan: {{ formatDate(item.tanggal_mulai) }}</p>
+                <p class="text-xs text-gray-400">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_pengajuan) }}</p>
+                <p class="font-medium text-gray-800 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
               </div>
               <span :class="['inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium', getStatusStyle(item.status)]">
                 <span :class="[
@@ -236,7 +232,7 @@ onMounted(async () => {
               </span>
             </div>
             <div class="flex items-center gap-4 text-sm text-gray-600">
-              <span>{{ item.durasi }} Hari</span>
+              <span>{{ item.durasi }} {{ t('history.days') }}</span>
               <span class="capitalize">{{ item.jenis_cuti }}</span>
             </div>
             <div v-if="item.nama_pengganti" class="flex items-center gap-2">
@@ -253,7 +249,7 @@ onMounted(async () => {
       <div class="px-4 lg:px-6 py-4 border-t border-gray-100">
         <div class="flex items-center justify-between">
           <p class="text-xs lg:text-sm text-gray-500">
-            Menampilkan {{ paginatedRiwayat.length }} dari {{ filteredRiwayat.length }} data
+            {{ t('history.showing') }} {{ paginatedRiwayat.length }} {{ t('history.of') }} {{ filteredRiwayat.length }} {{ t('history.data') }}
           </p>
           <div class="flex items-center gap-1">
             <button

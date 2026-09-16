@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   pmApi,
   type RekapSaldoItem,
   type RekapTimSummary,
 } from "../../services/pm.service";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+
+const { t } = useI18n();
+const { showError } = useErrorPopup();
 
 const summary = ref<RekapTimSummary | null>(null);
 const allSaldoList = ref<RekapSaldoItem[]>([]);
@@ -28,8 +33,8 @@ const fetchSummary = async () => {
   try {
     const res = await pmApi.getRekapSummary();
     summary.value = res.data;
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 };
 
@@ -40,8 +45,8 @@ const fetchSaldo = async () => {
     totalItems.value = allSaldoList.value.length;
     totalPages.value = Math.ceil(totalItems.value / 10) || 1;
     applyPagination();
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 };
 
@@ -81,21 +86,6 @@ const getBarColor = (item: RekapSaldoItem) => {
   return "bg-blue-500";
 };
 
-const handleExportCsv = async () => {
-  try {
-    const res = await pmApi.exportRekapCsv();
-    const blob = new Blob([res.data as string], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `rekap-cuti-tim-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  } catch {
-    // silent fail
-  }
-};
-
 onMounted(async () => {
   loading.value = true;
   await Promise.all([fetchSummary(), fetchSaldo()]);
@@ -108,18 +98,9 @@ onMounted(async () => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
       <div>
-        <h1 class="text-xl lg:text-2xl font-bold text-gray-800">Rekap Cuti Tim</h1>
-        <p class="text-sm text-gray-500">Ringkasan saldo dan penggunaan cuti untuk seluruh anggota tim.</p>
+        <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('approval.rekapCutiTim') || 'Rekap Cuti Tim' }}</h1>
+        <p class="text-sm text-gray-500">{{ t('leaveLog.subtitle') }}</p>
       </div>
-      <button
-        @click="handleExportCsv"
-        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer self-start"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        Export CSV
-      </button>
     </div>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
@@ -127,39 +108,20 @@ onMounted(async () => {
     </div>
 
     <template v-else>
-      <!-- Summary Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Ringkasan Tim</p>
-              <p class="text-2xl font-bold text-gray-800">
-                {{ summary?.total_anggota_aktif ?? '-' }}
-                <span class="text-sm font-normal text-gray-500">Anggota Aktif</span>
-              </p>
-            </div>
+      <!-- Summary Card - Left aligned compact -->
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
+          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
           </div>
-        </div>
-
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Cuti Digunakan</p>
-              <p class="text-2xl font-bold text-gray-800">
-                {{ summary?.total_cuti_all ?? '-' }}
-                <span class="text-sm font-normal text-gray-500">Hari</span>
-              </p>
-            </div>
+          <div>
+            <p class="text-[10px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.summary') }}</p>
+            <p class="text-lg font-bold text-gray-800">
+              {{ summary?.total_anggota_aktif ?? '-' }}
+              <span class="text-xs font-normal text-gray-500">{{ t('approval.activeMembers') }}</span>
+            </p>
           </div>
         </div>
       </div>
@@ -167,7 +129,7 @@ onMounted(async () => {
       <!-- Detail Saldo Karyawan -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-100">
         <div class="p-4 lg:p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <h3 class="font-semibold text-gray-800">Detail Saldo Karyawan</h3>
+          <h3 class="font-semibold text-gray-800">{{ t('employee.title') || 'Detail Saldo Karyawan' }}</h3>
           <div class="flex items-center gap-3">
             <div class="relative">
               <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,7 +139,7 @@ onMounted(async () => {
                 v-model="searchQuery"
                 @input="handleSearch"
                 type="text"
-                placeholder="Cari nama karyawan..."
+                :placeholder="t('approval.searchPlaceholder')"
                 class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
               />
             </div>
@@ -193,16 +155,16 @@ onMounted(async () => {
           <table class="w-full">
             <thead>
               <tr class="border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Karyawan</th>
-                <th class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Departemen</th>
-                <th class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Penggunaan Cuti</th>
-                <th class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Sisa</th>
-                <th class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('employee.name') }}</th>
+                <th class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('employee.department') }}</th>
+                <th class="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('approval.duration') }}</th>
+                <th class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('approval.remainingLeave') }}</th>
+                <th class="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{{ t('leaveLog.status') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
               <tr v-if="saldoList.length === 0">
-                <td colspan="5" class="text-center py-8 text-gray-400 text-sm">Tidak ada data</td>
+                <td colspan="5" class="text-center py-8 text-gray-400 text-sm">{{ t('common.noData') }}</td>
               </tr>
               <tr
                 v-for="(item, index) in saldoList"
@@ -228,11 +190,11 @@ onMounted(async () => {
                         :style="{ width: `${getUsagePercentage(item)}%` }"
                       ></div>
                     </div>
-                    <span class="text-xs text-gray-600">{{ item.penggunaan_cuti }} Hari</span>
+                    <span class="text-xs text-gray-600">{{ item.penggunaan_cuti }} {{ t('dashboard.days') }}</span>
                   </div>
                 </td>
                 <td class="px-5 py-4 text-center text-sm font-medium" :class="item.sisa_cuti <= 2 ? 'text-red-600' : 'text-gray-800'">
-                  {{ item.sisa_cuti }} Hari
+                  {{ item.sisa_cuti }} {{ t('dashboard.days') }}
                 </td>
                 <td class="px-5 py-4 text-center">
                   <span
@@ -252,7 +214,7 @@ onMounted(async () => {
         <!-- Pagination -->
         <div class="flex items-center justify-between px-5 py-3 border-t border-gray-100">
           <p class="text-xs text-gray-500">
-            Menampilkan {{ saldoList.length > 0 ? ((currentPage - 1) * 10 + 1) : 0 }}-{{ Math.min(currentPage * 10, totalItems) }} dari {{ totalItems }} karyawan
+            {{ t('common.showing') }} {{ saldoList.length > 0 ? ((currentPage - 1) * 10 + 1) : 0 }}-{{ Math.min(currentPage * 10, totalItems) }} {{ t('common.of') }} {{ totalItems }} {{ t('employee.name') }}
           </p>
           <div class="flex items-center gap-1">
             <button

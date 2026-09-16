@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
+
 import { authApi, type UserList } from "../../services/auth.service";
-import { leaveApi } from "../../services/leave.service";
+import { karyawanApi, type OngoingCuti } from "../../services/karyawan.service";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import type { CurrentUser } from "../../types";
+import { useErrorPopup } from "../../composables/useErrorPopup";
+import { getNetworkErrorMessage } from "../../lib/api";
+import { useCalendarNames } from "../../composables/useCalendarNames";
 
-const router = useRouter();
+const { t } = useI18n();
+const route = useRoute();
+const { showError } = useErrorPopup();
+const { dayNamesMini, monthNamesLong } = useCalendarNames();
 
 const user = ref<CurrentUser | null>(null);
 const users = ref<UserList[]>([]);
@@ -16,8 +24,13 @@ const successMessage = ref("");
 const errorMessage = ref("");
 const warningMessage = ref("");
 const holidays = ref<Holiday[]>([]);
+const ongoingCuti = ref<OngoingCuti[]>([]);
 const showDropdown = ref(false);
 const searchQuery = ref("");
+const showSuccessPopup = ref(false);
+
+const editMode = ref(false);
+const editingItemId = ref<number | null>(null);
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -26,12 +39,13 @@ const currentYear = ref(today.getFullYear());
 const form = ref({
   tanggal_mulai: "",
   tanggal_selesai: "",
-  keterangan: "",
+  keterangan_cuti: "",
   pengganti: null as number | null,
   setuju_aturan: false,
 });
 
 const selectedDates = ref<string[]>([]);
+const originalDates = ref<string[]>([]);
 
 const filteredUsers = computed(() => {
   if (!searchQuery.value) return users.value;
@@ -56,23 +70,6 @@ const closeDropdown = () => {
     showDropdown.value = false;
   }, 200);
 };
-
-const monthNames = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-];
-
-const dayNames = ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"];
 
 const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -124,19 +121,23 @@ const isDateSelected = (date: Date) => {
   return selectedDates.value.includes(formatDate(date));
 };
 
+const isOriginalDate = (date: Date) => {
+  return editMode.value && originalDates.value.includes(formatDate(date));
+};
+
 const isToday = (date: Date) => {
   return formatDate(date) === formatDate(today);
 };
 
 const isPastDate = (date: Date) => {
-  const todayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-  const minDate = new Date(todayStart);
-  minDate.setDate(minDate.getDate() + 10);
-  return date < minDate;
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return date <= todayStart;
+};
+
+const isNextMonthDate = (date: Date) => {
+  const nextMonth = currentMonth.value === 11 ? 0 : currentMonth.value + 1;
+  const nextYear = currentMonth.value === 11 ? currentYear.value + 1 : currentYear.value;
+  return date.getMonth() === nextMonth && date.getFullYear() === nextYear;
 };
 
 const isHoliday = (date: Date) => {
@@ -159,28 +160,25 @@ const MAX_CUTI_DAYS = 4;
 
 const selectedDaysCount = computed(() => selectedDates.value.length);
 
+const hasOngoingCuti = computed(() => {
+  return ongoingCuti.value.some((item) => !item.status_sekarang.includes("ditolak"));
+});
+
+const hasRejectedCuti = computed(() => {
+  const todayStr = formatDate(today);
+  return ongoingCuti.value.some(
+    (item) => item.status_sekarang.includes("ditolak") && item.tanggal_selesai >= todayStr,
+  );
+});
+
 const handleDateClick = (day: {
   day: number;
   currentMonth: boolean;
   date: Date;
 }) => {
-  if (!day.currentMonth || isHoliday(day.date)) return;
-
-  const todayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-  const minDate = new Date(todayStart);
-  minDate.setDate(minDate.getDate() + 10);
-
-  if (day.date < minDate) {
-    warningMessage.value = "Pengajuan cuti minimal H-10 sebelum tanggal cuti";
-    setTimeout(() => {
-      warningMessage.value = "";
-    }, 3000);
-    return;
-  }
+  const isCurrentMonth = day.currentMonth;
+  const isNextMonth = !day.currentMonth && isNextMonthDate(day.date) && !isPastDate(day.date);
+  if ((!isCurrentMonth && !isNextMonth) || isHoliday(day.date) || isPastDate(day.date)) return;
 
   const dateStr = formatDate(day.date);
   const index = selectedDates.value.indexOf(dateStr);
@@ -190,7 +188,7 @@ const handleDateClick = (day: {
     warningMessage.value = "";
   } else {
     if (selectedDates.value.length >= MAX_CUTI_DAYS) {
-      warningMessage.value = `Maksimal ${MAX_CUTI_DAYS} hari cuti`;
+      warningMessage.value = t('error.maxDays');
       setTimeout(() => {
         warningMessage.value = "";
       }, 3000);
@@ -236,16 +234,48 @@ const calculateDuration = () => {
 
 onMounted(async () => {
   try {
-    const [userRes, holidayRes, usersRes] = await Promise.all([
+    const [userRes, holidayRes, usersRes, ongoingRes] = await Promise.allSettled([
       authApi.me(),
       holidayApi.getByYear(currentYear.value),
       authApi.getAllUsers(),
+      karyawanApi.getOngoingCuti(),
     ]);
-    user.value = userRes.data;
-    holidays.value = holidayRes.data.data || [];
-    users.value = usersRes.data || [];
-  } catch {
-    // silent fail
+    if (userRes.status === "fulfilled") user.value = userRes.value.data;
+    if (holidayRes.status === "fulfilled") holidays.value = holidayRes.value.data.data || [];
+    if (usersRes.status === "fulfilled") users.value = usersRes.value.data || [];
+    if (ongoingRes.status === "fulfilled") {
+      ongoingCuti.value = (ongoingRes.value.data || [])
+        .filter((item) => !item.status_sekarang.includes('disetujui_hr') && item.status_sekarang !== 'disetujui_direktur');
+    }
+
+    if (route.query.edit || sessionStorage.getItem('editCuti')) {
+      const editData = sessionStorage.getItem('editCuti');
+      if (editData) {
+        const data = JSON.parse(editData);
+        editMode.value = true;
+        editingItemId.value = data.id;
+        form.value.tanggal_mulai = data.tanggal_mulai || "";
+        form.value.tanggal_selesai = data.tanggal_selesai || "";
+        form.value.keterangan_cuti = data.keterangan_cuti || "";
+        form.value.pengganti = data.pengganti || null;
+
+        if (form.value.tanggal_mulai) selectedDates.value.push(form.value.tanggal_mulai);
+        if (form.value.tanggal_selesai && form.value.tanggal_selesai !== form.value.tanggal_mulai) {
+          selectedDates.value.push(form.value.tanggal_selesai);
+        }
+        selectedDates.value.sort();
+        originalDates.value = [...selectedDates.value];
+
+        if (form.value.pengganti) {
+          const found = users.value.find((u) => u.id_user === form.value.pengganti);
+          if (found) searchQuery.value = found.nama;
+        }
+
+        sessionStorage.removeItem('editCuti');
+      }
+    }
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }
@@ -255,49 +285,67 @@ const handleSubmit = async () => {
   errorMessage.value = "";
   successMessage.value = "";
 
+  if (user.value?.sisa_cuti === 0) {
+    errorMessage.value = t('error.noRemainingLeave');
+    return;
+  }
+
+  if (hasOngoingCuti.value) {
+    errorMessage.value = "Anda masih memiliki pengajuan cuti yang sedang diproses. Silakan tunggu hingga pengajuan selesai.";
+    return;
+  }
+
+  if (hasRejectedCuti.value && !editMode.value) {
+    errorMessage.value = t('error.hasRejectedLeave');
+    return;
+  }
+
   if (!form.value.tanggal_mulai || !form.value.tanggal_selesai) {
-    errorMessage.value = "Pilih tanggal cuti terlebih dahulu";
+    errorMessage.value = t('error.selectDate');
     return;
   }
 
-  if (!form.value.pengganti) {
-    errorMessage.value = "Pilih delegasi tugas (pengganti)";
-    return;
-  }
-
-  if (!form.value.keterangan) {
-    errorMessage.value = "Masukkan keterangan cuti";
+  if (!form.value.keterangan_cuti) {
+    errorMessage.value = t('error.enterReason');
     return;
   }
 
   if (!form.value.setuju_aturan) {
-    errorMessage.value = "Anda harus menyetujui aturan pengajuan";
+    errorMessage.value = t('error.agreeRules');
     return;
   }
 
   submitting.value = true;
   try {
-    await leaveApi.createKaryawan({
-      tanggal_mulai: form.value.tanggal_mulai,
-      tanggal_selesai: form.value.tanggal_selesai,
-      keterangan: form.value.keterangan,
-      pengganti: form.value.pengganti,
-    });
-    successMessage.value = "Pengajuan cuti berhasil dikirim!";
+    if (editMode.value && editingItemId.value) {
+      await karyawanApi.updateCuti(editingItemId.value, {
+        tanggal_mulai: form.value.tanggal_mulai,
+        tanggal_selesai: form.value.tanggal_selesai,
+        keterangan_cuti: form.value.keterangan_cuti,
+        pengganti: form.value.pengganti,
+      });
+    } else {
+      await karyawanApi.createCuti({
+        tanggal_mulai: form.value.tanggal_mulai,
+        tanggal_selesai: form.value.tanggal_selesai,
+        keterangan_cuti: form.value.keterangan_cuti,
+        pengganti: form.value.pengganti,
+      });
+    }
+    showSuccessPopup.value = true;
     form.value = {
       tanggal_mulai: "",
       tanggal_selesai: "",
-      keterangan: "",
+      keterangan_cuti: "",
       pengganti: null,
       setuju_aturan: false,
     };
     selectedDates.value = [];
     searchQuery.value = "";
-    setTimeout(() => {
-      router.push("/karyawan/status-pengajuan");
-    }, 2000);
-  } catch (err: any) {
-    errorMessage.value = err.response?.data?.detail || "Gagal mengajukan cuti";
+    editMode.value = false;
+    editingItemId.value = null;
+  } catch (err) {
+    showError(err);
   } finally {
     submitting.value = false;
   }
@@ -306,12 +354,38 @@ const handleSubmit = async () => {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-gray-800 mb-2">Pengajuan Cuti</h1>
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ t('leave.title') || 'Pengajuan Cuti' }}</h1>
     <p class="text-sm text-gray-500 mb-6">
-      Silakan lengkapi formulir di bawah ini untuk mengajukan permohonan cuti
-      Anda.<br />
-      Pastikan Anda telah membaca aturan yang berlaku.
+      {{ t('leave.subtitle') }}
     </p>
+
+    <div v-if="user?.sisa_cuti === 0" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+      <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      </svg>
+      <div>
+        <p class="text-sm font-medium text-red-800">{{ t('error.noRemainingLeave') }}</p>
+      </div>
+    </div>
+
+    <div v-if="hasOngoingCuti" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start gap-3">
+      <svg class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      </svg>
+      <div>
+        <p class="text-sm font-medium text-yellow-800">Anda memiliki pengajuan cuti yang sedang diproses</p>
+        <p class="text-xs text-yellow-600 mt-1">Silakan tunggu hingga pengajuan selesai sebelum mengajukan cuti baru.</p>
+      </div>
+    </div>
+
+    <div v-if="hasRejectedCuti && !editMode" class="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-3">
+      <svg class="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      </svg>
+      <div>
+        <p class="text-sm font-medium text-orange-800">{{ t('error.hasRejectedLeave') }}</p>
+      </div>
+    </div>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
       <div
@@ -321,24 +395,24 @@ const handleSubmit = async () => {
 
     <div v-else class="flex flex-col lg:flex-row gap-4 lg:gap-6">
       <!-- Left - Form -->
-      <div class="flex-1">
+      <div class="flex-1" :class="{ 'opacity-50 pointer-events-none': hasRejectedCuti && !editMode }">
         <div class="bg-white rounded-xl shadow-sm border border-gray-100">
           <!-- Pilih Tanggal -->
           <div class="p-4 lg:p-6 border-b border-gray-100 bg-blue-50">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-gray-800">Pilih Tanggal</h3>
+              <h3 class="font-semibold text-gray-800">{{ t('leave.selectDate') }}</h3>
               <div class="flex items-center gap-4">
                 <span
                   v-if="selectedDaysCount > 0"
                   class="text-sm text-blue-600 font-medium"
                 >
-                  {{ selectedDaysCount }} hari dipilih
+                  {{ selectedDaysCount }} {{ t('leave.daysSelected') }}
                 </span>
                 <button
                   @click="clearDates"
                   class="text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
                 >
-                  Clear dates
+                  {{ t('leave.clearDates') }}
                 </button>
               </div>
             </div>
@@ -363,7 +437,7 @@ const handleSubmit = async () => {
                 </svg>
               </button>
               <h4 class="text-xl font-bold text-gray-800">
-                {{ monthNames[currentMonth] }} {{ currentYear }}
+                {{ monthNamesLong[currentMonth] }} {{ currentYear }}
               </h4>
               <button
                 @click="nextMonth"
@@ -388,7 +462,7 @@ const handleSubmit = async () => {
             <div class="border border-gray-200 rounded-lg overflow-hidden">
               <div class="grid grid-cols-7">
                 <div
-                  v-for="day in dayNames"
+                  v-for="day in dayNamesMini"
                   :key="day"
                   class="text-center text-xs font-bold py-3 border-b border-gray-200 text-gray-700 bg-gray-50"
                 >
@@ -403,7 +477,8 @@ const handleSubmit = async () => {
                   @click="handleDateClick(day)"
                   :class="[
                     'min-h-[80px] p-1 border-b border-r border-gray-200 text-sm transition-colors relative',
-                    !day.currentMonth && 'text-gray-300',
+                    !day.currentMonth && !isNextMonthDate(day.date) && 'text-gray-300',
+                    !day.currentMonth && isNextMonthDate(day.date) && !isHoliday(day.date) && !isPastDate(day.date) && 'text-blue-400 hover:bg-blue-100 cursor-pointer',
                     day.currentMonth && isToday(day.date) && 'bg-yellow-100',
                     day.currentMonth &&
                       isCutiBersama(day.date) &&
@@ -415,9 +490,9 @@ const handleSubmit = async () => {
                       !isDateSelected(day.date) &&
                       'bg-red-50',
                     day.currentMonth &&
-                      !isPastDate(day.date) &&
                       !isDateSelected(day.date) &&
                       !isHoliday(day.date) &&
+                      !isPastDate(day.date) &&
                       'hover:bg-blue-100 cursor-pointer',
                     isDateSelected(day.date) &&
                       'bg-blue-900 text-white font-medium',
@@ -429,7 +504,7 @@ const handleSubmit = async () => {
                       isDateSelected(day.date) && 'bg-blue-900 text-white',
                       !isDateSelected(day.date) &&
                         day.currentMonth &&
-                        (index % 7 === 0 || index % 7 === 6) &&
+                        (day.date.getDay() === 0 || day.date.getDay() === 6) &&
                         'text-red-400',
                     ]"
                   >
@@ -454,17 +529,17 @@ const handleSubmit = async () => {
                 <div
                   class="w-3 h-3 bg-red-50 border border-red-300 rounded-full"
                 ></div>
-                <span>Hari Libur</span>
+                <span>{{ t('leave.nationalHoliday') }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <div
                   class="w-3 h-3 bg-orange-50 border border-orange-300 rounded-full"
                 ></div>
-                <span>Cuti Bersama</span>
+                <span>{{ t('leave.collective') }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <div class="w-3 h-3 bg-blue-900 rounded-full"></div>
-                <span>Hari terpilih</span>
+                <span>{{ t('leave.selectedDay') }}</span>
               </div>
             </div>
 
@@ -481,25 +556,25 @@ const handleSubmit = async () => {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Jenis Cuti</label
+                  >{{ t('leave.leaveType') }}</label
                 >
                 <input
                   type="text"
-                  value="Cuti Tahunan"
+                  :value="t('leave.annual')"
                   disabled
                   class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
                 />
               </div>
               <div class="relative">
                 <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Nama Pengganti (Backup)</label
+                  >{{ t('leave.backupPerson') }}</label
                 >
                 <input
                   v-model="searchQuery"
                   @focus="showDropdown = true"
                   @blur="closeDropdown"
                   @input="form.pengganti = null"
-                  placeholder="Cari nama rekan kerja..."
+                  :placeholder="t('leave.searchPlaceholder')"
                   class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <div
@@ -520,12 +595,12 @@ const handleSubmit = async () => {
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Alasan Cuti</label
+                >{{ t('leave.leaveReason') }} <span class="text-red-500">*</span></label
               >
               <textarea
-                v-model="form.keterangan"
+                v-model="form.keterangan_cuti"
                 rows="3"
-                placeholder="Jelaskan secara singkat alasan pengambilan cuti Anda..."
+                :placeholder="t('leave.reasonPlaceholder')"
                 class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               ></textarea>
             </div>
@@ -535,35 +610,31 @@ const handleSubmit = async () => {
           <div class="p-4 lg:p-6">
             <div class="bg-gray-50 rounded-lg p-4 mb-4">
               <h4 class="font-semibold text-gray-800 mb-2">
-                Pernyataan Pengajuan Cuti
+                {{ t('leave.declaration') }}
               </h4>
               <p class="text-sm text-gray-600 mb-3">
-                Saya mengajukan cuti pada tanggal
+                {{ t('leave.declarationText') }}
                 <span class="font-medium">{{ form.tanggal_mulai || "-" }}</span>
-                s.d.
+                {{ t('leave.declarationUntil') }}
                 <span class="font-medium">{{
                   form.tanggal_selesai || "-"
                 }}</span>
-                (<span class="font-medium">{{ selectedDaysCount }}</span> hari),
-                dengan alasan:
-                <span class="font-medium">{{ form.keterangan || "-" }}</span
+                (<span class="font-medium">{{ selectedDaysCount }}</span> {{ t('leave.declarationDays') }}
+                <span class="font-medium">{{ form.keterangan_cuti || "-" }}</span
                 >.
               </p>
               <p class="text-sm text-gray-600 mb-2">
-                Dengan ini saya menyatakan bahwa:
+                {{ t('leave.declarationAgree') }}
               </p>
               <ul class="text-sm text-gray-600 space-y-1 ml-4 list-disc">
                 <li>
-                  Pengajuan cuti ini telah saya diskusikan dengan tim dan
-                  disetujui oleh anggota tim terkait.
+                  {{ t('leave.declarationPoint1') }}
                 </li>
                 <li>
-                  Pekerjaan/tanggung jawab saya selama masa cuti telah memiliki
-                  personel pengganti (backup).
+                  {{ t('leave.declarationPoint2') }}
                 </li>
                 <li>
-                  Saya bertanggung jawab penuh atas kebenaran informasi yang
-                  saya sampaikan di atas.
+                  {{ t('leave.declarationPoint3') }}
                 </li>
               </ul>
             </div>
@@ -575,14 +646,14 @@ const handleSubmit = async () => {
                 class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <span class="text-sm text-gray-600">
-                Saya menyetujui pernyataan di atas.
+                {{ t('leave.iAgree') }}
               </span>
             </label>
 
             <div class="mt-4 flex justify-end">
               <button
                 @click="handleSubmit"
-                :disabled="submitting || !form.setuju_aturan"
+                :disabled="submitting || !form.setuju_aturan || hasOngoingCuti || (hasRejectedCuti && !editMode) || user?.sisa_cuti === 0"
                 class="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <svg
@@ -598,7 +669,7 @@ const handleSubmit = async () => {
                     d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                   />
                 </svg>
-                {{ submitting ? "Mengirim..." : "Kirim Pengajuan" }}
+                {{ submitting ? t('leave.submitting') : t('leave.submitLeave') }}
               </button>
             </div>
           </div>
@@ -619,7 +690,7 @@ const handleSubmit = async () => {
                 d="M1 21h12v2H1v-2zM5.245 8.07l2.83-2.827 14.14 14.142-2.828 2.828L5.245 8.07zM12.317 1l5.657 5.656-2.83 2.83-5.654-5.66L12.317 1zM3.825 9.485l5.657 5.657-2.828 2.828-5.657-5.657 2.828-2.828z"
               />
             </svg>
-            <h3 class="font-bold text-gray-800 text-lg">Aturan Pengajuan</h3>
+            <h3 class="font-bold text-gray-800 text-lg">{{ t('leave.rules') }}</h3>
           </div>
           <ul class="space-y-4">
             <li class="flex items-start gap-3">
@@ -641,8 +712,7 @@ const handleSubmit = async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700"
-                >Maksimal <strong>4 hari</strong> berturut-turut untuk cuti
-                reguler.</span
+                ><strong>{{ t('leave.maxDays') }}</strong> {{ t('leave.maxDaysDesc') }}</span
               >
             </li>
             <li class="flex items-start gap-3">
@@ -664,8 +734,7 @@ const handleSubmit = async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700"
-                >Pengajuan minimal dilakukan <strong>H-3</strong> sebelum
-                tanggal cuti.</span
+                >{{ t('leave.advanceNotice') }}.</span
               >
             </li>
             <li class="flex items-start gap-3">
@@ -687,8 +756,7 @@ const handleSubmit = async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700"
-                >Saldo cuti tahunan Anda harus mencukupi jumlah hari yang
-                diajukan.</span
+                >{{ t('leave.sufficientBalance') }}.</span
               >
             </li>
             <li class="flex items-start gap-3">
@@ -710,25 +778,24 @@ const handleSubmit = async () => {
                 </svg>
               </span>
               <span class="text-sm text-gray-700"
-                >Pastikan tidak ada <strong>konflik jadwal</strong> penting di
-                departemen Anda.</span
+                >{{ t('leave.noConflicts') }}.</span
               >
             </li>
           </ul>
         </div>
 
         <!-- Sisa Cuti -->
-        <div class="bg-gray-600 rounded-xl shadow-sm p-6 text-white">
-          <p class="text-xs text-gray-200 uppercase tracking-wide mb-1">
-            Sisa Cuti Anda
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
+            {{ t('leave.remainingLeave') }}
           </p>
-          <p class="text-4xl font-bold mb-4">
+          <p class="text-4xl font-bold text-gray-800 mb-4">
             {{ user?.sisa_cuti || 0 }}
-            <span class="text-lg font-normal text-gray-200">Hari</span>
+            <span class="text-lg font-normal text-gray-500">{{ t('dashboard.days') }}</span>
           </p>
-          <div class="w-full bg-gray-400 rounded-full h-2 mb-3">
+          <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
             <div
-              class="bg-white rounded-full h-2"
+              class="bg-blue-500 rounded-full h-2"
               :style="{
                 width:
                   (((user?.total_cuti || 0) - (user?.sisa_cuti || 0)) /
@@ -738,12 +805,12 @@ const handleSubmit = async () => {
               }"
             ></div>
           </div>
-          <div class="flex justify-between text-xs text-gray-200">
+          <div class="flex justify-between text-xs text-gray-500">
             <span
-              >Digunakan:
+              >{{ t('leave.used') }}:
               {{ (user?.total_cuti || 0) - (user?.sisa_cuti || 0) }}</span
             >
-            <span>Total: {{ user?.total_cuti || 0 }}</span>
+            <span>{{ t('leave.total') }}: {{ user?.total_cuti || 0 }}</span>
           </div>
         </div>
 
@@ -754,13 +821,30 @@ const handleSubmit = async () => {
         >
           <p class="text-sm text-red-600">{{ errorMessage }}</p>
         </div>
-        <div
-          v-if="successMessage"
-          class="bg-green-50 border border-green-200 rounded-xl p-4"
-        >
-          <p class="text-sm text-green-600">{{ successMessage }}</p>
-        </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Success Popup Modal -->
+  <div
+    v-if="showSuccessPopup"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    @click.self="showSuccessPopup = false"
+  >
+    <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('leave.submitSuccess') }}</h3>
+      <p class="text-sm text-gray-500 mb-6">{{ t('leave.submitSuccessMsg') }}</p>
+      <button
+        @click="showSuccessPopup = false"
+        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+      >
+        {{ t('leave.close') }}
+      </button>
     </div>
   </div>
 </template>

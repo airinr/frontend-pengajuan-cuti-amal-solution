@@ -4,5 +4,8 @@ export { departmentApi } from './department.service'
 export { calendarApi } from './calendar.service'
 export { pmApi } from './pm.service'
 export { hrApi } from './hr.service'
+export { approvalApi } from './approval.service'
+export { karyawanApi } from './karyawan.service'
 export { direkturApi } from './direktur.service'
+export { penambahanKerjaApi } from './penambahanKerja.service'
 

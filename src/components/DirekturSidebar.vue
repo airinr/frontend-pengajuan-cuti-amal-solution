@@ -1,36 +1,46 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { authApi, type CurrentUser } from "../services/auth.service";
+import { useI18n } from "vue-i18n";
+import type { CurrentUser } from "../types";
 
-const props = defineProps<{
-  open?: boolean;
-  isOpen?: boolean;
+const { t } = useI18n();
+
+defineProps<{
+  open: boolean;
+  user?: CurrentUser | null;
 }>();
 
-const isSidebarOpen = computed(() => props.open ?? props.isOpen ?? false);
-
 const emit = defineEmits<{
-  (e: "close"): void;
+  close: [];
 }>();
 
 const route = useRoute();
 const router = useRouter();
 
-const user = ref<CurrentUser | null>(null);
+const hrMenu = computed(() => [
+  { label: t('nav.dashboard'), icon: "grid", route: "/direktur/dashboard" },
+]);
 
-const direkturMenu = [
-  { label: "Dashboard", route: "/direktur/dashboard" },
-  { label: "Persetujuan", route: "/direktur/persetujuan" },
-  { label: "Log & Rekap Cuti", route: "/direktur/log-rekap-cuti" },
-  { label: "Data Karyawan", route: "/direktur/data-karyawan" },
-  { label: "Jatah Cuti", route: "/direktur/jatah-cuti" },
-  { label: "Kalender & Libur", route: "/direktur/kalender-libur" },
-];
+const cutiMenu = computed(() => [
+  { label: t('nav.persetujuan'), icon: "check-circle", route: "/direktur/persetujuan" },
+  { label: t('nav.logRekapCuti'), icon: "clipboard", route: "/direktur/log-rekap-cuti" },
+  { label: t('nav.jatahCuti'), icon: "briefcase", route: "/direktur/jatah-cuti" },
+  { label: t('nav.kalenderTim'), icon: "calendar", route: "/direktur/kalender-tim" },
+]);
 
-const personalMenu = [
-  { label: "Profil", route: "/direktur/profil" },
-];
+const kerjaMenu = computed(() => [
+  { label: t('nav.persetujuanKerja'), icon: "check-circle", route: "/direktur/persetujuan-kerja" },
+  { label: t('nav.logRekapKerja'), icon: "clipboard", route: "/direktur/log-rekap-kerja" },
+]);
+
+const karyawanMenu = computed(() => [
+  { label: t('nav.dataKaryawan'), icon: "users", route: "/direktur/data-karyawan" },
+]);
+
+const personalMenu = computed(() => [
+  { label: t('nav.profil'), icon: "user", route: "/direktur/profil" },
+]);
 
 const isActive = (itemRoute: string) => {
   return route.path === itemRoute;
@@ -49,45 +59,33 @@ const getInitials = (name: string) => {
     .toUpperCase()
     .slice(0, 2);
 };
-
-onMounted(async () => {
-  try {
-    const res = await authApi.me();
-    user.value = res.data;
-  } catch {
-    // silent fail
-  }
-});
 </script>
 
 <template>
   <div>
-    <!-- Mobile Backdrop -->
-    <div
-      v-if="isSidebarOpen"
-      @click="emit('close')"
-      class="fixed inset-0 bg-black/40 z-40 lg:hidden transition-opacity duration-200"
-    />
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="open"
+          class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          @click="emit('close')"
+        />
+      </Transition>
+    </Teleport>
 
-    <!-- Sidebar Container -->
     <aside
       :class="[
-        'fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r border-gray-100 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 lg:sticky lg:top-0 lg:shrink-0',
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        'fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:z-auto',
+        open ? 'translate-x-0' : '-translate-x-full'
       ]"
     >
-      <!-- Logo Header -->
       <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-[#0f4bb4] rounded-xl flex items-center justify-center text-white shadow-sm">
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm-8 4H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/>
-            </svg>
-          </div>
-          <h1 class="text-xl font-bold text-[#0f4bb4] tracking-tight">
-            AjuanCuti
-          </h1>
-        </div>
+        <h1 class="text-xl font-bold text-blue-600 flex items-center gap-2">
+          <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/>
+          </svg>
+          {{ t('app.name') }}
+        </h1>
         <button
           @click="emit('close')"
           class="lg:hidden p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -99,61 +97,139 @@ onMounted(async () => {
       </div>
 
       <nav class="flex-1 p-4 overflow-y-auto">
-        <!-- Direktur Admin -->
-        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-3">
-          DIREKTUR ADMIN
-        </p>
+        <!-- Dashboard -->
         <ul class="space-y-1 mb-6">
-          <li v-for="item in direkturMenu" :key="item.route">
+          <li v-for="item in hrMenu" :key="item.route">
             <button
               @click="navigateTo(item.route)"
               :class="[
-                'w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer',
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                 isActive(item.route)
-                  ? 'bg-[#0f4bb4] text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
               ]"
             >
+              <svg v-if="item.icon === 'grid'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
               {{ item.label }}
             </button>
           </li>
         </ul>
 
-        <!-- Personal -->
-        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-3">
-          PERSONAL
-        </p>
+        <!-- CUTI -->
+        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">{{ t('nav.cuti') }}</p>
+        <ul class="space-y-1 mb-6">
+          <li v-for="item in cutiMenu" :key="item.route">
+            <button
+              @click="navigateTo(item.route)"
+              :class="[
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                isActive(item.route)
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
+              ]"
+            >
+              <svg v-if="item.icon === 'check-circle'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <svg v-else-if="item.icon === 'clipboard'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <svg v-else-if="item.icon === 'users'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              <svg v-else-if="item.icon === 'briefcase'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <svg v-else-if="item.icon === 'calendar'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {{ item.label }}
+            </button>
+          </li>
+        </ul>
+
+        <!-- PENAMBAHAN KERJA -->
+        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">{{ t('nav.penambahanKerja') }}</p>
+        <ul class="space-y-1 mb-6">
+          <li v-for="item in kerjaMenu" :key="item.route">
+            <button
+              @click="navigateTo(item.route)"
+              :class="[
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                isActive(item.route)
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
+              ]"
+            >
+              <svg v-if="item.icon === 'check-circle'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <svg v-else-if="item.icon === 'clipboard'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              {{ item.label }}
+            </button>
+          </li>
+        </ul>
+
+        <!-- KARYAWAN -->
+        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">{{ t('nav.karyawan') }}</p>
+        <ul class="space-y-1 mb-6">
+          <li v-for="item in karyawanMenu" :key="item.route">
+            <button
+              @click="navigateTo(item.route)"
+              :class="[
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                isActive(item.route)
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
+              ]"
+            >
+              <svg v-if="item.icon === 'users'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              {{ item.label }}
+            </button>
+          </li>
+        </ul>
+
+        <!-- PERSONAL -->
+        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">{{ t('nav.personal') }}</p>
         <ul class="space-y-1">
           <li v-for="item in personalMenu" :key="item.route">
             <button
               @click="navigateTo(item.route)"
               :class="[
-                'w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer',
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                 isActive(item.route)
-                  ? 'bg-[#0f4bb4] text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
               ]"
             >
+              <svg v-if="item.icon === 'user'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
               {{ item.label }}
             </button>
           </li>
         </ul>
       </nav>
 
-      <!-- Bottom User Profile -->
       <div class="p-4 border-t border-gray-100">
-        <div class="flex items-center gap-3 px-3 py-2">
+        <div class="flex items-center gap-3 px-4 py-2">
           <div
-            class="w-9 h-9 bg-[#0f4bb4] rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+            class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium"
           >
-            {{ user ? getInitials(user.nama) : "D" }}
+            {{ user ? getInitials(user.nama) : "..." }}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-xs font-bold text-gray-800 truncate">
-              {{ user?.nama || "Direktur" }}
+            <p class="text-sm font-medium text-gray-800 truncate">
+              {{ user?.nama || "Loading..." }}
             </p>
-            <p class="text-[10px] text-gray-400 truncate">
-              {{ user?.jabatan || "Direktur" }}
+            <p v-if="user?.email" class="text-xs text-gray-500 truncate">
+              {{ user.email }}
             </p>
           </div>
         </div>
@@ -161,3 +237,14 @@ onMounted(async () => {
     </aside>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
