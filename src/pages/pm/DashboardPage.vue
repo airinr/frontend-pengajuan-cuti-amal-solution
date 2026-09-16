@@ -44,26 +44,19 @@ const fetchData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const userRes = await authApi.me();
-    user.value = userRes.data;
+    const [userRes, statsRes, pendingRes, activityRes] = await Promise.allSettled([
+      authApi.me(),
+      pmApi.getDashboardStats(),
+      pmApi.getDashboardTim(),
+      karyawanApi.getActivities(),
+    ]);
+    if (userRes.status === "fulfilled") user.value = userRes.value.data;
+    else error.value = getNetworkErrorMessage(new Error("Gagal memuat data user"));
+    if (statsRes.status === "fulfilled") stats.value = statsRes.value.data;
+    if (pendingRes.status === "fulfilled") pendingLeaves.value = pendingRes.value.data || [];
+    if (activityRes.status === "fulfilled") activities.value = activityRes.value.data || [];
   } catch (err: any) {
     error.value = getNetworkErrorMessage(err);
-  }
-
-  try {
-    const statsRes = await pmApi.getDashboardStats();
-    stats.value = statsRes.data;
-  } catch {}
-
-  try {
-    const pendingRes = await pmApi.getDashboardTim();
-    pendingLeaves.value = pendingRes.data || [];
-  } catch {}
-
-  try {
-    const activityRes = await karyawanApi.getActivities();
-    activities.value = activityRes.data || [];
-  } catch {
   } finally {
     loading.value = false;
   }

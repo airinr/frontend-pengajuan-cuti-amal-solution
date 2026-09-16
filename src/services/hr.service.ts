@@ -3,8 +3,12 @@ import api from "../lib/api";
 export interface DashboardStats {
   total_karyawan: number;
   menunggu: number;
-  total_cuti_bulan_ini: number;
-  total_cuti_bulan_depan: number;
+  total_pengajuan: number;
+  total_pengajuan_diacc: number;
+  total_pengajuan_ditolak: number;
+  total_cuti: number;
+  cuti_terpakai: number;
+  sisa_cuti: number;
 }
 
 export interface ActivityItem {
@@ -40,9 +44,8 @@ export interface RingkasanPersetujuan {
 export interface RekapItem {
   nama: string;
   nama_departemen: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
   total_cuti: number;
+  cuti_terpakai: number;
   sisa_cuti: number;
 }
 
@@ -54,8 +57,9 @@ export interface LogCutiItem {
   jenis_cuti: string;
   keterangan: string;
   pengganti: string;
+  tanggal_pengajuan: string;
   status: string;
-  hr_approved_by: string;
+  approved_by: string;
 }
 
 export interface CutiMendatangItem {
@@ -82,6 +86,7 @@ export interface KaryawanItem {
   role?: string;
   no_telp?: string;
   tanggal_bergabung?: string;
+  nama_pm?: string[];
 }
 
 export interface DepartemenItem {
@@ -101,6 +106,25 @@ export interface DaftarCutiKaryawan {
   total_cuti: number;
   cuti_terpakai: number;
   sisa_cuti: number;
+}
+
+export interface LogPenambahanKerjaItem {
+  nama: string;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  durasi: number;
+  keterangan: string;
+  tanggal_pengajuan: string;
+  status: string;
+  approved_by: string | null;
+}
+
+export interface RekapPenambahanKerjaItem {
+  nama: string;
+  nama_departemen: string;
+  total_pengajuan: number;
+  disetujui: number;
+  ditolak: number;
 }
 
 export const hrApi = {
@@ -144,4 +168,10 @@ export const hrApi = {
 
   getAllPm: () =>
     api.get<{ id_user: number; nama: string }[]>("/pm"),
+
+  getRekapPenambahanKerja: () =>
+    api.get<RekapPenambahanKerjaItem[]>("/hr/rekapitulasi-pengajuan-kerja"),
+
+  getLogPenambahanKerja: () =>
+    api.get<LogPenambahanKerjaItem[]>("/hr/log-pengajuan-kerja"),
 };

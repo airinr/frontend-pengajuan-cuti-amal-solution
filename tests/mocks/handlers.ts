@@ -144,19 +144,6 @@ export async function setupMockRoutes(page: Page): Promise<void> {
       return route.fulfill(jsonResponse({ detail: 'Username atau password salah' }, 400))
     }
 
-    if (method === 'POST' && url.includes('/api/auth/register')) {
-      const data = JSON.parse(bodyText)
-      return route.fulfill(
-        jsonResponse({
-          id_user: 99,
-          username: data.username,
-          nama: data.nama,
-          role: 'karyawan',
-          id_departemen: data.id_departemen,
-        }),
-      )
-    }
-
     if (method === 'POST' && url.includes('/api/auth/register-admin')) {
       const data = JSON.parse(bodyText)
       return route.fulfill(
@@ -376,6 +363,17 @@ export async function setupMockRoutes(page: Page): Promise<void> {
     }
 
     // --- KARYAWAN ---
+    if (method === 'GET' && url.includes('/api/karyawan/cuti/ringkasan')) {
+      return route.fulfill(
+        jsonResponse({
+          periode_tahun: 2026,
+          total_cuti: 12,
+          cuti_terpakai: 4,
+          sisa_cuti: 8,
+        }),
+      )
+    }
+
     if (method === 'GET' && url.includes('/api/karyawan/cuti/ongoing')) {
       return route.fulfill(
         jsonResponse([
@@ -640,9 +638,8 @@ export async function setupMockRoutes(page: Page): Promise<void> {
           {
             nama: 'Budi Santoso',
             nama_departemen: 'Engineering',
-            tanggal_mulai: '2026-08-01',
-            tanggal_selesai: '2026-08-03',
             total_cuti: 12,
+            cuti_terpakai: 4,
             sisa_cuti: 8,
           },
         ]),
@@ -660,8 +657,9 @@ export async function setupMockRoutes(page: Page): Promise<void> {
             jenis_cuti: 'Cuti Tahunan',
             keterangan: 'Libur lebaran',
             pengganti: 'Rina Karyawan',
+            tanggal_pengajuan: '2026-07-20',
             status: 'disetujui',
-            hr_approved_by: 'Sari HR',
+            approved_by: 'Sari HR',
           },
         ]),
       )

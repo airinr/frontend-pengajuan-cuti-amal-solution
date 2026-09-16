@@ -64,14 +64,6 @@ test.describe('Authentication Flow', () => {
     await expect(errorMsg).toContainText('salah')
   })
 
-  test('should navigate to register page', async ({ page }) => {
-    await page.goto('/login')
-
-    await page.click('text=Daftar di sini')
-    await page.waitForURL('**/register')
-    expect(page.url()).toContain('/register')
-  })
-
   test('should redirect authenticated user from login to dashboard', async ({ page }) => {
     const tokenPayload = {
       id_user: 1,

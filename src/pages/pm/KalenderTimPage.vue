@@ -6,6 +6,7 @@ import { karyawanApi, type KalenderItem } from "../../services/karyawan.service"
 import { authApi } from "../../services/auth.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 import { useCalendarNames } from "../../composables/useCalendarNames";
+import { getNetworkErrorMessage } from "../../lib/api";
 import type { CurrentUser } from "../../types";
 
 const { t } = useI18n();
@@ -21,6 +22,8 @@ const holidays = ref<Holiday[]>([]);
 const myCalendar = ref<KalenderItem[]>([]);
 const teamCalendar = ref<KalenderItem[]>([]);
 const currentUser = ref<CurrentUser | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
 
 const filteredTeamCalendar = computed(() =>
   teamCalendar.value.filter((item) => item.nama !== currentUser.value?.nama)
@@ -89,12 +92,16 @@ const getHolidayName = (date: Date) => {
   return holidays.value.find((h) => h.date === dateStr)?.name || "";
 };
 
+const isApprovedLeave = (status: string) => {
+  return status === 'disetujui_hr' || status === 'disetujui_direktur';
+};
+
 const getMyLeaveOnDate = (date: Date) => {
   const dateStr = formatDate(date);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (date < today) return [];
-  return myCalendar.value.filter((item) => item.tanggal === dateStr);
+  return myCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
 };
 
 const getTeamLeaveOnDate = (date: Date) => {
@@ -102,7 +109,7 @@ const getTeamLeaveOnDate = (date: Date) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (date < today) return [];
-  return filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr);
+  return filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
 };
 
 const selectedDateMyLeave = computed(() => getMyLeaveOnDate(selectedDate.value));
@@ -148,19 +155,22 @@ const selectDate = (date: Date) => {
 };
 
 onMounted(async () => {
+  loading.value = true;
   try {
-    const [holidayRes, myRes, teamRes, userRes] = await Promise.all([
+    const [holidayRes, myRes, teamRes, userRes] = await Promise.allSettled([
       holidayApi.getByYear(currentYear.value),
       karyawanApi.getMyCalendar(),
       karyawanApi.getTeamCalendar(),
       authApi.me(),
     ]);
-    holidays.value = holidayRes.data.data || [];
-    myCalendar.value = myRes.data || [];
-    teamCalendar.value = teamRes.data || [];
-    currentUser.value = userRes.data;
+    if (holidayRes.status === "fulfilled") holidays.value = holidayRes.value.data.data || [];
+    if (myRes.status === "fulfilled") myCalendar.value = myRes.value.data || [];
+    if (teamRes.status === "fulfilled") teamCalendar.value = teamRes.value.data || [];
+    if (userRes.status === "fulfilled") currentUser.value = userRes.value.data;
   } catch (err) {
-    showError(err);
+    error.value = getNetworkErrorMessage(err);
+  } finally {
+    loading.value = false;
   }
 });
 </script>
@@ -407,7 +417,7 @@ onMounted(async () => {
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-              <span class="text-sm text-gray-600">{{ t('calendar.teamLeave') }} ({{ t('status.approved') }})</span>
+              <span class="text-sm text-gray-600">{{ t('calendar.teamLeave') }}</span>
             </div>
           </div>
         </div>

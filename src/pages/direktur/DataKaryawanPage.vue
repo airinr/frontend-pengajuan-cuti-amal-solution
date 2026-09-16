@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, reactive, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
   direkturApi,
+  type RingkasanKaryawan,
   type KaryawanItem,
-  type DepartemenItem,
 } from "../../services/direktur.service";
+import { hrApi } from "../../services/hr.service";
 import { authApi } from "../../services/auth.service";
 import { departmentApi } from "../../services/department.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
@@ -13,90 +14,131 @@ import { useErrorPopup } from "../../composables/useErrorPopup";
 const { t } = useI18n();
 const { showError } = useErrorPopup();
 
-const activeTab = ref<"karyawan" | "departemen">("karyawan");
-const searchKaryawan = ref("");
-const searchDepartemen = ref("");
-const currentPage = ref(1);
-const itemsPerPage = 10;
+const searchQuery = ref("");
+const selectedDepartemen = ref("");
 const loading = ref(true);
+const collapsedDepartments = reactive(new Set<string>());
 
-const summary = ref({ total_karyawan: 0, total_departemen: 0, total_pm: 0 });
+const summary = ref<RingkasanKaryawan>({
+  total_karyawan: 0,
+  total_departemen: 0,
+  total_project_manager: 0,
+});
 const karyawanList = ref<KaryawanItem[]>([]);
-const departemenList = ref<DepartemenItem[]>([]);
-const departemenOptions = ref<
-  { id_departemen: number; nama_departemen: string }[]
->([]);
+const departemenList = ref<{ id_departemen: number; nama_departemen: string }[]>([]);
+const pmList = ref<{ id_user: number; nama: string }[]>([]);
 
-// Filter states
-const showFilterModal = ref(false);
-const filterStatus = ref("semua");
-const filterDept = ref("semua");
-
-// Karyawan Modal States
-const showAddKaryawanModal = ref(false);
-const showEditKaryawanModal = ref(false);
+const showAddModal = ref(false);
+const showEditModal = ref(false);
+const addSubmitting = ref(false);
+const editSubmitting = ref(false);
 const showAddPassword = ref(false);
 const showSuccessPopup = ref(false);
-const editingKaryawan = ref<KaryawanItem | null>(null);
-const karyawanForm = ref({
+
+const showAddDeptModal = ref(false);
+const showEditDeptModal = ref(false);
+const addDeptSubmitting = ref(false);
+const editDeptSubmitting = ref(false);
+const addDeptName = ref("");
+const editDeptName = ref("");
+const editDeptId = ref<number | null>(null);
+const showDeptSuccessPopup = ref(false);
+const deptSuccessMessage = ref("");
+
+const addForm = ref({
   username: "",
   nama: "",
   password: "",
   role: "karyawan",
-  email: "",
   id_departemen: 1,
-  departemen: "",
-  jabatan: "",
-  id_pm: null as number | null,
+  email: "",
+  no_telp: "",
+  tanggal_bergabung: "",
+  id_pm_list: [] as number[],
+});
+
+const addSelectedPmList = ref<{ id_user: number; nama: string }[]>([]);
+const addPmDropdownOpen = ref(false);
+
+const addAvailablePmList = computed(() => {
+  return pmList.value.filter((pm) => !addSelectedPmList.value.find((p) => p.id_user === pm.id_user));
+});
+
+const addPmToList = (pm: { id_user: number; nama: string }) => {
+  if (!addSelectedPmList.value.find((p) => p.id_user === pm.id_user)) {
+    addSelectedPmList.value.push(pm);
+    addForm.value.id_pm_list = addSelectedPmList.value.map((p) => p.id_user);
+  }
+  addPmDropdownOpen.value = false;
+};
+
+const removePmFromAddList = (pm: { id_user: number; nama: string }) => {
+  addSelectedPmList.value = addSelectedPmList.value.filter((p) => p.id_user !== pm.id_user);
+  addForm.value.id_pm_list = addSelectedPmList.value.map((p) => p.id_user);
+};
+
+const editForm = ref({
+  nama: "",
+  role: "karyawan",
+  id_departemen: 0,
+  email: "",
   no_telp: "",
   tanggal_bergabung: "",
   status: "Aktif",
 });
-const karyawanSubmitting = ref(false);
+const editUserId = ref<number | null>(null);
+const editSelectedPmList = ref<{ id_user: number; nama: string }[]>([]);
+const editPmAdd = ref<number[]>([]);
+const editPmRemove = ref<number[]>([]);
+const editPmDropdownOpen = ref(false);
 
-// Departemen Modal States
-const showAddDepartemenModal = ref(false);
-const showEditDepartemenModal = ref(false);
-const editingDepartemen = ref<DepartemenItem | null>(null);
-const departemenForm = ref({
-  id_departemen: 0,
-  nama_departemen: "",
-  jumlah_karyawan: 0,
+const departemenOptions = computed(() => departemenList.value);
+
+const filteredKaryawan = computed(() => {
+  return karyawanList.value.filter((item) => {
+    const matchSearch = !searchQuery.value ||
+      item.nama.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchDept = !selectedDepartemen.value ||
+      item.departemen === selectedDepartemen.value;
+    return matchSearch && matchDept;
+  });
 });
-const departemenSubmitting = ref(false);
+
+const groupedKaryawan = computed(() => {
+  const groups: Record<string, KaryawanItem[]> = {};
+  for (const item of filteredKaryawan.value) {
+    const dept = item.departemen || 'Tanpa Departemen';
+    if (!groups[dept]) groups[dept] = [];
+    groups[dept].push(item);
+  }
+  return groups;
+});
+
+const toggleDept = (deptName: string) => {
+  if (collapsedDepartments.has(deptName)) {
+    collapsedDepartments.delete(deptName);
+  } else {
+    collapsedDepartments.add(deptName);
+  }
+};
 
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [summaryRes, karyawanRes, departemenRes, dropdownRes] =
-      await Promise.allSettled([
-        direkturApi.getDataKaryawanSummary(),
-        direkturApi.getDataKaryawan(),
-        direkturApi.getDataDepartemen(),
-        departmentApi.getAll(),
-      ]);
-
-    if (summaryRes.status === "fulfilled" && summaryRes.value.data) {
+    const [summaryRes, karyawanRes, departemenRes, pmRes] = await Promise.allSettled([
+      direkturApi.getDataKaryawanSummary(),
+      direkturApi.getDataKaryawan(),
+      departmentApi.getAll(),
+      hrApi.getAllPm(),
+    ]);
+    if (summaryRes.status === "fulfilled")
       summary.value = summaryRes.value.data;
-    }
-    if (
-      karyawanRes.status === "fulfilled" &&
-      Array.isArray(karyawanRes.value.data)
-    ) {
-      karyawanList.value = karyawanRes.value.data;
-    }
-    if (
-      departemenRes.status === "fulfilled" &&
-      Array.isArray(departemenRes.value.data)
-    ) {
-      departemenList.value = departemenRes.value.data;
-    }
-    if (
-      dropdownRes.status === "fulfilled" &&
-      Array.isArray(dropdownRes.value.data)
-    ) {
-      departemenOptions.value = dropdownRes.value.data;
-    }
+    if (karyawanRes.status === "fulfilled")
+      karyawanList.value = karyawanRes.value.data || [];
+    if (departemenRes.status === "fulfilled")
+      departemenList.value = departemenRes.value.data || [];
+    if (pmRes.status === "fulfilled")
+      pmList.value = pmRes.value.data || [];
   } catch (err) {
     showError(err);
   } finally {
@@ -104,1386 +146,694 @@ const fetchData = async () => {
   }
 };
 
-onMounted(() => {
-  fetchData();
-});
-
-const filteredKaryawan = computed(() => {
-  return karyawanList.value.filter((k) => {
-    const q = searchKaryawan.value.toLowerCase();
-    const matchSearch =
-      !searchKaryawan.value ||
-      k.nama.toLowerCase().includes(q) ||
-      k.id_karyawan.toLowerCase().includes(q) ||
-      k.email.toLowerCase().includes(q) ||
-      (k.departemen && k.departemen.toLowerCase().includes(q));
-
-    const matchStatus =
-      filterStatus.value === "semua" ||
-      k.status.toLowerCase() === filterStatus.value.toLowerCase();
-
-    const matchDept =
-      filterDept.value === "semua" || k.departemen === filterDept.value;
-
-    return matchSearch && matchStatus && matchDept;
-  });
-});
-
-const filteredDepartemen = computed(() => {
-  return departemenList.value.filter((d) => {
-    return (
-      !searchDepartemen.value ||
-      d.nama_departemen
-        .toLowerCase()
-        .includes(searchDepartemen.value.toLowerCase())
-    );
-  });
-});
-
-const totalItems = computed(() =>
-  activeTab.value === "karyawan"
-    ? filteredKaryawan.value.length
-    : filteredDepartemen.value.length,
-);
-
-const totalPages = computed(
-  () => Math.ceil(totalItems.value / itemsPerPage) || 1,
-);
-
-const currentKaryawanData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return filteredKaryawan.value.slice(start, start + itemsPerPage);
-});
-
-const currentDepartemenData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return filteredDepartemen.value.slice(start, start + itemsPerPage);
-});
-
-const switchTab = (tab: "karyawan" | "departemen") => {
-  activeTab.value = tab;
-  currentPage.value = 1;
-};
-
-const goToPage = (page: number) => {
-  if (page < 1 || page > totalPages.value) return;
-  currentPage.value = page;
-};
-
-const handleAddClick = () => {
-  if (activeTab.value === "karyawan") {
-    openAddKaryawan();
-  } else {
-    openAddDepartemen();
-  }
-};
-
-// Karyawan Actions
-const openAddKaryawan = () => {
-  editingKaryawan.value = null;
-  karyawanForm.value = {
+const openAddModal = () => {
+  addForm.value = {
     username: "",
     nama: "",
     password: "",
     role: "karyawan",
-    email: "",
     id_departemen: departemenOptions.value[0]?.id_departemen || 1,
-    departemen: departemenOptions.value[0]?.nama_departemen || "",
-    jabatan: "",
-    id_pm: null,
+    email: "",
     no_telp: "",
     tanggal_bergabung: "",
-    status: "Aktif",
+    id_pm_list: [],
   };
+  addSelectedPmList.value = [];
+  addPmDropdownOpen.value = false;
   showAddPassword.value = false;
-  showAddKaryawanModal.value = true;
+  showAddModal.value = true;
 };
 
-const openEditKaryawan = (item: KaryawanItem) => {
-  editingKaryawan.value = item;
-  const dept = departemenOptions.value.find(
-    (d) => d.nama_departemen === item.departemen,
-  );
-  karyawanForm.value = {
-    username: "",
-    nama: item.nama,
-    password: "",
-    role: item.role || "karyawan",
-    email: item.email,
-    id_departemen: dept?.id_departemen || 0,
-    departemen: item.departemen,
-    jabatan: item.jabatan,
-    id_pm: item.id_pm || null,
-    no_telp: item.no_telp || "",
-    tanggal_bergabung: item.tanggal_bergabung || "",
-    status: item.status || "Aktif",
-  };
-  showEditKaryawanModal.value = true;
+const closeAddModal = () => {
+  showAddModal.value = false;
 };
 
-const saveNewKaryawan = async () => {
-  if (
-    !karyawanForm.value.username ||
-    !karyawanForm.value.nama ||
-    !karyawanForm.value.password
-  )
-    return;
-  karyawanSubmitting.value = true;
+const handleAddSubmit = async () => {
+  addSubmitting.value = true;
   try {
     await authApi.registerAdmin({
-      username: karyawanForm.value.username,
-      nama: karyawanForm.value.nama,
-      password: karyawanForm.value.password,
-      role: karyawanForm.value.role,
-      id_departemen: karyawanForm.value.id_departemen,
-      id_pm: karyawanForm.value.id_pm,
+      username: addForm.value.username,
+      nama: addForm.value.nama,
+      password: addForm.value.password,
+      role: addForm.value.role,
+      id_departemen: addForm.value.id_departemen,
+      email: addForm.value.email,
+      no_telp: addForm.value.no_telp,
+      tanggal_bergabung: addForm.value.tanggal_bergabung,
+      id_pm_list: addForm.value.id_pm_list,
     });
-    showAddKaryawanModal.value = false;
+    closeAddModal();
     showSuccessPopup.value = true;
-    await fetchData();
-  } catch {
-    // silent fail
-  } finally {
-    karyawanSubmitting.value = false;
-  }
-};
-
-const saveEditKaryawan = async () => {
-  if (!editingKaryawan.value || !karyawanForm.value.nama) return;
-  karyawanSubmitting.value = true;
-  try {
-    await authApi.updateKaryawan(editingKaryawan.value.id_user, {
-      nama: karyawanForm.value.nama,
-      role: karyawanForm.value.role,
-      id_departemen: karyawanForm.value.id_departemen,
-      id_pm: karyawanForm.value.id_pm,
-      email: karyawanForm.value.email,
-      no_telp: karyawanForm.value.no_telp,
-      tanggal_bergabung:
-        karyawanForm.value.tanggal_bergabung ||
-        new Date().toISOString().split("T")[0],
-      status: karyawanForm.value.status,
-    });
-    showEditKaryawanModal.value = false;
-    editingKaryawan.value = null;
     await fetchData();
   } catch (err) {
     showError(err);
   } finally {
-    karyawanSubmitting.value = false;
+    addSubmitting.value = false;
   }
 };
 
-// Departemen Actions
-const openAddDepartemen = () => {
-  editingDepartemen.value = null;
-  departemenForm.value = {
-    id_departemen: 0,
-    nama_departemen: "",
-    jumlah_karyawan: 0,
+const openEditModal = (item: any) => {
+  editUserId.value = item.id_user || null;
+  editForm.value = {
+    nama: item.nama || "",
+    role: item.role || "karyawan",
+    id_departemen: departemenOptions.value.find((d) => d.nama_departemen === item.departemen)?.id_departemen || 0,
+    email: item.email || "",
+    no_telp: item.no_telp || "",
+    tanggal_bergabung: item.tanggal_bergabung || "",
+    status: item.status || "Aktif",
   };
-  showAddDepartemenModal.value = true;
+  editSelectedPmList.value = (item.nama_pm || []).map((nama: string) => {
+    const found = pmList.value.find((p) => p.nama === nama);
+    return found || { id_user: 0, nama };
+  });
+  editPmAdd.value = [];
+  editPmRemove.value = [];
+  editPmDropdownOpen.value = false;
+  showEditModal.value = true;
 };
 
-const openEditDepartemen = (item: DepartemenItem) => {
-  editingDepartemen.value = item;
-  departemenForm.value = {
-    id_departemen: item.id_departemen,
-    nama_departemen: item.nama_departemen,
-    jumlah_karyawan: item.jumlah_karyawan || 0,
-  };
-  showEditDepartemenModal.value = true;
+const closeEditModal = () => {
+  showEditModal.value = false;
+  editUserId.value = null;
+  editPmDropdownOpen.value = false;
 };
 
-const saveNewDepartemen = async () => {
-  if (!departemenForm.value.nama_departemen.trim()) return;
-  departemenSubmitting.value = true;
+const addPmToEdit = (pm: { id_user: number; nama: string }) => {
+  if (!editSelectedPmList.value.find((p) => p.id_user === pm.id_user)) {
+    editSelectedPmList.value.push(pm);
+    if (pm.id_user > 0 && !editPmRemove.value.includes(pm.id_user)) {
+      editPmAdd.value.push(pm.id_user);
+    }
+  }
+  editPmDropdownOpen.value = false;
+};
+
+const removePmFromEdit = (pm: { id_user: number; nama: string }) => {
+  editSelectedPmList.value = editSelectedPmList.value.filter((p) => p.id_user !== pm.id_user);
+  if (pm.id_user > 0) {
+    editPmAdd.value = editPmAdd.value.filter((id) => id !== pm.id_user);
+    editPmRemove.value.push(pm.id_user);
+  }
+};
+
+const editAvailablePmList = computed(() => {
+  return pmList.value.filter((pm) => !editSelectedPmList.value.find((p) => p.id_user === pm.id_user));
+});
+
+const handleEditSubmit = async () => {
+  if (!editUserId.value || !editForm.value.nama) return;
+  editSubmitting.value = true;
   try {
-    await direkturApi.createDepartemen({
-      nama_departemen: departemenForm.value.nama_departemen,
+    await authApi.updateKaryawan(editUserId.value, {
+      nama: editForm.value.nama,
+      role: editForm.value.role,
+      id_departemen: editForm.value.id_departemen,
+      email: editForm.value.email,
+      no_telp: editForm.value.no_telp,
+      tanggal_bergabung: editForm.value.tanggal_bergabung || new Date().toISOString().split('T')[0],
+      status: editForm.value.status,
+      pm_add: editPmAdd.value.length > 0 ? editPmAdd.value : undefined,
+      pm_remove: editPmRemove.value.length > 0 ? editPmRemove.value : undefined,
     });
-    showAddDepartemenModal.value = false;
+    closeEditModal();
     await fetchData();
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
-    departemenSubmitting.value = false;
+    editSubmitting.value = false;
   }
 };
 
-const saveEditDepartemen = async () => {
-  if (!editingDepartemen.value || !departemenForm.value.nama_departemen.trim())
-    return;
-  departemenSubmitting.value = true;
+const handleSearch = () => {
+  // search is reactive via filteredKaryawan
+};
+
+watch(searchQuery, () => {
+  // search is reactive
+});
+
+const openAddDeptModal = () => {
+  addDeptName.value = "";
+  showAddDeptModal.value = true;
+};
+
+const closeAddDeptModal = () => {
+  showAddDeptModal.value = false;
+};
+
+const handleAddDeptSubmit = async () => {
+  if (!addDeptName.value.trim()) return;
+  addDeptSubmitting.value = true;
   try {
-    await direkturApi.updateDepartemen(editingDepartemen.value.id_departemen, {
-      nama_departemen: departemenForm.value.nama_departemen,
-    });
-    showEditDepartemenModal.value = false;
-    editingDepartemen.value = null;
+    await departmentApi.create({ nama_departemen: addDeptName.value });
+    closeAddDeptModal();
     await fetchData();
-  } catch {
-    // silent fail
+    deptSuccessMessage.value = t('employee.departmentAdded');
+    showDeptSuccessPopup.value = true;
+  } catch (err) {
+    showError(err);
   } finally {
-    departemenSubmitting.value = false;
+    addDeptSubmitting.value = false;
   }
 };
 
-const handleDeptChange = (event: Event) => {
-  const select = event.target as HTMLSelectElement;
-  const deptId = parseInt(select.value);
-  karyawanForm.value.id_departemen = deptId;
-  const found = departemenOptions.value.find((d) => d.id_departemen === deptId);
-  if (found) {
-    karyawanForm.value.departemen = found.nama_departemen;
+const openEditDeptModal = (item: { id_departemen: number; nama_departemen: string }) => {
+  editDeptId.value = item.id_departemen;
+  editDeptName.value = item.nama_departemen;
+  showEditDeptModal.value = true;
+};
+
+const closeEditDeptModal = () => {
+  showEditDeptModal.value = false;
+  editDeptId.value = null;
+};
+
+const handleEditDeptSubmit = async () => {
+  if (!editDeptId.value || !editDeptName.value.trim()) return;
+  editDeptSubmitting.value = true;
+  try {
+    await departmentApi.update(editDeptId.value, { nama_departemen: editDeptName.value });
+    closeEditDeptModal();
+    await fetchData();
+    deptSuccessMessage.value = t('employee.departmentUpdated');
+    showDeptSuccessPopup.value = true;
+  } catch (err) {
+    showError(err);
+  } finally {
+    editDeptSubmitting.value = false;
   }
 };
+
+onMounted(() => {
+  fetchData();
+});
 </script>
 
 <template>
-  <div class="space-y-6 max-w-7xl mx-auto">
-    <!-- Header -->
-    <div>
-      <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-        {{ t("employee.title") }}
-      </h1>
-      <p class="text-sm text-gray-500 mt-1">
-        Kelola informasi personalia, alokasi departemen, dan penugasan Project
-        Manager dalam satu dasbor terpusat.
-      </p>
-    </div>
-
-    <!-- 3 Summary Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5">
-      <!-- Total Karyawan -->
-      <div
-        class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between"
-      >
-        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-          {{ t("dashboard.totalEmployees") }}
-        </p>
-        <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-2">
-          {{ summary.total_karyawan }}
+  <div>
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('employee.title') }}</h1>
+        <p class="text-sm text-gray-500">
+          {{ t('employee.subtitle') }}
         </p>
       </div>
-
-      <!-- Departemen -->
-      <div
-        class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between"
-      >
-        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-          DEPARTEMEN
-        </p>
-        <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-2">
-          {{ summary.total_departemen }}
-          <span class="text-xs font-medium text-gray-400 ml-1"
-            >Divisi Aktif</span
-          >
-        </p>
-      </div>
-
-      <!-- Project Manager -->
-      <div
-        class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between"
-      >
-        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-          PROJECT MANAGER
-        </p>
-        <p class="text-3xl lg:text-4xl font-extrabold text-gray-900 mt-2">
-          {{ summary.total_project_manager }}
-          <span class="text-xs font-medium text-gray-400 ml-1">Terdaftar</span>
-        </p>
-      </div>
-    </div>
-
-    <!-- Toolbar: Tab + Filter & Tambah Baru -->
-    <div
-      class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-    >
-      <!-- Left: Segmented Pill -->
-      <div class="flex bg-[#e8eef9] p-1 rounded-xl">
+      <div class="flex items-center gap-2">
         <button
-          @click="switchTab('karyawan')"
-          :class="[
-            'px-5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer',
-            activeTab === 'karyawan'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900',
-          ]"
+          @click="openAddModal"
+          class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer"
         >
-          Karyawan
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          {{ t('employee.addEmployee') }}
         </button>
         <button
-          @click="switchTab('departemen')"
-          :class="[
-            'px-5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer',
-            activeTab === 'departemen'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900',
-          ]"
+          @click="openAddDeptModal"
+          class="flex items-center gap-2 px-4 py-2 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium transition-colors cursor-pointer"
         >
-          Departemen
-        </button>
-      </div>
-
-      <!-- Right Action Buttons -->
-      <div class="flex items-center gap-3">
-        <!-- Search Input -->
-        <div class="relative w-48 sm:w-64">
-          <svg
-            class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          <input
-            v-if="activeTab === 'karyawan'"
-            v-model="searchKaryawan"
-            type="text"
-            placeholder="Cari karyawan..."
-            class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4bb4] outline-none shadow-sm"
-          />
-          <input
-            v-else
-            v-model="searchDepartemen"
-            type="text"
-            placeholder="Cari departemen..."
-            class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-[#0f4bb4] outline-none shadow-sm"
-          />
-        </div>
-
-        <button
-          v-if="activeTab === 'karyawan'"
-          @click="showFilterModal = true"
-          class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
-        >
-          <svg
-            class="w-4 h-4 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-            />
-          </svg>
-          Filter Data
-        </button>
-        <button
-          @click="handleAddClick"
-          class="flex items-center gap-2 px-5 py-2 bg-[#0f4bb4] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer whitespace-nowrap"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-            />
-          </svg>
-          Tambah Baru
+          {{ t('employee.addDepartment') }}
         </button>
       </div>
     </div>
 
-    <!-- Table Card -->
-    <div
-      class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-    >
-      <!-- Loading State -->
-      <div v-if="loading" class="flex justify-center items-center py-16">
-        <div
-          class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f4bb4]"
-        ></div>
-      </div>
+    <div v-if="loading" class="flex justify-center items-center py-12">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
 
-      <template v-else>
-        <!-- Karyawan Table -->
-        <div v-if="activeTab === 'karyawan'" class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead
-              class="bg-gray-50/80 border-b border-gray-100 text-[10px] font-bold text-gray-600 uppercase tracking-wider"
-            >
-              <tr>
-                <th class="py-3.5 px-6">NO</th>
-                <th class="py-3.5 px-6">KARYAWAN</th>
-                <th class="py-3.5 px-6">DEPARTEMEN</th>
-                <th class="py-3.5 px-6">EMAIL</th>
-                <th class="py-3.5 px-6 text-center">STATUS</th>
-                <th class="py-3.5 px-6">PROJECT MANAGER</th>
-                <th class="py-3.5 px-6 text-center">AKSI</th>
-              </tr>
-            </thead>
-            <tbody v-if="currentKaryawanData.length === 0">
-              <tr>
-                <td colspan="7" class="py-12 text-center text-gray-400 text-xs">
-                  Tidak ada data karyawan yang ditemukan.
-                </td>
-              </tr>
-            </tbody>
-            <tbody
-              v-else
-              class="divide-y divide-gray-50 font-medium text-gray-700"
-            >
-              <tr
-                v-for="(k, idx) in currentKaryawanData"
-                :key="k.id_user"
-                class="hover:bg-gray-50/60 transition-colors"
-              >
-                <td class="py-4 px-6">
-                  {{ (currentPage - 1) * itemsPerPage + idx + 1 }}
-                </td>
-                <td class="py-4 px-6 font-bold text-gray-900">
-                  <p class="leading-tight">{{ k.nama }}</p>
-                  <p class="text-[10px] font-normal text-gray-400 mt-0.5">
-                    {{ k.jabatan }}
-                  </p>
-                </td>
-                <td class="py-4 px-6">
-                  <span
-                    class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100"
-                  >
-                    {{ k.departemen || "-" }}
-                  </span>
-                </td>
-                <td class="py-4 px-6 text-gray-600 max-w-[180px] truncate">
-                  {{ k.email }}
-                </td>
-                <td class="py-4 px-6 text-center">
-                  <span
-                    :class="[
-                      'px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize',
-                      k.status.toLowerCase() === 'aktif'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                        : 'bg-gray-100 text-gray-600 border border-gray-200',
-                    ]"
-                  >
-                    {{ k.status }}
-                  </span>
-                </td>
-                <td class="py-4 px-6 text-gray-800 font-semibold">
-                  {{ k.nama_pm || "-" }}
-                </td>
-                <td class="py-4 px-6 text-center">
-                  <button
-                    @click="openEditKaryawan(k)"
-                    class="px-3 py-1.5 border border-gray-200 rounded-lg text-[11px] font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-1 mx-auto cursor-pointer"
-                  >
-                    <svg
-                      class="w-3.5 h-3.5 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+    <template v-else>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1">{{ t('employee.totalEmployees') }}</p>
+          <p class="text-2xl font-bold text-gray-800">{{ summary.total_karyawan }}</p>
         </div>
-
-        <!-- Departemen Table -->
-        <div v-else class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead
-              class="bg-gray-50/80 border-b border-gray-100 text-[10px] font-bold text-gray-600 uppercase tracking-wider"
-            >
-              <tr>
-                <th class="py-3.5 px-6">NO.</th>
-                <th class="py-3.5 px-6">NAMA DEPARTEMEN</th>
-                <th class="py-3.5 px-6">JUMLAH KARYAWAN</th>
-                <th class="py-3.5 px-6 text-center">AKSI</th>
-              </tr>
-            </thead>
-            <tbody v-if="currentDepartemenData.length === 0">
-              <tr>
-                <td colspan="4" class="py-12 text-center text-gray-400 text-xs">
-                  Tidak ada data departemen yang ditemukan.
-                </td>
-              </tr>
-            </tbody>
-            <tbody
-              v-else
-              class="divide-y divide-gray-50 font-medium text-gray-700"
-            >
-              <tr
-                v-for="(dept, idx) in currentDepartemenData"
-                :key="dept.id_departemen"
-                class="hover:bg-gray-50/60 transition-colors"
-              >
-                <td class="py-4 px-6 font-bold text-gray-900">
-                  {{ (currentPage - 1) * itemsPerPage + idx + 1 }}
-                </td>
-                <td class="py-4 px-6 font-bold text-gray-900">
-                  {{ dept.nama_departemen }}
-                </td>
-                <td class="py-4 px-6 text-gray-600">
-                  {{ dept.jumlah_karyawan }} orang
-                </td>
-                <td class="py-4 px-6 text-center">
-                  <button
-                    @click="openEditDepartemen(dept)"
-                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0f4bb4] hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
-                  >
-                    <svg
-                      class="w-3.5 h-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Footer Pagination -->
-        <div
-          class="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500"
-        >
-          <p>
-            Menampilkan
-            {{ totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0 }}-{{
-              Math.min(currentPage * itemsPerPage, totalItems)
-            }}
-            dari {{ totalItems }}
-            {{ activeTab === "karyawan" ? "Karyawan" : "Departemen" }}
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1">{{ t('employee.department') }}</p>
+          <p class="text-2xl font-bold text-gray-800">
+            {{ summary.total_departemen }}
+            <span class="text-sm font-normal text-gray-500">{{ t('employee.activeDivisions') }}</span>
           </p>
-          <div v-if="totalPages > 1" class="flex items-center gap-1.5">
-            <button
-              @click="goToPage(currentPage - 1)"
-              :disabled="currentPage === 1"
-              class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <button
-              v-for="page in totalPages"
-              :key="page"
-              @click="goToPage(page)"
-              :class="[
-                'w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors cursor-pointer',
-                currentPage === page
-                  ? 'bg-[#0f4bb4] text-white shadow-sm'
-                  : 'hover:bg-gray-100 text-gray-700',
-              ]"
-            >
-              {{ page }}
-            </button>
-            <button
-              @click="goToPage(currentPage + 1)"
-              :disabled="currentPage === totalPages"
-              class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
         </div>
-      </template>
-    </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1">{{ t('employee.projectManager') }}</p>
+          <p class="text-2xl font-bold text-gray-800">
+            {{ summary.total_project_manager }}
+            <span class="text-sm font-normal text-gray-500">{{ t('employee.registered') }}</span>
+          </p>
+        </div>
+      </div>
 
-    <!-- POPUP MODAL 1: TAMBAH KARYAWAN BARU -->
-    <div
-      v-if="showAddKaryawanModal"
-      class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
-      >
-        <!-- Header -->
-        <div
-          class="flex items-center justify-between border-b border-gray-100 pb-3"
-        >
-          <h3 class="text-base font-bold text-gray-900">
-            Tambah Karyawan Baru
-          </h3>
-          <button
-            @click="showAddKaryawanModal = false"
-            class="text-gray-400 hover:text-gray-600 cursor-pointer"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+        <div class="flex items-center gap-3">
+          <div class="relative flex-1">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-          </button>
+            <input
+              v-model="searchQuery"
+              type="text"
+              :placeholder="t('employee.searchKaryawan')"
+              class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+            />
+          </div>
+          <div class="w-px h-8 bg-gray-300"></div>
+          <select
+            v-model="selectedDepartemen"
+            class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[180px]"
+          >
+            <option value="">Semua Departemen</option>
+            <option v-for="dept in departemenList" :key="dept.id_departemen" :value="dept.nama_departemen">
+              {{ dept.nama_departemen }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div v-if="Object.keys(groupedKaryawan).length === 0" class="p-8 text-center text-gray-400 text-sm">
+          {{ t('employee.noData') }}
         </div>
 
-        <!-- Form Fields -->
-        <div class="space-y-3.5 text-xs">
-          <div>
-            <label class="block font-medium text-gray-800 mb-1"
-              >Username <span class="text-red-500">*</span></label
-            >
-            <input
-              v-model="karyawanForm.username"
-              type="text"
-              placeholder="Masukkan username"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
-            />
-          </div>
-
-          <div>
-            <label class="block font-medium text-gray-800 mb-1"
-              >Nama Karyawan <span class="text-red-500">*</span></label
-            >
-            <input
-              v-model="karyawanForm.nama"
-              type="text"
-              placeholder="Masukkan nama lengkap"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
-            />
-          </div>
-
-          <div>
-            <label class="block font-medium text-gray-800 mb-1"
-              >Password <span class="text-red-500">*</span></label
-            >
-            <div class="relative">
-              <input
-                v-model="karyawanForm.password"
-                :type="showAddPassword ? 'text' : 'password'"
-                placeholder="Masukkan password"
-                class="w-full px-3.5 py-2.5 pr-10 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
-              />
-              <button
-                type="button"
-                @click="showAddPassword = !showAddPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+        <template v-for="(employees, deptName) in groupedKaryawan" :key="deptName">
+          <div
+            class="bg-gray-100 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between cursor-pointer select-none"
+            @click="toggleDept(deptName)"
+          >
+            <div class="flex items-center gap-2">
+              <svg
+                :class="['w-4 h-4 transition-transform duration-200', !collapsedDepartments.has(deptName) && 'rotate-90']"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  v-if="showAddPassword"
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                  />
-                </svg>
-                <svg
-                  v-else
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+              <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">{{ deptName }}</span>
+              <span class="text-[10px] text-gray-500 font-normal">({{ employees.length }})</span>
+            </div>
+            <button
+              @click.stop="openEditDeptModal({ id_departemen: departemenList.find(d => d.nama_departemen === deptName)?.id_departemen || 0, nama_departemen: deptName })"
+              class="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
+            >
+              {{ t('employee.edit') }}
+            </button>
+          </div>
+          <table v-show="!collapsedDepartments.has(deptName)" class="w-full" style="table-layout: fixed">
+            <thead>
+              <tr class="bg-gray-50 border-b border-gray-200">
+                <th class="text-center px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[5%]">No</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[12%]">Nama</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Jabatan</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[15%]">Email</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">No. Telp</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Tgl Gabung</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[15%]">Project Manager</th>
+                <th class="text-center px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Status</th>
+                <th class="text-center px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              <tr
+                v-for="(item, index) in employees"
+                :key="item.id_user || index"
+                class="hover:bg-gray-50 transition-colors"
+              >
+                <td class="px-2 py-2 text-sm text-gray-500 text-center">{{ index + 1 }}</td>
+                <td class="px-2 py-2 text-sm font-medium text-gray-800">{{ item.nama }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.jabatan === 'pm' ? 'Project Manager' : item.jabatan === 'hr' ? 'Human Resources' : item.jabatan === 'staff_hr' ? 'Staff HR' : item.jabatan">{{ item.jabatan === 'pm' ? 'PM' : item.jabatan === 'hr' ? 'HR' : item.jabatan === 'staff_hr' ? 'Staff HR' : item.jabatan }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.email">{{ item.email }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.no_telp || '-'">{{ item.no_telp || '-' }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.tanggal_bergabung || '-'">{{ item.tanggal_bergabung || '-' }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600">
+                  <span v-if="item.departemen !== 'Manajemen Perusahaan' && item.nama_pm && item.nama_pm.length > 0">{{ item.nama_pm.join(', ') }}</span>
+                  <span v-else-if="item.departemen === 'MANAJEMEN PERUSAHAAN'" class="text-gray-400">-</span>
+                  <span v-else class="text-gray-400">-</span>
+                </td>
+                <td class="px-2 py-2 text-center">
+                  <span :class="['inline-block text-[10px] px-2 py-0.5 rounded-full font-medium', item.status === 'Aktif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
+                    {{ item.status }}
+                  </span>
+                </td>
+                <td class="px-2 py-2 text-center">
+                  <button @click="openEditModal(item)" class="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer">{{ t('employee.edit') }}</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </template>
+      </div>
+    </template>
+
+    <!-- Modal Tambah Karyawan -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showAddModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="closeAddModal">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">{{ t('employee.addModalTitle') }}</h3>
+              <button @click="closeAddModal" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.username') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.username" type="text" :placeholder="t('employee.usernamePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.name') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.nama" type="text" :placeholder="t('employee.namePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.password') }} <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <input v-model="addForm.password" :type="showAddPassword ? 'text' : 'password'" :placeholder="t('employee.passwordPlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <button type="button" @click="showAddPassword = !showAddPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                    <svg v-if="showAddPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.role') }} <span class="text-red-500">*</span></label>
+                <select v-model="addForm.role" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option value="karyawan">{{ t('employee.karyawanTab') }}</option>
+                  <option value="pm">{{ t('employee.projectManager') }}</option>
+                  <option value="hr">HR</option>
+                  <option value="staff_hr">Staff HR</option>
+                  <option value="direktur">Direktur</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.department') }} <span class="text-red-500">*</span></label>
+                <select v-model="addForm.id_departemen" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option v-for="dept in departemenOptions" :key="dept.id_departemen" :value="dept.id_departemen">{{ dept.nama_departemen }}</option>
+                </select>
+              </div>
+              <div v-if="addForm.id_departemen && departemenOptions.find(d => d.id_departemen === addForm.id_departemen)?.nama_departemen !== 'Manajemen Perusahaan'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
+                <div class="relative">
+                  <button
+                    type="button"
+                    @click="addPmDropdownOpen = !addPmDropdownOpen"
+                    class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex items-center justify-between bg-white"
+                  >
+                    <span class="text-gray-500">Pilih Project Manager</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </button>
+                  <div v-if="addPmDropdownOpen" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div v-if="addAvailablePmList.length === 0" class="px-4 py-2 text-sm text-gray-400">
+                      Semua PM sudah dipilih
+                    </div>
+                    <button
+                      v-for="pm in addAvailablePmList"
+                      :key="pm.id_user"
+                      @click="addPmToList(pm)"
+                      class="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 cursor-pointer flex items-center gap-2"
+                    >
+                      <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      {{ pm.nama }}
+                    </button>
+                  </div>
+                </div>
+                <div v-if="addSelectedPmList.length > 0" class="mt-2 flex flex-wrap gap-2">
+                  <span
+                    v-for="pm in addSelectedPmList"
+                    :key="pm.id_user"
+                    class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                  >
+                    {{ pm.nama }}
+                    <button @click="removePmFromAddList(pm)" class="hover:text-blue-900 cursor-pointer">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.email') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.email" type="email" :placeholder="t('employee.emailPlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.phone') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.no_telp" type="text" :placeholder="t('employee.phonePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.joinDate') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.tanggal_bergabung" type="date" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 mt-6">
+              <button @click="closeAddModal" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">{{ t('employee.cancel') }}</button>
+              <button @click="handleAddSubmit" :disabled="addSubmitting" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+                {{ addSubmitting ? t('employee.saving') : t('employee.save') }}
               </button>
             </div>
           </div>
-
-          <div>
-            <label class="block font-medium text-gray-800 mb-1">Role</label>
-            <div class="relative">
-              <select
-                v-model="karyawanForm.role"
-                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4] text-gray-700 cursor-pointer pr-10"
-              >
-                <option value="karyawan">Karyawan</option>
-                <option value="pm">Project Manager</option>
-                <option value="hr">HR</option>
-                <option value="direktur">Direktur</option>
-              </select>
-              <svg
-                class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <div>
-            <label class="block font-medium text-gray-800 mb-1"
-              >Pilih Departemen</label
-            >
-            <div class="relative">
-              <select
-                :value="karyawanForm.id_departemen"
-                @change="handleDeptChange"
-                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4] text-gray-700 cursor-pointer pr-10"
-              >
-                <option value="0" disabled>Pilih Departemen</option>
-                <option
-                  v-for="dept in departemenOptions"
-                  :key="dept.id_departemen"
-                  :value="dept.id_departemen"
-                >
-                  {{ dept.nama_departemen }}
-                </option>
-              </select>
-              <svg
-                class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <div>
-            <label class="block font-medium text-gray-800 mb-1">Email</label>
-            <input
-              v-model="karyawanForm.email"
-              type="email"
-              placeholder="nama@company.com"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
-            />
-          </div>
         </div>
+      </Transition>
+    </Teleport>
 
-        <!-- Footer Actions -->
-        <div class="flex items-center justify-end gap-3 pt-3">
-          <button
-            @click="showAddKaryawanModal = false"
-            class="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-          >
-            Batal
-          </button>
-          <button
-            @click="saveNewKaryawan"
-            :disabled="karyawanSubmitting"
-            class="px-6 py-2 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
-          >
-            {{ karyawanSubmitting ? "Menyimpan..." : "Simpan" }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- POPUP MODAL 2: EDIT DATA KARYAWAN -->
-    <div
-      v-if="showEditKaryawanModal"
-      class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
-      >
-        <!-- Header -->
-        <div
-          class="flex items-start justify-between border-b border-gray-100 pb-3"
-        >
-          <div>
-            <h3 class="text-lg font-bold text-gray-900">Edit Data Karyawan</h3>
-            <p class="text-xs text-gray-500 mt-0.5">
-              Perbarui informasi detail karyawan di sistem.
-            </p>
-          </div>
-          <button
-            @click="showEditKaryawanModal = false"
-            class="text-gray-400 hover:text-gray-600 cursor-pointer"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Form 2 Columns Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <!-- Col 1: Nama Lengkap -->
-          <div>
-            <label class="block font-semibold text-gray-800 mb-1.5"
-              >Nama Lengkap <span class="text-red-500">*</span></label
-            >
-            <input
-              v-model="karyawanForm.nama"
-              type="text"
-              placeholder="Masukkan nama lengkap"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4]"
-            />
-          </div>
-
-          <!-- Col 2: Role -->
-          <div>
-            <label class="block font-semibold text-gray-800 mb-1.5">Role</label>
-            <div class="relative">
-              <select
-                v-model="karyawanForm.role"
-                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4] cursor-pointer pr-10"
-              >
-                <option value="karyawan">Karyawan</option>
-                <option value="pm">Project Manager</option>
-                <option value="hr">HR</option>
-                <option value="direktur">Direktur</option>
-              </select>
-              <svg
-                class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+    <!-- Modal Edit Karyawan -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showEditModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="closeEditModal">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">{{ t('employee.editModalTitle') }}</h3>
+              <button @click="closeEditModal" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
-          </div>
 
-          <!-- Col 3: Alamat Email -->
-          <div>
-            <label class="block font-semibold text-gray-800 mb-1.5"
-              >Alamat Email</label
-            >
-            <input
-              v-model="karyawanForm.email"
-              type="email"
-              placeholder="nama@company.com"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4]"
-            />
-          </div>
-
-          <!-- Col 4: Pilih Departemen -->
-          <div>
-            <label class="block font-semibold text-gray-800 mb-1.5"
-              >Pilih Departemen</label
-            >
-            <div class="relative">
-              <select
-                :value="karyawanForm.id_departemen"
-                @change="handleDeptChange"
-                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4] cursor-pointer pr-10"
-              >
-                <option
-                  v-for="dept in departemenOptions"
-                  :key="dept.id_departemen"
-                  :value="dept.id_departemen"
-                >
-                  {{ dept.nama_departemen }}
-                </option>
-              </select>
-              <svg
-                class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.name') }} <span class="text-red-500">*</span></label>
+                <input v-model="editForm.nama" type="text" :placeholder="t('employee.namePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.role') }} <span class="text-red-500">*</span></label>
+                <select v-model="editForm.role" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option value="karyawan">{{ t('employee.karyawanTab') }}</option>
+                  <option value="pm">{{ t('employee.projectManager') }}</option>
+                  <option value="hr">HR</option>
+                  <option value="staff_hr">Staff HR</option>
+                  <option value="direktur">Direktur</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.department') }} <span class="text-red-500">*</span></label>
+                <select v-model="editForm.id_departemen" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option v-for="dept in departemenOptions" :key="dept.id_departemen" :value="dept.id_departemen">{{ dept.nama_departemen }}</option>
+                </select>
+              </div>
+              <div v-if="editForm.id_departemen && departemenOptions.find(d => d.id_departemen === editForm.id_departemen)?.nama_departemen !== 'Manajemen Perusahaan'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
+                <div class="relative">
+                  <button
+                    type="button"
+                    @click="editPmDropdownOpen = !editPmDropdownOpen"
+                    class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex items-center justify-between bg-white"
+                  >
+                    <span class="text-gray-500">Pilih Project Manager</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </button>
+                  <div v-if="editPmDropdownOpen" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div v-if="editAvailablePmList.length === 0" class="px-4 py-2 text-sm text-gray-400">
+                      Semua PM sudah dipilih
+                    </div>
+                    <button
+                      v-for="pm in editAvailablePmList"
+                      :key="pm.id_user"
+                      @click="addPmToEdit(pm)"
+                      class="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 cursor-pointer flex items-center gap-2"
+                    >
+                      <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      {{ pm.nama }}
+                    </button>
+                  </div>
+                </div>
+                <div v-if="editSelectedPmList.length > 0" class="mt-2 flex flex-wrap gap-2">
+                  <span
+                    v-for="pm in editSelectedPmList"
+                    :key="pm.id_user"
+                    class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                  >
+                    {{ pm.nama }}
+                    <button @click="removePmFromEdit(pm)" class="hover:text-blue-900 cursor-pointer">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.email') }}</label>
+                <input v-model="editForm.email" type="email" :placeholder="t('employee.emailPlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.phone') }} <span class="text-red-500">*</span></label>
+                <input v-model="editForm.no_telp" type="text" :placeholder="t('employee.phonePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.status') }} <span class="text-red-500">*</span></label>
+                <select v-model="editForm.status" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option value="Aktif">{{ t('employee.active') }}</option>
+                  <option value="Cuti">{{ t('employee.inactive') }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.joinDate') }} <span class="text-red-500">*</span></label>
+                <input v-model="editForm.tanggal_bergabung" type="date" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
             </div>
-          </div>
 
-          <!-- Col 5: No. Telepon -->
-          <div>
-            <label class="block font-semibold text-gray-800 mb-1.5"
-              >No. Telepon</label
-            >
-            <input
-              v-model="karyawanForm.no_telp"
-              type="text"
-              placeholder="Masukkan nomor telepon"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4]"
-            />
-          </div>
-
-          <!-- Col 6: Status -->
-          <div>
-            <label class="block font-semibold text-gray-800 mb-1.5"
-              >Status</label
-            >
-            <div class="relative">
-              <select
-                v-model="karyawanForm.status"
-                class="w-full appearance-none px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4] cursor-pointer pr-10"
-              >
-                <option value="Aktif">Aktif</option>
-                <option value="Cuti">Cuti</option>
-              </select>
-              <svg
-                class="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <!-- Col 7: Tanggal Bergabung -->
-          <div>
-            <label class="block font-semibold text-gray-800 mb-1.5"
-              >Tanggal Bergabung</label
-            >
-            <input
-              v-model="karyawanForm.tanggal_bergabung"
-              type="date"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:border-[#0f4bb4]"
-            />
-          </div>
-          <div></div>
-
-          <!-- Col 7 & 8: Status Karyawan Radio Buttons -->
-          <div class="sm:col-span-2">
-            <label class="block font-semibold text-gray-800 mb-1.5"
-              >Status Karyawan</label
-            >
-            <div class="grid grid-cols-2 gap-4">
-              <!-- Aktif -->
-              <label
-                :class="[
-                  'flex items-center justify-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer text-xs font-semibold',
-                  karyawanForm.status.toLowerCase() === 'aktif'
-                    ? 'border-[#0f4bb4] bg-blue-50/40 text-gray-900'
-                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
-                ]"
-              >
-                <input
-                  type="radio"
-                  v-model="karyawanForm.status"
-                  value="aktif"
-                  class="accent-[#0f4bb4] w-4 h-4"
-                />
-                <span>Aktif</span>
-              </label>
-
-              <!-- Non-aktif -->
-              <label
-                :class="[
-                  'flex items-center justify-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer text-xs font-semibold',
-                  karyawanForm.status.toLowerCase() === 'non-aktif' ||
-                  karyawanForm.status.toLowerCase() === 'nonaktif'
-                    ? 'border-[#0f4bb4] bg-blue-50/40 text-gray-900'
-                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
-                ]"
-              >
-                <input
-                  type="radio"
-                  v-model="karyawanForm.status"
-                  value="nonaktif"
-                  class="accent-[#0f4bb4] w-4 h-4"
-                />
-                <span>Non-aktif</span>
-              </label>
+            <div class="flex items-center justify-end gap-3 mt-6">
+              <button @click="closeEditModal" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">{{ t('employee.cancel') }}</button>
+              <button @click="handleEditSubmit" :disabled="editSubmitting" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+                {{ editSubmitting ? t('employee.saving') : t('employee.save') }}
+              </button>
             </div>
           </div>
         </div>
-
-        <!-- Footer Actions -->
-        <div class="flex items-center justify-end gap-3 pt-3">
-          <button
-            @click="showEditKaryawanModal = false"
-            class="px-5 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-          >
-            Batal
-          </button>
-          <button
-            @click="saveEditKaryawan"
-            :disabled="karyawanSubmitting"
-            class="px-6 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
-          >
-            {{ karyawanSubmitting ? "Menyimpan..." : "Simpan Perubahan" }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- POPUP MODAL 3: TAMBAH DEPARTEMEN BARU -->
-    <div
-      v-if="showAddDepartemenModal"
-      class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
-      >
-        <!-- Header -->
-        <div
-          class="flex items-center justify-between border-b border-gray-100 pb-3"
-        >
-          <h3 class="text-base font-bold text-gray-900">
-            Tambah Departemen Baru
-          </h3>
-          <button
-            @click="showAddDepartemenModal = false"
-            class="text-gray-400 hover:text-gray-600 cursor-pointer"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Form Fields -->
-        <div class="space-y-3.5 text-xs">
-          <div>
-            <label class="block font-medium text-gray-800 mb-1"
-              >Nama Departemen</label
-            >
-            <input
-              v-model="departemenForm.nama_departemen"
-              type="text"
-              placeholder="Contoh: Operasional"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
-            />
-          </div>
-
-          <div>
-            <label class="block font-medium text-gray-800 mb-1"
-              >Jumlah Karyawan</label
-            >
-            <input
-              type="text"
-              value="0 orang"
-              disabled
-              class="w-full px-3.5 py-2.5 bg-[#f0f5ff] border border-transparent rounded-xl text-xs text-gray-700 font-medium outline-none cursor-not-allowed"
-            />
-          </div>
-        </div>
-
-        <!-- Footer Actions -->
-        <div class="flex items-center justify-end gap-3 pt-3">
-          <button
-            @click="showAddDepartemenModal = false"
-            class="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 cursor-pointer"
-          >
-            Batal
-          </button>
-          <button
-            @click="saveNewDepartemen"
-            :disabled="departemenSubmitting"
-            class="px-5 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
-          >
-            {{ departemenSubmitting ? "Menyimpan..." : "Simpan Departemen" }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- POPUP MODAL 4: EDIT DEPARTEMEN -->
-    <div
-      v-if="showEditDepartemenModal"
-      class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
-      >
-        <!-- Header -->
-        <div
-          class="flex items-center justify-between border-b border-gray-100 pb-3"
-        >
-          <h3 class="text-base font-bold text-gray-900">Edit Departemen</h3>
-          <button
-            @click="showEditDepartemenModal = false"
-            class="text-gray-400 hover:text-gray-600 cursor-pointer"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Form Fields -->
-        <div class="space-y-3.5 text-xs">
-          <div>
-            <label class="block font-medium text-gray-800 mb-1"
-              >Nama Departemen</label
-            >
-            <input
-              v-model="departemenForm.nama_departemen"
-              type="text"
-              placeholder="IT Department"
-              class="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#0f4bb4] focus:ring-1 focus:ring-[#0f4bb4]"
-            />
-          </div>
-
-          <div>
-            <label class="block font-medium text-gray-800 mb-1"
-              >Jumlah Karyawan Terdaftar</label
-            >
-            <div
-              class="w-full px-3.5 py-2.5 bg-[#f0f5ff] rounded-xl text-xs font-bold text-gray-800"
-            >
-              {{ departemenForm.jumlah_karyawan }} Orang
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer Actions -->
-        <div class="flex items-center justify-end gap-3 pt-3">
-          <button
-            @click="showEditDepartemenModal = false"
-            class="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 cursor-pointer"
-          >
-            Batal
-          </button>
-          <button
-            @click="saveEditDepartemen"
-            :disabled="departemenSubmitting"
-            class="px-5 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
-          >
-            {{ departemenSubmitting ? "Menyimpan..." : "Simpan Perubahan" }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- POPUP MODAL 5: Filter Data Karyawan -->
-    <div
-      v-if="showFilterModal"
-      class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
-      >
-        <div
-          class="flex items-center justify-between border-b border-gray-100 pb-2"
-        >
-          <h3 class="text-base font-bold text-gray-900">
-            Filter Data Karyawan
-          </h3>
-          <button
-            @click="showFilterModal = false"
-            class="text-gray-400 hover:text-gray-600 cursor-pointer"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-medium text-gray-800 mb-1"
-              >Departemen</label
-            >
-            <select
-              v-model="filterDept"
-              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4bb4]"
-            >
-              <option value="semua">Semua Departemen</option>
-              <option
-                v-for="dept in departemenOptions"
-                :key="dept.id_departemen"
-                :value="dept.nama_departemen"
-              >
-                {{ dept.nama_departemen }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-medium text-gray-800 mb-1">Status</label>
-            <select
-              v-model="filterStatus"
-              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0f4bb4]"
-            >
-              <option value="semua">Semua Status</option>
-              <option value="aktif">Aktif</option>
-              <option value="nonaktif">Non-aktif</option>
-            </select>
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
-          <button
-            @click="
-              filterDept = 'semua';
-              filterStatus = 'semua';
-              showFilterModal = false;
-              currentPage = 1;
-            "
-            class="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200"
-          >
-            Reset
-          </button>
-          <button
-            @click="
-              showFilterModal = false;
-              currentPage = 1;
-            "
-            class="px-5 py-2 text-xs font-bold text-white bg-[#0f4bb4] rounded-xl cursor-pointer hover:bg-blue-700"
-          >
-            Terapkan Filter
-          </button>
-        </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
 
     <!-- Success Popup -->
-    <div
-      v-if="showSuccessPopup"
-      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      @click.self="showSuccessPopup = false"
-    >
-      <div
-        class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center"
-      >
+    <Teleport to="body">
+      <Transition name="fade">
         <div
-          class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+          v-if="showSuccessPopup"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="showSuccessPopup = false"
         >
-          <svg
-            class="w-7 h-7 text-green-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('employee.success') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">{{ t('employee.successMsg') }}</p>
+            <button
+              @click="showSuccessPopup = false"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+            >
+              {{ t('employee.close') }}
+            </button>
+          </div>
         </div>
-        <h3 class="text-lg font-semibold text-gray-800 mb-2">
-          Berhasil Ditambahkan!
-        </h3>
-        <p class="text-sm text-gray-500 mb-6">
-          Karyawan baru telah berhasil didaftarkan.
-        </p>
-        <button
-          @click="showSuccessPopup = false"
-          class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+      </Transition>
+    </Teleport>
+
+    <!-- Modal Tambah Departemen -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showAddDeptModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="closeAddDeptModal">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">{{ t('employee.addDepartment') }}</h3>
+              <button @click="closeAddDeptModal" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.departmentNameLabel') }} <span class="text-red-500">*</span></label>
+                <input v-model="addDeptName" type="text" :placeholder="t('employee.departmentNamePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-3 mt-6">
+              <button @click="closeAddDeptModal" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">{{ t('employee.cancel') }}</button>
+              <button @click="handleAddDeptSubmit" :disabled="addDeptSubmitting || !addDeptName.trim()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+                {{ addDeptSubmitting ? t('employee.saving') : t('employee.save') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Modal Edit Departemen -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showEditDeptModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="closeEditDeptModal">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">{{ t('employee.editDepartment') }}</h3>
+              <button @click="closeEditDeptModal" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.departmentNameLabel') }} <span class="text-red-500">*</span></label>
+                <input v-model="editDeptName" type="text" :placeholder="t('employee.departmentNamePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-3 mt-6">
+              <button @click="closeEditDeptModal" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">{{ t('employee.cancel') }}</button>
+              <button @click="handleEditDeptSubmit" :disabled="editDeptSubmitting || !editDeptName.trim()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+                {{ editDeptSubmitting ? t('employee.saving') : t('employee.save') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Department Success Popup -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showDeptSuccessPopup"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="showDeptSuccessPopup = false"
         >
-          Tutup
-        </button>
-      </div>
-    </div>
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('common.success') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">{{ deptSuccessMessage }}</p>
+            <button
+              @click="showDeptSuccessPopup = false"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+            >
+              {{ t('common.close') }}
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

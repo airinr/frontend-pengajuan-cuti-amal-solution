@@ -294,7 +294,7 @@ onMounted(async () => {
               <textarea
                 v-model="rejectAlasan"
                 rows="3"
-                placeholder="{{ t('approval.rejectPlaceholder') }}"
+                :placeholder="t('approval.rejectPlaceholder')"
                 class="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               ></textarea>
             </div>

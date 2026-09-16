@@ -26,6 +26,11 @@ const stepsByRole = computed(() => ({
     { label: t('status.waitingHR'), statusKey: 'hr', completedLabel: t('status.approvedHR'), rejectedLabel: t('status.rejectedHR') },
     { label: t('status.completed'), statusKey: 'selesai', completedLabel: t('status.completed'), rejectedLabel: t('status.rejected') },
   ],
+  staff_hr: [
+    { label: t('status.submitted'), statusKey: 'submitted', completedLabel: t('status.submitted'), rejectedLabel: t('status.rejected') },
+    { label: t('status.waitingHR'), statusKey: 'hr', completedLabel: t('status.approvedHR'), rejectedLabel: t('status.rejectedHR') },
+    { label: t('status.completed'), statusKey: 'selesai', completedLabel: t('status.completed'), rejectedLabel: t('status.rejected') },
+  ],
   hr: [
     { label: t('status.submitted'), statusKey: 'submitted', completedLabel: t('status.submitted'), rejectedLabel: t('status.rejected') },
     { label: t('status.waitingDirector'), statusKey: 'direktur', completedLabel: t('status.approvedDirector'), rejectedLabel: t('status.rejectedDirector') },
@@ -123,10 +128,10 @@ const getStepStatus = (item: OngoingCuti, stepIndex: number) => {
 
   const prevStep = steps[stepIndex - 1]
   if (prevStep.statusKey === 'submitted') {
+    if (step.statusKey === 'pm' && (status === 'menunggu_hr' || status === 'menunggu_direktur')) return 'completed'
     if (status === `menunggu_${step.statusKey}`) return 'active'
     if (status === `disetujui_${step.statusKey}` || status.includes(`disetujui_${step.statusKey}`)) return 'completed'
     if (status === 'menunggu_pm' || status === 'menunggu_hr' || status === 'menunggu_direktur') {
-      if (stepIndex === 1 && (status === 'menunggu_pm' || status === 'menunggu_hr' || status === 'menunggu_direktur')) return 'active'
       return 'pending'
     }
     return 'pending'
@@ -152,8 +157,7 @@ const getStepDate = (item: OngoingCuti, stepIndex: number) => {
   const steps = currentSteps.value
   const step = steps[stepIndex]
   if (!step) return null
-  if (stepIndex === 0) return item.tanggal_mulai
-  if (step.statusKey === 'pm') return item.processed_at_pm
+  if (stepIndex === 0) return item.tanggal_pengajuan
   if (step.statusKey === 'hr') return item.processed_at_hr
   if (step.statusKey === 'direktur') return item.processed_at_direktur
   return null
@@ -170,9 +174,15 @@ const goToEdit = (item: OngoingCuti) => {
     tanggal_mulai: item.tanggal_mulai,
     tanggal_selesai: item.tanggal_selesai,
     keterangan_cuti: item.keterangan_cuti,
-    pengganti: item.pengganti,
+    pengganti: item.id_pengganti,
   }))
-  router.push('/karyawan/pengajuan-cuti')
+  const routeMap: Record<string, string> = {
+    karyawan: '/karyawan/pengajuan-cuti',
+    pm: '/pm/pengajuan-cuti',
+    staff_hr: '/staff_hr/pengajuan-cuti',
+    hr: '/hr/pengajuan-cuti',
+  }
+  router.push(routeMap[userRole.value] || '/karyawan/pengajuan-cuti')
 }
 
 onMounted(async () => {
@@ -185,7 +195,7 @@ onMounted(async () => {
       ongoingList.value = (cutiRes.value.data || [])
         .filter((item) => !item.status_sekarang.includes('disetujui_hr') && item.status_sekarang !== 'disetujui_direktur')
         .sort((a, b) => 
-          new Date(b.tanggal_mulai).getTime() - new Date(a.tanggal_mulai).getTime()
+          new Date(b.tanggal_pengajuan).getTime() - new Date(a.tanggal_pengajuan).getTime()
         )
     }
     if (userRes.status === 'fulfilled') userRole.value = userRes.value.data?.role || 'karyawan'
@@ -261,7 +271,7 @@ onMounted(async () => {
             </div>
 
             <!-- Multiple PM Approval Details -->
-            <div v-if="hasMultiplePm(item) && item.status_sekarang === 'menunggu_pm'" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div v-if="item.approval_pm_detail && item.approval_pm_detail.length > 0" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p class="text-sm font-semibold text-blue-800 mb-3">{{ t('status.waitingPM') }}</p>
               <div class="space-y-2">
                 <div v-for="(pm, i) in item.approval_pm_detail" :key="i" class="flex items-center justify-between">
@@ -278,12 +288,12 @@ onMounted(async () => {
                       </svg>
                       <span v-else class="text-xs text-gray-500">{{ i + 1 }}</span>
                     </div>
-                    <span class="text-sm text-gray-700">{{ pm.nama }}</span>
+                    <span class="text-sm text-gray-700">{{ pm.nama_pm }}</span>
                   </div>
                   <div class="flex items-center gap-2">
                     <span v-if="pm.status === 'disetujui'" class="text-xs text-green-600 font-medium">Disetujui</span>
                     <span v-else-if="pm.status === 'ditolak'" class="text-xs text-red-600 font-medium">Ditolak</span>
-                    <span v-else class="text-xs text-gray-400">Menunggu</span>
+                    <span v-else class="text-xs text-gray-400">{{ t('status.waiting') }}</span>
                     <span v-if="pm.processed_at" class="text-[10px] text-gray-400">{{ formatDateShort(pm.processed_at) }}</span>
                   </div>
                 </div>

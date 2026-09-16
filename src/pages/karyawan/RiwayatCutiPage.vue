@@ -11,26 +11,26 @@ const { monthNamesShort } = useCalendarNames()
 const riwayat = ref<RiwayatCuti[]>([])
 const loading = ref(true)
 const selectedYear = ref(new Date().getFullYear())
-const selectedStatus = ref('semua')
+const sortDirection = ref<'desc' | 'asc'>('desc')
 const currentPage = ref(1)
 const itemsPerPage = 5
 
 const years = computed(() => {
-  const currentYear = new Date().getFullYear()
-  return Array.from({ length: 5 }, (_, i) => currentYear - i)
+  const current = new Date().getFullYear();
+  const startYear = 2026;
+  return Array.from({ length: current - startYear + 1 }, (_, i) => startYear + i);
 })
 
-const statusOptions = computed(() => [
-  { value: 'semua', label: t('history.allStatus') },
-  { value: 'disetujui_hr', label: t('status.approvedHR') },
-])
-
 const filteredRiwayat = computed(() => {
-  return riwayat.value.filter(item => {
+  const filtered = riwayat.value.filter(item => {
     const itemYear = new Date(item.tanggal_mulai).getFullYear()
     const yearMatch = itemYear === selectedYear.value
-    const statusMatch = item.status === 'disetujui_hr'
-    return yearMatch && statusMatch
+    return yearMatch
+  })
+  return filtered.sort((a, b) => {
+    const dateA = new Date(a.tanggal_pengajuan).getTime()
+    const dateB = new Date(b.tanggal_pengajuan).getTime()
+    return sortDirection.value === 'desc' ? dateB - dateA : dateA - dateB
   })
 })
 
@@ -66,22 +66,18 @@ const formatDateRange = (start: string, end: string) => {
 
 const getStatusStyle = (status: string) => {
   const styles: Record<string, string> = {
-    'disetujui_pm': 'bg-blue-50 text-blue-600 border border-blue-200',
-    'disetujui_direktur': 'bg-blue-50 text-blue-600 border border-blue-200',
-    'menunggu_pm': 'bg-yellow-50 text-yellow-600 border border-yellow-200',
-    'menunggu_direktur': 'bg-yellow-50 text-yellow-600 border border-yellow-200',
-    'ditolak': 'bg-red-50 text-red-600 border border-red-200',
+    'disetujui': 'bg-green-100 text-green-700',
+    'disetujui_hr': 'bg-green-100 text-green-700',
+    'disetujui_direktur': 'bg-green-100 text-green-700',
   }
   return styles[status] || 'bg-gray-50 text-gray-600 border border-gray-200'
 }
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    'disetujui_pm': t('status.approved'),
+    'disetujui': t('status.approved'),
+    'disetujui_hr': t('status.approved'),
     'disetujui_direktur': t('status.approved'),
-    'menunggu_pm': t('status.waiting'),
-    'menunggu_direktur': t('status.waiting'),
-    'ditolak': t('status.rejected'),
   }
   return labels[status] || status
 }
@@ -138,12 +134,11 @@ onMounted(async () => {
 
           <div class="relative w-full sm:w-auto">
             <select
-              v-model="selectedStatus"
+              v-model="sortDirection"
               class="w-full sm:w-auto px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 outline-none cursor-pointer appearance-none pr-8"
             >
-              <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
+              <option value="desc">{{ t('history.newest') }}</option>
+              <option value="asc">{{ t('history.oldest') }}</option>
             </select>
             <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -176,8 +171,8 @@ onMounted(async () => {
               class="border-b border-gray-50 hover:bg-gray-50 transition-colors"
             >
               <td class="px-6 py-4">
-                <p class="font-medium text-gray-800">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_mulai) }}</p>
+                <p class="text-xs text-gray-400">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_pengajuan) }}</p>
+                <p class="font-medium text-gray-800 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
               </td>
               <td class="px-6 py-4">
                 <span class="text-sm text-gray-700">{{ item.durasi }} {{ t('history.days') }}</span>
@@ -224,8 +219,8 @@ onMounted(async () => {
           >
             <div class="flex justify-between items-start">
               <div>
-                <p class="font-medium text-gray-800">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_mulai) }}</p>
+                <p class="text-xs text-gray-400">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_pengajuan) }}</p>
+                <p class="font-medium text-gray-800 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
               </div>
               <span :class="['inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium', getStatusStyle(item.status)]">
                 <span :class="[

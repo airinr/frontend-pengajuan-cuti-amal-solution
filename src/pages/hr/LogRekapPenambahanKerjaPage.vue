@@ -3,10 +3,9 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
   hrApi,
-  type DaftarCutiKaryawan,
-  type LogCutiItem,
+  type RekapPenambahanKerjaItem,
+  type LogPenambahanKerjaItem,
 } from "../../services/hr.service";
-import { authApi } from "../../services/auth.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 import { useCalendarNames } from "../../composables/useCalendarNames";
 
@@ -21,11 +20,9 @@ const selectedStatus = ref("semua");
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-const rekapList = ref<DaftarCutiKaryawan[]>([]);
-const logList = ref<LogCutiItem[]>([]);
+const rekapList = ref<RekapPenambahanKerjaItem[]>([]);
+const logList = ref<LogPenambahanKerjaItem[]>([]);
 const loading = ref(true);
-const userRole = ref("");
-const exporting = ref(false);
 
 const years = computed(() => {
   const current = new Date().getFullYear();
@@ -43,15 +40,12 @@ const formatDateRange = (start: string, end: string) => {
 };
 
 const formatDateShort = (dateStr: string) => {
-  if (!dateStr) return "-"
-  const date = new Date(dateStr)
-  const day = date.getDate()
-  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
-  const month = months[date.getMonth()]
-  const year = date.getFullYear()
-  const hours = String(date.getHours()).padStart(2, "0")
-  const minutes = String(date.getMinutes()).padStart(2, "0")
-  return `${day} ${month} ${year}, ${hours}:${minutes}`
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const day = date.getDate();
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const month = months[date.getMonth()];
+  return `${day} ${month}`;
 };
 
 const filteredRekap = computed(() => {
@@ -65,6 +59,7 @@ const filteredRekap = computed(() => {
 
 const filteredLog = computed(() => {
   return logList.value.filter((item) => {
+    const itemYear = new Date(item.tanggal_mulai).getFullYear();
     const isPending = item.status.includes("menunggu");
     const matchSearch =
       !searchQuery.value ||
@@ -72,7 +67,7 @@ const filteredLog = computed(() => {
     const matchStatus =
       selectedStatus.value === "semua" ||
       item.status.includes(selectedStatus.value);
-    return !isPending && matchSearch && matchStatus;
+    return itemYear === selectedYear.value && !isPending && matchSearch && matchStatus;
   });
 });
 
@@ -99,8 +94,8 @@ const fetchData = async () => {
   loading.value = true;
   try {
     const [rekapRes, logRes] = await Promise.allSettled([
-      hrApi.getDaftarCutiKaryawan(),
-      hrApi.getLogCuti(),
+      hrApi.getRekapPenambahanKerja(),
+      hrApi.getLogPenambahanKerja(),
     ]);
     if (rekapRes.status === "fulfilled")
       rekapList.value = rekapRes.value.data || [];
@@ -136,82 +131,30 @@ const getInitials = (name: string) => {
     .slice(0, 2);
 };
 
-const getUsagePercentage = (item: DaftarCutiKaryawan) => {
-  if (item.total_cuti === 0) return 0;
-  return Math.round((item.cuti_terpakai / item.total_cuti) * 100);
-};
-
-const getBarColor = (item: DaftarCutiKaryawan) => {
-  const pct = getUsagePercentage(item);
-  if (pct >= 80) return "bg-red-500";
-  if (pct >= 50) return "bg-yellow-500";
-  return "bg-blue-500";
-};
-
 const viewLogForEmployee = (nama: string) => {
   activeTab.value = "log";
   searchQuery.value = nama;
   currentPage.value = 1;
 };
 
+const getApprovalPercentage = (item: RekapPenambahanKerjaItem) => {
+  if (item.total_pengajuan === 0) return 0;
+  return Math.round((item.disetujui / item.total_pengajuan) * 100);
+};
+
+const getBarColor = (item: RekapPenambahanKerjaItem) => {
+  const pct = getApprovalPercentage(item);
+  if (pct >= 80) return "bg-green-500";
+  if (pct >= 50) return "bg-yellow-500";
+  return "bg-blue-500";
+};
+
 watch([selectedYear, selectedStatus], () => {
   currentPage.value = 1;
 });
 
-const exportRekapCsv = async () => {
-  exporting.value = true;
-  try {
-    const res = await hrApi.exportCuti(selectedYear.value);
-    const blob = new Blob([res.data as BlobPart], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `rekapitulasi-cuti-${selectedYear.value}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    showError(err);
-  } finally {
-    exporting.value = false;
-  }
-};
-
-const exportLogCsv = async () => {
-  exporting.value = true;
-  try {
-    const res = await hrApi.exportCuti(selectedYear.value);
-    const blob = new Blob([res.data as BlobPart], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `log-cuti-${selectedYear.value}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    showError(err);
-  } finally {
-    exporting.value = false;
-  }
-};
-
-const canExport = computed(
-  () =>
-    userRole.value === "hr" ||
-    userRole.value === "direktur" ||
-    userRole.value === "staff_hr",
-);
-
 onMounted(async () => {
-  loading.value = true;
-  try {
-    await fetchData();
-    const userRes = await authApi.me().catch(() => null);
-    if (userRes?.data) userRole.value = userRes.data.role || "";
-  } catch (err) {
-    showError(err);
-  } finally {
-    loading.value = false;
-  }
+  await fetchData();
 });
 </script>
 
@@ -220,9 +163,9 @@ onMounted(async () => {
     <!-- Header -->
     <div class="mb-6">
       <h1 class="text-xl lg:text-2xl font-bold text-gray-800">
-        {{ t("leaveLog.title") }}
+        {{ t("logRekapKerja.title") }}
       </h1>
-      <p class="text-sm text-gray-500">{{ t("leaveLog.subtitle") }}</p>
+      <p class="text-sm text-gray-500">{{ t("logRekapKerja.subtitle") }}</p>
     </div>
 
     <!-- Toolbar -->
@@ -250,7 +193,7 @@ onMounted(async () => {
                 : 'text-gray-600 hover:text-gray-800',
             ]"
           >
-            {{ t("leaveLog.logTab") }}
+            {{ t("logRekapKerja.logTab") }}
           </button>
         </div>
 
@@ -325,52 +268,6 @@ onMounted(async () => {
             {{ t("leaveLog.rejected") }}
           </button>
         </div>
-
-        <!-- Export CSV Button -->
-        <button
-          v-if="canExport"
-          @click="
-            activeTab === 'rekapitulasi' ? exportRekapCsv() : exportLogCsv()
-          "
-          :disabled="exporting"
-          class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors cursor-pointer disabled:opacity-50"
-        >
-          <svg
-            v-if="!exporting"
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <svg
-            v-else
-            class="w-4 h-4 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
-          {{ exporting ? t("leaveLog.exporting") : t("leaveLog.exportCSV") }}
-        </button>
       </div>
     </div>
 
@@ -393,27 +290,27 @@ onMounted(async () => {
                 <th
                   class="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  Nama Lengkap
+                  {{ t("leaveLog.employee") }}
                 </th>
                 <th
                   class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider max-w-[120px]"
                 >
-                  Departemen
+                  {{ t("leaveLog.department") }}
                 </th>
                 <th
                   class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  Durasi
+                  {{ t("logRekapKerja.totalSubmissions") }}
                 </th>
                 <th
                   class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  Sisa Cuti
+                  {{ t("logRekapKerja.approved") }}
                 </th>
                 <th
                   class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  Status
+                  {{ t("logRekapKerja.rejected") }}
                 </th>
                 <th
                   class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
@@ -450,41 +347,17 @@ onMounted(async () => {
                 >
                   {{ item.nama_departemen }}
                 </td>
-                <td class="px-3 py-2">
-                  <div class="flex items-center justify-center gap-1.5">
-                    <div
-                      class="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden"
-                    >
-                      <div
-                        :class="['h-full rounded-full', getBarColor(item)]"
-                        :style="{ width: `${getUsagePercentage(item)}%` }"
-                      ></div>
-                    </div>
-                    <span class="text-[11px] text-gray-600"
-                      >{{ item.cuti_terpakai }}/{{
-                        item.total_cuti
-                      }}</span
-                    >
-                  </div>
-                </td>
-                <td
-                  class="px-3 py-2 text-sm font-medium text-center"
-                  :class="
-                    item.sisa_cuti <= 2 ? 'text-red-600' : 'text-gray-800'
-                  "
-                >
-                  {{ item.sisa_cuti }}
+                <td class="px-3 py-2 text-sm text-gray-800 text-center font-medium">
+                  {{ item.total_pengajuan }}
                 </td>
                 <td class="px-3 py-2 text-center">
-                  <span
-                    :class="[
-                      'inline-block text-[10px] px-2 py-0.5 rounded-full font-medium',
-                      item.sisa_cuti > 0
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700',
-                    ]"
-                  >
-                    {{ item.sisa_cuti > 0 ? "Aktif" : "Habis" }}
+                  <span class="inline-block text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                    {{ item.disetujui }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-center">
+                  <span class="inline-block text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
+                    {{ item.ditolak }}
                   </span>
                 </td>
                 <td class="px-3 py-2 text-center">
@@ -500,7 +373,7 @@ onMounted(async () => {
           </table>
         </div>
 
-        <!-- ========== LOG CUTI TABLE ========== -->
+        <!-- ========== LOG PENGAJUAN KERJA TABLE ========== -->
         <div v-if="activeTab === 'log'" class="overflow-x-auto">
           <table class="w-full">
             <thead>
@@ -523,7 +396,7 @@ onMounted(async () => {
                 <th
                   class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  {{ t("leaveLog.leaveDate") }}
+                  {{ t("logRekapKerja.workDate") }}
                 </th>
                 <th
                   class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
@@ -533,17 +406,7 @@ onMounted(async () => {
                 <th
                   class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                 >
-                  {{ t("leaveLog.leaveType") }}
-                </th>
-                <th
-                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
-                >
                   {{ t("leaveLog.description") }}
-                </th>
-                <th
-                  class="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
-                >
-                  {{ t("leaveLog.backup") }}
                 </th>
                 <th
                   class="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
@@ -559,13 +422,13 @@ onMounted(async () => {
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-if="currentData.length === 0">
-                <td colspan="10" class="text-center py-8 text-gray-400 text-sm">
+                <td colspan="8" class="text-center py-8 text-gray-400 text-sm">
                   {{ t("leaveLog.noData") }}
                 </td>
               </tr>
               <tr
-                v-for="(item, index) in currentData as LogCutiItem[]"
-                :key="item.id_log_cuti"
+                v-for="(item, index) in currentData as LogPenambahanKerjaItem[]"
+                :key="index"
                 class="hover:bg-gray-50 transition-colors"
               >
                 <td class="px-4 py-3 text-sm text-gray-500 text-center">
@@ -587,24 +450,16 @@ onMounted(async () => {
                   {{ formatDateShort(item.tanggal_pengajuan) }}
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600">
-                  {{
-                    formatDateRange(item.tanggal_mulai, item.tanggal_selesai)
-                  }}
+                  {{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600 text-center">
                   {{ item.durasi }} {{ t("leaveLog.days") }}
-                </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
-                  {{ item.jenis_cuti }}
                 </td>
                 <td
                   class="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate"
                   :title="item.keterangan || '-'"
                 >
                   {{ item.keterangan || "-" }}
-                </td>
-                <td class="px-4 py-3 text-sm text-gray-600">
-                  {{ item.pengganti || "-" }}
                 </td>
                 <td class="px-4 py-3 text-center">
                   <span
@@ -650,7 +505,7 @@ onMounted(async () => {
             {{
               activeTab === "rekapitulasi"
                 ? t("leaveLog.data")
-                : t("leaveLog.leaveLogData")
+                : t("logRekapKerja.workLogData")
             }}
           </p>
           <div class="flex items-center gap-1">

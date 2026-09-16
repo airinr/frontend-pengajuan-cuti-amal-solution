@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, provide, watch, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import DirekturSidebar from "../components/DirekturSidebar.vue";
@@ -11,8 +11,6 @@ const route = useRoute();
 const { locale } = useI18n();
 const sidebarOpen = ref(false);
 const user = ref<CurrentUser | null>(null);
-
-provide("sidebarOpen", sidebarOpen);
 
 watch(
   () => route.path,
@@ -39,7 +37,7 @@ onMounted(async () => {
 
 <template>
   <div class="flex min-h-screen bg-[#f8fafc]">
-    <DirekturSidebar :open="sidebarOpen" @close="sidebarOpen = false" />
+    <DirekturSidebar :open="sidebarOpen" :user="user" @close="sidebarOpen = false" />
 
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Top Navbar / Header -->

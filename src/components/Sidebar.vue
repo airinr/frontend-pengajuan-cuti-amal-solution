@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { authApi } from "../services/auth.service";
 import type { CurrentUser } from "../types";
 
 const { t } = useI18n();
 
 const props = defineProps<{
   open: boolean;
+  user?: CurrentUser | null;
 }>();
 
 const emit = defineEmits<{
@@ -17,8 +17,6 @@ const emit = defineEmits<{
 
 const route = useRoute();
 const router = useRouter();
-
-const user = ref<CurrentUser | null>(null);
 
 interface MenuItem {
   label: string;
@@ -31,7 +29,7 @@ interface MenuSection {
   items: MenuItem[];
 }
 
-const baseSections = computed<MenuSection[]>(() => [
+const menuSections = computed<MenuSection[]>(() => [
   {
     items: [
       { label: t('nav.dashboard'), icon: "grid", route: "/karyawan/dashboard" },
@@ -42,30 +40,24 @@ const baseSections = computed<MenuSection[]>(() => [
     items: [
       { label: t('nav.pengajuanCuti'), icon: "file-plus", route: "/karyawan/pengajuan-cuti" },
       { label: t('nav.statusPengajuan'), icon: "clock", route: "/karyawan/status-pengajuan" },
+      { label: t('nav.riwayatCuti'), icon: "history", route: "/karyawan/riwayat-cuti" },
+      { label: t('nav.kalenderCuti'), icon: "calendar", route: "/karyawan/kalender-cuti" },
+    ],
+  },
+  {
+    title: t('nav.bekerja'),
+    items: [
+      { label: t('nav.pengajuanBekerja'), icon: "briefcase", route: "/karyawan/pengajuan-bekerja" },
+      { label: t('nav.statusPengajuanBekerja'), icon: "clock", route: "/karyawan/status-pengajuan-kerja" },
+      { label: t('nav.riwayatPengajuanKerja'), icon: "history", route: "/karyawan/riwayat-pengajuan-kerja" },
     ],
   },
   {
     items: [
-      { label: t('nav.riwayatCuti'), icon: "history", route: "/karyawan/riwayat-cuti" },
-      { label: t('nav.kalenderCuti'), icon: "calendar", route: "/karyawan/kalender-cuti" },
       { label: t('nav.profil'), icon: "user", route: "/karyawan/profil" },
     ],
   },
 ]);
-
-const bekerjaSection = computed<MenuSection>(() => ({
-  title: t('nav.bekerja'),
-  items: [
-    { label: t('nav.pengajuanBekerja'), icon: "briefcase", route: "/karyawan/pengajuan-bekerja" },
-    { label: t('nav.statusPengajuanBekerja'), icon: "clock-check", route: "/karyawan/status-pengajuan-kerja" },
-  ],
-}));
-
-const menuSections = computed(() => {
-  const sections = [...baseSections.value];
-  sections.splice(2, 0, bekerjaSection.value);
-  return sections;
-});
 
 const isActive = (itemRoute: string) => {
   return route.path === itemRoute;
@@ -84,15 +76,6 @@ const getInitials = (name: string) => {
     .toUpperCase()
     .slice(0, 2);
 };
-
-onMounted(async () => {
-  try {
-    const res = await authApi.me();
-    user.value = res.data;
-  } catch {
-    // silent fail
-  }
-});
 </script>
 
 <template>

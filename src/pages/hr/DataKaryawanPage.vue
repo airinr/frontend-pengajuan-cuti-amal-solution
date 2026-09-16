@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, reactive, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
   hrApi,
@@ -16,6 +16,7 @@ const { showError } = useErrorPopup();
 const searchQuery = ref("");
 const selectedDepartemen = ref("");
 const loading = ref(true);
+const collapsedDepartments = reactive(new Set<string>());
 
 const summary = ref<RingkasanKaryawan>({
   total_karyawan: 0,
@@ -49,20 +50,46 @@ const addForm = ref({
   password: "",
   role: "karyawan",
   id_departemen: 1,
-  id_pm: null as number | null,
+  email: "",
+  no_telp: "",
+  tanggal_bergabung: "",
+  id_pm_list: [] as number[],
 });
+
+const addSelectedPmList = ref<{ id_user: number; nama: string }[]>([]);
+const addPmDropdownOpen = ref(false);
+
+const addAvailablePmList = computed(() => {
+  return pmList.value.filter((pm) => !addSelectedPmList.value.find((p) => p.id_user === pm.id_user));
+});
+
+const addPmToList = (pm: { id_user: number; nama: string }) => {
+  if (!addSelectedPmList.value.find((p) => p.id_user === pm.id_user)) {
+    addSelectedPmList.value.push(pm);
+    addForm.value.id_pm_list = addSelectedPmList.value.map((p) => p.id_user);
+  }
+  addPmDropdownOpen.value = false;
+};
+
+const removePmFromAddList = (pm: { id_user: number; nama: string }) => {
+  addSelectedPmList.value = addSelectedPmList.value.filter((p) => p.id_user !== pm.id_user);
+  addForm.value.id_pm_list = addSelectedPmList.value.map((p) => p.id_user);
+};
 
 const editForm = ref({
   nama: "",
   role: "karyawan",
   id_departemen: 0,
-  id_pm: null as number | null,
   email: "",
   no_telp: "",
   tanggal_bergabung: "",
   status: "Aktif",
 });
 const editUserId = ref<number | null>(null);
+const editSelectedPmList = ref<{ id_user: number; nama: string }[]>([]);
+const editPmAdd = ref<number[]>([]);
+const editPmRemove = ref<number[]>([]);
+const editPmDropdownOpen = ref(false);
 
 const departemenOptions = computed(() => departemenList.value);
 
@@ -85,6 +112,14 @@ const groupedKaryawan = computed(() => {
   }
   return groups;
 });
+
+const toggleDept = (deptName: string) => {
+  if (collapsedDepartments.has(deptName)) {
+    collapsedDepartments.delete(deptName);
+  } else {
+    collapsedDepartments.add(deptName);
+  }
+};
 
 const fetchData = async () => {
   loading.value = true;
@@ -117,8 +152,13 @@ const openAddModal = () => {
     password: "",
     role: "karyawan",
     id_departemen: departemenOptions.value[0]?.id_departemen || 1,
-    id_pm: null,
+    email: "",
+    no_telp: "",
+    tanggal_bergabung: "",
+    id_pm_list: [],
   };
+  addSelectedPmList.value = [];
+  addPmDropdownOpen.value = false;
   showAddPassword.value = false;
   showAddModal.value = true;
 };
@@ -128,7 +168,6 @@ const closeAddModal = () => {
 };
 
 const handleAddSubmit = async () => {
-  if (!addForm.value.username || !addForm.value.nama || !addForm.value.password) return;
   addSubmitting.value = true;
   try {
     await authApi.registerAdmin({
@@ -137,7 +176,10 @@ const handleAddSubmit = async () => {
       password: addForm.value.password,
       role: addForm.value.role,
       id_departemen: addForm.value.id_departemen,
-      id_pm: addForm.value.id_pm,
+      email: addForm.value.email,
+      no_telp: addForm.value.no_telp,
+      tanggal_bergabung: addForm.value.tanggal_bergabung,
+      id_pm_list: addForm.value.id_pm_list,
     });
     closeAddModal();
     showSuccessPopup.value = true;
@@ -155,19 +197,48 @@ const openEditModal = (item: any) => {
     nama: item.nama || "",
     role: item.role || "karyawan",
     id_departemen: departemenOptions.value.find((d) => d.nama_departemen === item.departemen)?.id_departemen || 0,
-    id_pm: item.id_pm || null,
     email: item.email || "",
     no_telp: item.no_telp || "",
     tanggal_bergabung: item.tanggal_bergabung || "",
     status: item.status || "Aktif",
   };
+  editSelectedPmList.value = (item.nama_pm || []).map((nama: string) => {
+    const found = pmList.value.find((p) => p.nama === nama);
+    return found || { id_user: 0, nama };
+  });
+  editPmAdd.value = [];
+  editPmRemove.value = [];
+  editPmDropdownOpen.value = false;
   showEditModal.value = true;
 };
 
 const closeEditModal = () => {
   showEditModal.value = false;
   editUserId.value = null;
+  editPmDropdownOpen.value = false;
 };
+
+const addPmToEdit = (pm: { id_user: number; nama: string }) => {
+  if (!editSelectedPmList.value.find((p) => p.id_user === pm.id_user)) {
+    editSelectedPmList.value.push(pm);
+    if (pm.id_user > 0 && !editPmRemove.value.includes(pm.id_user)) {
+      editPmAdd.value.push(pm.id_user);
+    }
+  }
+  editPmDropdownOpen.value = false;
+};
+
+const removePmFromEdit = (pm: { id_user: number; nama: string }) => {
+  editSelectedPmList.value = editSelectedPmList.value.filter((p) => p.id_user !== pm.id_user);
+  if (pm.id_user > 0) {
+    editPmAdd.value = editPmAdd.value.filter((id) => id !== pm.id_user);
+    editPmRemove.value.push(pm.id_user);
+  }
+};
+
+const editAvailablePmList = computed(() => {
+  return pmList.value.filter((pm) => !editSelectedPmList.value.find((p) => p.id_user === pm.id_user));
+});
 
 const handleEditSubmit = async () => {
   if (!editUserId.value || !editForm.value.nama) return;
@@ -177,11 +248,12 @@ const handleEditSubmit = async () => {
       nama: editForm.value.nama,
       role: editForm.value.role,
       id_departemen: editForm.value.id_departemen,
-      id_pm: editForm.value.id_pm,
       email: editForm.value.email,
       no_telp: editForm.value.no_telp,
       tanggal_bergabung: editForm.value.tanggal_bergabung || new Date().toISOString().split('T')[0],
       status: editForm.value.status,
+      pm_add: editPmAdd.value.length > 0 ? editPmAdd.value : undefined,
+      pm_remove: editPmRemove.value.length > 0 ? editPmRemove.value : undefined,
     });
     closeEditModal();
     await fetchData();
@@ -346,24 +418,41 @@ onMounted(() => {
         </div>
 
         <template v-for="(employees, deptName) in groupedKaryawan" :key="deptName">
-          <div class="bg-gray-100 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">{{ deptName }}</span>
+          <div
+            class="bg-gray-100 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between cursor-pointer select-none"
+            @click="toggleDept(deptName)"
+          >
+            <div class="flex items-center gap-2">
+              <svg
+                :class="['w-4 h-4 transition-transform duration-200', !collapsedDepartments.has(deptName) && 'rotate-90']"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+              <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">{{ deptName }}</span>
+              <span class="text-[10px] text-gray-500 font-normal">({{ employees.length }})</span>
+            </div>
             <button
-              @click="openEditDeptModal({ id_departemen: departemenList.find(d => d.nama_departemen === deptName)?.id_departemen || 0, nama_departemen: deptName })"
+              @click.stop="openEditDeptModal({ id_departemen: departemenList.find(d => d.nama_departemen === deptName)?.id_departemen || 0, nama_departemen: deptName })"
               class="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
             >
               {{ t('employee.edit') }}
             </button>
           </div>
-          <table class="w-full table-fixed">
+          <table v-show="!collapsedDepartments.has(deptName)" class="w-full" style="table-layout: fixed">
             <thead>
               <tr class="bg-gray-50 border-b border-gray-200">
-                <th class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-12">No</th>
-                <th class="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[25%]">Nama</th>
-                <th class="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[20%]">Jabatan</th>
-                <th class="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[25%]">Email</th>
-                <th class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-24">Status</th>
-                <th class="text-center px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-20">Aksi</th>
+                <th class="text-center px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[5%]">No</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[12%]">Nama</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Jabatan</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[15%]">Email</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">No. Telp</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Tgl Gabung</th>
+                <th class="text-left px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[15%]">Project Manager</th>
+                <th class="text-center px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Status</th>
+                <th class="text-center px-2 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Aksi</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -372,16 +461,23 @@ onMounted(() => {
                 :key="item.id_user || index"
                 class="hover:bg-gray-50 transition-colors"
               >
-                <td class="px-3 py-2 text-sm text-gray-500 text-center">{{ index + 1 }}</td>
-                <td class="px-3 py-2 text-sm font-medium text-gray-800 truncate">{{ item.nama }}</td>
-                <td class="px-3 py-2 text-sm text-gray-600 truncate">{{ item.jabatan }}</td>
-                <td class="px-3 py-2 text-sm text-gray-600 truncate">{{ item.email }}</td>
-                <td class="px-3 py-2 text-center">
+                <td class="px-2 py-2 text-sm text-gray-500 text-center">{{ index + 1 }}</td>
+                <td class="px-2 py-2 text-sm font-medium text-gray-800">{{ item.nama }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.jabatan === 'pm' ? 'Project Manager' : item.jabatan === 'hr' ? 'Human Resources' : item.jabatan === 'staff_hr' ? 'Staff HR' : item.jabatan">{{ item.jabatan === 'pm' ? 'PM' : item.jabatan === 'hr' ? 'HR' : item.jabatan === 'staff_hr' ? 'Staff HR' : item.jabatan }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.email">{{ item.email }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.no_telp || '-'">{{ item.no_telp || '-' }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.tanggal_bergabung || '-'">{{ item.tanggal_bergabung || '-' }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600">
+                  <span v-if="item.departemen !== 'Manajemen Perusahaan' && item.nama_pm && item.nama_pm.length > 0">{{ item.nama_pm.join(', ') }}</span>
+                  <span v-else-if="item.departemen === 'MANAJEMEN PERUSAHAAN'" class="text-gray-400">-</span>
+                  <span v-else class="text-gray-400">-</span>
+                </td>
+                <td class="px-2 py-2 text-center">
                   <span :class="['inline-block text-[10px] px-2 py-0.5 rounded-full font-medium', item.status === 'Aktif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
-                    {{ item.status === "Aktif" ? t('employee.active') : t('employee.inactive') }}
+                    {{ item.status }}
                   </span>
                 </td>
-                <td class="px-3 py-2 text-center">
+                <td class="px-2 py-2 text-center">
                   <button @click="openEditModal(item)" class="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer">{{ t('employee.edit') }}</button>
                 </td>
               </tr>
@@ -395,7 +491,7 @@ onMounted(() => {
     <Teleport to="body">
       <Transition name="fade">
         <div v-if="showAddModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="closeAddModal">
-          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-bold text-gray-800">{{ t('employee.addModalTitle') }}</h3>
               <button @click="closeAddModal" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
@@ -423,25 +519,83 @@ onMounted(() => {
                 </div>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.role') }}</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.role') }} <span class="text-red-500">*</span></label>
                 <select v-model="addForm.role" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="karyawan">{{ t('employee.karyawanTab') }}</option>
                   <option value="pm">{{ t('employee.projectManager') }}</option>
                   <option value="hr">HR</option>
+                  <option value="staff_hr">Staff HR</option>
                   <option value="direktur">Direktur</option>
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.department') }}</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.department') }} <span class="text-red-500">*</span></label>
                 <select v-model="addForm.id_departemen" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option v-for="dept in departemenOptions" :key="dept.id_departemen" :value="dept.id_departemen">{{ dept.nama_departemen }}</option>
                 </select>
+              </div>
+              <div v-if="addForm.id_departemen && departemenOptions.find(d => d.id_departemen === addForm.id_departemen)?.nama_departemen !== 'Manajemen Perusahaan'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
+                <div class="relative">
+                  <button
+                    type="button"
+                    @click="addPmDropdownOpen = !addPmDropdownOpen"
+                    class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex items-center justify-between bg-white"
+                  >
+                    <span class="text-gray-500">Pilih Project Manager</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </button>
+                  <div v-if="addPmDropdownOpen" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div v-if="addAvailablePmList.length === 0" class="px-4 py-2 text-sm text-gray-400">
+                      Semua PM sudah dipilih
+                    </div>
+                    <button
+                      v-for="pm in addAvailablePmList"
+                      :key="pm.id_user"
+                      @click="addPmToList(pm)"
+                      class="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 cursor-pointer flex items-center gap-2"
+                    >
+                      <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      {{ pm.nama }}
+                    </button>
+                  </div>
+                </div>
+                <div v-if="addSelectedPmList.length > 0" class="mt-2 flex flex-wrap gap-2">
+                  <span
+                    v-for="pm in addSelectedPmList"
+                    :key="pm.id_user"
+                    class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                  >
+                    {{ pm.nama }}
+                    <button @click="removePmFromAddList(pm)" class="hover:text-blue-900 cursor-pointer">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.email') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.email" type="email" :placeholder="t('employee.emailPlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.phone') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.no_telp" type="text" :placeholder="t('employee.phonePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.joinDate') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.tanggal_bergabung" type="date" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
 
             <div class="flex items-center justify-end gap-3 mt-6">
               <button @click="closeAddModal" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">{{ t('employee.cancel') }}</button>
-              <button @click="handleAddSubmit" :disabled="addSubmitting || !addForm.username || !addForm.nama || !addForm.password" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+              <button @click="handleAddSubmit" :disabled="addSubmitting" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
                 {{ addSubmitting ? t('employee.saving') : t('employee.save') }}
               </button>
             </div>
@@ -454,7 +608,7 @@ onMounted(() => {
     <Teleport to="body">
       <Transition name="fade">
         <div v-if="showEditModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="closeEditModal">
-          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-bold text-gray-800">{{ t('employee.editModalTitle') }}</h3>
               <button @click="closeEditModal" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
@@ -468,51 +622,90 @@ onMounted(() => {
                 <input v-model="editForm.nama" type="text" :placeholder="t('employee.namePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.role') }}</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.role') }} <span class="text-red-500">*</span></label>
                 <select v-model="editForm.role" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="karyawan">{{ t('employee.karyawanTab') }}</option>
                   <option value="pm">{{ t('employee.projectManager') }}</option>
                   <option value="hr">HR</option>
+                  <option value="staff_hr">Staff HR</option>
                   <option value="direktur">Direktur</option>
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.department') }}</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.department') }} <span class="text-red-500">*</span></label>
                 <select v-model="editForm.id_departemen" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option v-for="dept in departemenOptions" :key="dept.id_departemen" :value="dept.id_departemen">{{ dept.nama_departemen }}</option>
                 </select>
               </div>
-              <div>
+              <div v-if="editForm.id_departemen && departemenOptions.find(d => d.id_departemen === editForm.id_departemen)?.nama_departemen !== 'Manajemen Perusahaan'">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
-                <select v-model="editForm.id_pm" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                  <option :value="null">-</option>
-                  <option v-for="pm in pmList" :key="pm.id_user" :value="pm.id_user">{{ pm.nama }}</option>
-                </select>
+                <div class="relative">
+                  <button
+                    type="button"
+                    @click="editPmDropdownOpen = !editPmDropdownOpen"
+                    class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex items-center justify-between bg-white"
+                  >
+                    <span class="text-gray-500">Pilih Project Manager</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </button>
+                  <div v-if="editPmDropdownOpen" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div v-if="editAvailablePmList.length === 0" class="px-4 py-2 text-sm text-gray-400">
+                      Semua PM sudah dipilih
+                    </div>
+                    <button
+                      v-for="pm in editAvailablePmList"
+                      :key="pm.id_user"
+                      @click="addPmToEdit(pm)"
+                      class="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 cursor-pointer flex items-center gap-2"
+                    >
+                      <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      {{ pm.nama }}
+                    </button>
+                  </div>
+                </div>
+                <div v-if="editSelectedPmList.length > 0" class="mt-2 flex flex-wrap gap-2">
+                  <span
+                    v-for="pm in editSelectedPmList"
+                    :key="pm.id_user"
+                    class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                  >
+                    {{ pm.nama }}
+                    <button @click="removePmFromEdit(pm)" class="hover:text-blue-900 cursor-pointer">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                </div>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.email') }}</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.email') }} <span class="text-red-500">*</span></label>
                 <input v-model="editForm.email" type="email" :placeholder="t('employee.emailPlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.phone') }}</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.phone') }} <span class="text-red-500">*</span></label>
                 <input v-model="editForm.no_telp" type="text" :placeholder="t('employee.phonePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.status') }}</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.status') }} <span class="text-red-500">*</span></label>
                 <select v-model="editForm.status" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="Aktif">{{ t('employee.active') }}</option>
                   <option value="Cuti">{{ t('employee.inactive') }}</option>
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.joinDate') }}</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.joinDate') }} <span class="text-red-500">*</span></label>
                 <input v-model="editForm.tanggal_bergabung" type="date" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
 
             <div class="flex items-center justify-end gap-3 mt-6">
               <button @click="closeEditModal" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">{{ t('employee.cancel') }}</button>
-              <button @click="handleEditSubmit" :disabled="editSubmitting || !editForm.nama" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+              <button @click="handleEditSubmit" :disabled="editSubmitting" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
                 {{ editSubmitting ? t('employee.saving') : t('employee.save') }}
               </button>
             </div>

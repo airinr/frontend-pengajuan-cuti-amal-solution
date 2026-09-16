@@ -14,10 +14,21 @@ const loading = ref(true);
 const statusList = ref<PenambahanKerjaItem[]>([]);
 
 const steps = computed(() => [
-  { label: t('status.submitted'), statusKey: "submitted" },
-  { label: t('status.waitingPM'), statusKey: "pm" },
-  { label: t('status.completed'), statusKey: "selesai" },
+  { label: t('status.submitted'), statusKey: "submitted", completedLabel: t('status.submitted'), rejectedLabel: t('status.submitted') },
+  { label: t('status.waitingPM'), statusKey: "pm", completedLabel: t('status.approvedPM'), rejectedLabel: t('status.rejectedPM') },
+  { label: t('status.waitingHR'), statusKey: "hr", completedLabel: t('status.approvedHR'), rejectedLabel: t('status.rejectedHR') },
+  { label: t('status.completed'), statusKey: "selesai", completedLabel: t('status.completed'), rejectedLabel: t('status.completed') },
 ]);
+
+const hasMultiplePm = (item: PenambahanKerjaItem) => {
+  return item.approval_pm_detail && item.approval_pm_detail.length > 1;
+};
+
+const getPmApprovalStatus = (item: PenambahanKerjaItem) => {
+  if (!item.approval_pm_detail) return { approved: 0, total: 0 };
+  const approved = item.approval_pm_detail.filter(pm => pm.status === 'disetujui').length;
+  return { approved, total: item.approval_pm_detail.length };
+};
 
 const formatDateRange = (start: string, end: string) => {
   const s = new Date(start);
@@ -32,12 +43,14 @@ const formatDateRange = (start: string, end: string) => {
   return `${s.getDate()} ${months[s.getMonth()]} ${s.getFullYear()} - ${e.getDate()} ${months[e.getMonth()]} ${e.getFullYear()}`;
 };
 
-const getStatusConfig = (status: string) => {
+const getStatusConfig = (status: string, item?: PenambahanKerjaItem) => {
+  const pmStatus = item && hasMultiplePm(item) ? ` (${getPmApprovalStatus(item).approved}/${getPmApprovalStatus(item).total})` : '';
   const configs: Record<string, { label: string; color: string; bgColor: string; borderColor: string }> = {
-    menunggu_pm: { label: "Menunggu PM", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
-    disetujui_pm: { label: "Disetujui PM", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
-    disetujui: { label: "Disetujui", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
-    ditolak_pm: { label: "Ditolak PM", color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-200" },
+    menunggu_pm: { label: t('status.waitingPM') + pmStatus, color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
+    menunggu_hr: { label: t('status.waitingHR'), color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
+    disetujui_pm: { label: t('status.approvedPM'), color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
+    disetujui: { label: t('status.approved'), color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
+    ditolak_pm: { label: t('status.rejectedPM'), color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-200" },
   };
   return configs[status] || { label: status, color: "text-gray-600", bgColor: "bg-gray-50", borderColor: "border-gray-200" };
 };
@@ -50,15 +63,16 @@ const getStepStatus = (item: PenambahanKerjaItem, stepIndex: number) => {
   if (status.includes("ditolak")) {
     if (stepIndex === 0) return "completed";
     if (step.statusKey === "pm") return "rejected";
+    if (step.statusKey === "hr") return "pending";
     return "pending";
   }
 
   if (stepIndex === 0) return "completed";
 
+  if (stepIndex === 1 && status === 'menunggu_hr') return 'completed';
+
   if (status === `menunggu_${step.statusKey}`) return "active";
   if (status === `disetujui_${step.statusKey}` || status === "disetujui") return "completed";
-
-  if (status === "disetujui_pm" && stepIndex === steps.value.length - 1) return "completed";
 
   return "pending";
 };
@@ -66,8 +80,7 @@ const getStepStatus = (item: PenambahanKerjaItem, stepIndex: number) => {
 const getStepDate = (item: PenambahanKerjaItem, stepIndex: number) => {
   const step = steps.value[stepIndex];
   if (!step) return null;
-  if (stepIndex === 0) return item.tanggal_mulai;
-  if (step.statusKey === "pm") return item.processed_at_pm;
+  if (stepIndex === 0) return item.tanggal_pengajuan;
   return null;
 };
 
@@ -89,7 +102,9 @@ const getCardBorderColor = (item: PenambahanKerjaItem) => {
 onMounted(async () => {
   try {
     const res = await penambahanKerjaApi.getMyPenambahanKerja();
-    statusList.value = res.data || [];
+    statusList.value = (res.data || [])
+      .filter((item) => !item.status.includes('disetujui'))
+      .sort((a, b) => new Date(b.tanggal_pengajuan).getTime() - new Date(a.tanggal_pengajuan).getTime());
   } catch (err) {
     showError(err);
     statusList.value = [];
@@ -135,7 +150,6 @@ onMounted(async () => {
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
               <div>
                 <div class="flex items-center gap-2 mb-2">
-                  <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">CUTI BERSAMA</span>
                   <span class="px-2 py-0.5 bg-blue-100 rounded text-xs font-medium text-blue-700">Kerja</span>
                 </div>
                 <h3 class="text-lg font-semibold text-gray-800">{{ item.keterangan_pengajuan }}</h3>
@@ -150,9 +164,9 @@ onMounted(async () => {
               <div
                 :class="[
                   'px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 self-start',
-                  getStatusConfig(item.status).bgColor,
-                  getStatusConfig(item.status).color,
-                  getStatusConfig(item.status).borderColor,
+                  getStatusConfig(item.status, item).bgColor,
+                  getStatusConfig(item.status, item).color,
+                  getStatusConfig(item.status, item).borderColor,
                 ]"
               >
                 <svg
@@ -176,8 +190,38 @@ onMounted(async () => {
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Status</span>
-                <span class="font-semibold">{{ getStatusConfig(item.status).label }}</span>
+                <span>{{ t('statusPage.currentStatus') }}</span>
+                <span class="font-semibold">{{ getStatusConfig(item.status, item).label }}</span>
+              </div>
+            </div>
+
+            <!-- Multiple PM Approval Details -->
+            <div v-if="item.approval_pm_detail && item.approval_pm_detail.length > 0" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p class="text-sm font-semibold text-blue-800 mb-3">{{ t('status.waitingPM') }}</p>
+              <div class="space-y-2">
+                <div v-for="(pm, i) in item.approval_pm_detail" :key="i" class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div :class="[
+                      'w-6 h-6 rounded-full flex items-center justify-center',
+                      pm.status === 'disetujui' ? 'bg-green-100' : pm.status === 'ditolak' ? 'bg-red-100' : 'bg-gray-100'
+                    ]">
+                      <svg v-if="pm.status === 'disetujui'" class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <svg v-else-if="pm.status === 'ditolak'" class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span v-else class="text-xs text-gray-500">{{ i + 1 }}</span>
+                    </div>
+                    <span class="text-sm text-gray-700">{{ pm.nama_pm }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span v-if="pm.status === 'disetujui'" class="text-xs text-green-600 font-medium">{{ t('status.approved') }}</span>
+                    <span v-else-if="pm.status === 'ditolak'" class="text-xs text-red-600 font-medium">{{ t('status.rejected') }}</span>
+                    <span v-else class="text-xs text-gray-400">{{ t('status.waiting') }}</span>
+                    <span v-if="pm.processed_at" class="text-[10px] text-gray-400">{{ formatDateShort(pm.processed_at) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -260,10 +304,10 @@ onMounted(async () => {
                   {{
                     getStepStatus(item, stepIndex) === "completed" && step.statusKey !== "submitted"
                       ? step.statusKey === "selesai"
-                        ? "Selesai"
-                        : `Disetujui ${step.label.replace("Menunggu ", "")}`
+                        ? t('status.completed')
+                        : step.completedLabel
                       : getStepStatus(item, stepIndex) === "rejected"
-                        ? `Ditolak ${step.label.replace("Menunggu ", "")}`
+                        ? step.rejectedLabel
                         : step.label
                   }}
                 </p>

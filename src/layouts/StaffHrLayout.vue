@@ -2,7 +2,7 @@
 import { ref, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
-import HrSidebar from "../components/HrSidebar.vue";
+import StaffHrSidebar from "../components/StaffHrSidebar.vue";
 import { authApi } from "../services/auth.service";
 import type { CurrentUser } from "../types";
 
@@ -26,7 +26,7 @@ const toggleLocale = () => {
 };
 
 const goToProfile = () => {
-  router.push("/hr/profil");
+  router.push("/staff_hr/profil");
 };
 
 const handleLogout = () => {
@@ -47,7 +47,7 @@ onMounted(async () => {
 
 <template>
   <div class="flex min-h-screen bg-gray-100">
-    <HrSidebar :open="sidebarOpen" :user="user" @close="sidebarOpen = false" />
+    <StaffHrSidebar :open="sidebarOpen" :user="user" @close="sidebarOpen = false" />
 
     <div class="flex-1 flex flex-col lg:ml-0">
       <header class="bg-gray-100 border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 sticky top-0 z-30">

@@ -37,6 +37,16 @@ const currentLanguage = computed(() =>
   locale.value === "id" ? "Bahasa Indonesia" : "English",
 );
 
+const roleLabel = computed(() => {
+  const roleMap: Record<string, string> = {
+    karyawan: 'Karyawan',
+    pm: 'Project Manager',
+    hr: 'Human Resources',
+    direktur: 'Direktur',
+  };
+  return roleMap[user.value?.role || ''] || user.value?.role || '-';
+});
+
 const selectLanguage = (lang: string) => {
   locale.value = lang;
   localStorage.setItem("locale", lang);
@@ -150,7 +160,7 @@ onMounted(() => {
         </div>
 
         <h2 class="text-xl font-bold text-gray-900">{{ user?.nama }}</h2>
-        <p class="text-xs text-gray-500 mt-1 mb-4">{{ user?.role }}</p>
+        <p class="text-xs text-gray-500 mt-1 mb-4">{{ roleLabel }}</p>
 
         <!-- Administrator Aktif Badge -->
       </div>

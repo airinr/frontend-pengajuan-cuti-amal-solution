@@ -8,6 +8,7 @@ import { karyawanApi, type OngoingCuti } from "../../services/karyawan.service";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import type { CurrentUser } from "../../types";
 import { useErrorPopup } from "../../composables/useErrorPopup";
+import { getNetworkErrorMessage } from "../../lib/api";
 import { useCalendarNames } from "../../composables/useCalendarNames";
 
 const { t } = useI18n();
@@ -133,6 +134,12 @@ const isPastDate = (date: Date) => {
   return date <= todayStart;
 };
 
+const isNextMonthDate = (date: Date) => {
+  const nextMonth = currentMonth.value === 11 ? 0 : currentMonth.value + 1;
+  const nextYear = currentMonth.value === 11 ? currentYear.value + 1 : currentYear.value;
+  return date.getMonth() === nextMonth && date.getFullYear() === nextYear;
+};
+
 const isHoliday = (date: Date) => {
   const dateStr = formatDate(date);
   return holidays.value.some((h) => h.date === dateStr);
@@ -157,12 +164,21 @@ const hasOngoingCuti = computed(() => {
   return ongoingCuti.value.some((item) => !item.status_sekarang.includes("ditolak"));
 });
 
+const hasRejectedCuti = computed(() => {
+  const todayStr = formatDate(today);
+  return ongoingCuti.value.some(
+    (item) => item.status_sekarang.includes("ditolak") && item.tanggal_selesai >= todayStr,
+  );
+});
+
 const handleDateClick = (day: {
   day: number;
   currentMonth: boolean;
   date: Date;
 }) => {
-  if (!day.currentMonth || isHoliday(day.date) || isPastDate(day.date)) return;
+  const isCurrentMonth = day.currentMonth;
+  const isNextMonth = !day.currentMonth && isNextMonthDate(day.date) && !isPastDate(day.date);
+  if ((!isCurrentMonth && !isNextMonth) || isHoliday(day.date) || isPastDate(day.date)) return;
 
   const dateStr = formatDate(day.date);
   const index = selectedDates.value.indexOf(dateStr);
@@ -218,16 +234,19 @@ const calculateDuration = () => {
 
 onMounted(async () => {
   try {
-    const [userRes, holidayRes, usersRes, ongoingRes] = await Promise.all([
+    const [userRes, holidayRes, usersRes, ongoingRes] = await Promise.allSettled([
       authApi.me(),
       holidayApi.getByYear(currentYear.value),
       authApi.getAllUsers(),
       karyawanApi.getOngoingCuti(),
     ]);
-    user.value = userRes.data;
-    holidays.value = holidayRes.data.data || [];
-    users.value = usersRes.data || [];
-    ongoingCuti.value = ongoingRes.data || [];
+    if (userRes.status === "fulfilled") user.value = userRes.value.data;
+    if (holidayRes.status === "fulfilled") holidays.value = holidayRes.value.data.data || [];
+    if (usersRes.status === "fulfilled") users.value = usersRes.value.data || [];
+    if (ongoingRes.status === "fulfilled") {
+      ongoingCuti.value = (ongoingRes.value.data || [])
+        .filter((item) => !item.status_sekarang.includes('disetujui_hr') && item.status_sekarang !== 'disetujui_direktur');
+    }
 
     if (route.query.edit || sessionStorage.getItem('editCuti')) {
       const editData = sessionStorage.getItem('editCuti');
@@ -255,8 +274,8 @@ onMounted(async () => {
         sessionStorage.removeItem('editCuti');
       }
     }
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   } finally {
     loading.value = false;
   }
@@ -266,8 +285,18 @@ const handleSubmit = async () => {
   errorMessage.value = "";
   successMessage.value = "";
 
+  if (user.value?.sisa_cuti === 0) {
+    errorMessage.value = t('error.noRemainingLeave');
+    return;
+  }
+
   if (hasOngoingCuti.value) {
     errorMessage.value = "Anda masih memiliki pengajuan cuti yang sedang diproses. Silakan tunggu hingga pengajuan selesai.";
+    return;
+  }
+
+  if (hasRejectedCuti.value && !editMode.value) {
+    errorMessage.value = t('error.hasRejectedLeave');
     return;
   }
 
@@ -330,6 +359,15 @@ const handleSubmit = async () => {
       {{ t('leave.subtitle') }}
     </p>
 
+    <div v-if="user?.sisa_cuti === 0" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+      <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      </svg>
+      <div>
+        <p class="text-sm font-medium text-red-800">{{ t('error.noRemainingLeave') }}</p>
+      </div>
+    </div>
+
     <div v-if="hasOngoingCuti" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start gap-3">
       <svg class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -337,6 +375,15 @@ const handleSubmit = async () => {
       <div>
         <p class="text-sm font-medium text-yellow-800">Anda memiliki pengajuan cuti yang sedang diproses</p>
         <p class="text-xs text-yellow-600 mt-1">Silakan tunggu hingga pengajuan selesai sebelum mengajukan cuti baru.</p>
+      </div>
+    </div>
+
+    <div v-if="hasRejectedCuti && !editMode" class="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-3">
+      <svg class="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      </svg>
+      <div>
+        <p class="text-sm font-medium text-orange-800">{{ t('error.hasRejectedLeave') }}</p>
       </div>
     </div>
 
@@ -348,7 +395,7 @@ const handleSubmit = async () => {
 
     <div v-else class="flex flex-col lg:flex-row gap-4 lg:gap-6">
       <!-- Left - Form -->
-      <div class="flex-1">
+      <div class="flex-1" :class="{ 'opacity-50 pointer-events-none': hasRejectedCuti && !editMode }">
         <div class="bg-white rounded-xl shadow-sm border border-gray-100">
           <!-- Pilih Tanggal -->
           <div class="p-4 lg:p-6 border-b border-gray-100 bg-blue-50">
@@ -430,7 +477,8 @@ const handleSubmit = async () => {
                   @click="handleDateClick(day)"
                   :class="[
                     'min-h-[80px] p-1 border-b border-r border-gray-200 text-sm transition-colors relative',
-                    !day.currentMonth && 'text-gray-300',
+                    !day.currentMonth && !isNextMonthDate(day.date) && 'text-gray-300',
+                    !day.currentMonth && isNextMonthDate(day.date) && !isHoliday(day.date) && !isPastDate(day.date) && 'text-blue-400 hover:bg-blue-100 cursor-pointer',
                     day.currentMonth && isToday(day.date) && 'bg-yellow-100',
                     day.currentMonth &&
                       isCutiBersama(day.date) &&
@@ -605,7 +653,7 @@ const handleSubmit = async () => {
             <div class="mt-4 flex justify-end">
               <button
                 @click="handleSubmit"
-                :disabled="submitting || !form.setuju_aturan || hasOngoingCuti"
+                :disabled="submitting || !form.setuju_aturan || hasOngoingCuti || (hasRejectedCuti && !editMode) || user?.sisa_cuti === 0"
                 class="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <svg

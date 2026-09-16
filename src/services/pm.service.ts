@@ -62,6 +62,16 @@ export interface HistoryCutiItem {
   status: string;
 }
 
+export interface RekapPengajuanKerjaItem {
+  nama: string;
+  nama_departemen: string;
+  total_pengajuan: number;
+  disetujui: number;
+  ditolak: number;
+  status: string;
+  tanggal_kerja: { tanggal_mulai: string; tanggal_selesai: string }[];
+}
+
 export const pmApi = {
   getDashboardStats: () => api.get<DashboardStats>("/pm/dashboard"),
 
@@ -88,4 +98,7 @@ export const pmApi = {
   getRekapSaldo: () => api.get<RekapSaldoItem[]>("/pm/rekap-cuti-detail"),
 
   exportRekapCsv: () => api.get("/pm/rekap/export", { responseType: "blob" }),
+
+  getRekapPengajuanKerja: () =>
+    api.get<RekapPengajuanKerjaItem[]>("/pm/rekap-pengajuan-kerja-detail"),
 };

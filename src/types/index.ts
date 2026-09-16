@@ -1,4 +1,4 @@
-export type UserRole = 'karyawan' | 'pm' | 'hr' | 'direktur'
+export type UserRole = 'karyawan' | 'pm' | 'hr' | 'direktur' | 'staff_hr'
 
 export interface User {
   id: string
@@ -33,22 +33,6 @@ export interface CreateLeaveRequest {
 export interface LoginRequest {
   username: string
   password: string
-}
-
-export interface RegisterRequest {
-  username: string
-  nama: string
-  password: string
-  id_departemen: number
-  id_pm?: number | null
-}
-
-export interface RegisterResponse {
-  id_user: number
-  username: string
-  nama: string
-  role: string
-  id_departemen: number
 }
 
 export interface AuthResponse {

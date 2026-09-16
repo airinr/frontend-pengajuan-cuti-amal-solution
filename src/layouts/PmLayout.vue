@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { ref, provide, watch } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import PmSidebar from "../components/PmSidebar.vue";
+import { authApi } from "../services/auth.service";
+import type { CurrentUser } from "../types";
 
 const router = useRouter();
 const route = useRoute();
 const { locale } = useI18n();
 const sidebarOpen = ref(false);
-
-provide("sidebarOpen", sidebarOpen);
+const user = ref<CurrentUser | null>(null);
 
 watch(
   () => route.path,
@@ -33,11 +34,20 @@ const handleLogout = () => {
   localStorage.removeItem("token_type");
   router.push("/login");
 };
+
+onMounted(async () => {
+  try {
+    const res = await authApi.me();
+    user.value = res.data;
+  } catch {
+    // silent fail
+  }
+});
 </script>
 
 <template>
   <div class="flex min-h-screen bg-gray-100">
-    <PmSidebar :open="sidebarOpen" @close="sidebarOpen = false" />
+    <PmSidebar :open="sidebarOpen" :user="user" @close="sidebarOpen = false" />
 
     <div class="flex-1 flex flex-col lg:ml-0">
       <header class="bg-gray-100 border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 sticky top-0 z-30">

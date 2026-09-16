@@ -8,6 +8,7 @@ import {
   type OngoingCuti,
   type ActivityItem,
   type RiwayatCuti,
+  type RingkasanCuti,
 } from "../../services/karyawan.service";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import { getNetworkErrorMessage } from "../../lib/api";
@@ -19,6 +20,7 @@ const router = useRouter();
 const { monthNamesShort } = useCalendarNames();
 
 const user = ref<CurrentUser | null>(null);
+const ringkasan = ref<RingkasanCuti | null>(null);
 const ongoingList = ref<OngoingCuti[]>([]);
 const riwayatList = ref<RiwayatCuti[]>([]);
 const upcomingHolidays = ref<Holiday[]>([]);
@@ -26,12 +28,9 @@ const activities = ref<ActivityItem[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-const totalCuti = computed(() => user.value?.total_cuti ?? "-");
-const sisaCuti = computed(() => user.value?.sisa_cuti ?? "-");
-const terpakai = computed(() => {
-  if (!user.value) return "-";
-  return user.value.total_cuti - user.value.sisa_cuti;
-});
+const totalCuti = computed(() => ringkasan.value?.total_cuti ?? user.value?.total_cuti ?? "-");
+const sisaCuti = computed(() => ringkasan.value?.sisa_cuti ?? user.value?.sisa_cuti ?? "-");
+const terpakai = computed(() => ringkasan.value?.cuti_terpakai ?? "-");
 
 const usedApproved = computed(() => {
   return riwayatList.value
@@ -81,15 +80,17 @@ const fetchData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const [userRes, ongoingRes, riwayatRes, holidayRes, activitiesRes] =
+    const [userRes, ringkasanRes, ongoingRes, riwayatRes, holidayRes, activitiesRes] =
       await Promise.allSettled([
         authApi.me(),
+        karyawanApi.getRingkasanCuti(),
         karyawanApi.getOngoingCuti(),
         karyawanApi.getRiwayatCuti(),
         holidayApi.getByYear(new Date().getFullYear()),
         karyawanApi.getActivities(),
       ]);
     if (userRes.status === "fulfilled") user.value = userRes.value.data;
+    if (ringkasanRes.status === "fulfilled") ringkasan.value = ringkasanRes.value.data;
     if (ongoingRes.status === "fulfilled")
       ongoingList.value = ongoingRes.value.data || [];
     if (riwayatRes.status === "fulfilled")
@@ -235,11 +236,8 @@ onMounted(fetchData);
             </p>
             <span class="text-sm text-gray-500">{{ t("dashboard.days") }}</span>
           </div>
-          <p
-            v-if="usedApproved > 0 || usedPending > 0"
-            class="text-[10px] text-gray-400"
-          >
-            {{ usedPending }} {{ t("dashboard.pendingDays") }}
+          <p class="text-[10px] text-gray-400">
+            {{ t("dashboard.usedDescription", { count: terpakai }) }}
           </p>
         </div>
 
