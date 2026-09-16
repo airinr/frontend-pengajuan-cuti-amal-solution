@@ -51,7 +51,7 @@ npm install
 Buat file `.env` di root project:
 
 ```env
-VITE_API_BASE_URL=url.ezample
+VITE_API_BASE_URL=url.example
 ```
 
 ### Development
