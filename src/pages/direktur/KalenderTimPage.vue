@@ -2,7 +2,10 @@
 import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
-import { karyawanApi, type KalenderItem } from "../../services/karyawan.service";
+import {
+  karyawanApi,
+  type KalenderItem,
+} from "../../services/karyawan.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 import { useCalendarNames } from "../../composables/useCalendarNames";
 import { getNetworkErrorMessage } from "../../lib/api";
@@ -67,7 +70,8 @@ const calendarDays = computed(() => {
 });
 
 const isToday = (date: Date) => formatDate(date) === formatDate(today);
-const isSelected = (date: Date) => formatDate(date) === formatDate(selectedDate.value);
+const isSelected = (date: Date) =>
+  formatDate(date) === formatDate(selectedDate.value);
 
 const isHoliday = (date: Date) => {
   const dateStr = formatDate(date);
@@ -85,7 +89,7 @@ const getHolidayName = (date: Date) => {
 };
 
 const isApprovedLeave = (status: string) => {
-  return status === 'disetujui_hr' || status === 'disetujui_direktur';
+  return status === "disetujui_hr" || status === "disetujui_direktur";
 };
 
 const getTeamLeaveOnDate = (date: Date) => {
@@ -93,10 +97,14 @@ const getTeamLeaveOnDate = (date: Date) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (date < today) return [];
-  return teamCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
+  return teamCalendar.value.filter(
+    (item) => item.tanggal === dateStr && isApprovedLeave(item.status),
+  );
 };
 
-const selectedDateTeamLeave = computed(() => getTeamLeaveOnDate(selectedDate.value));
+const selectedDateTeamLeave = computed(() =>
+  getTeamLeaveOnDate(selectedDate.value),
+);
 
 const selectedDateLabel = computed(() => {
   const d = selectedDate.value;
@@ -144,8 +152,10 @@ onMounted(async () => {
       holidayApi.getByYear(currentYear.value),
       karyawanApi.getTeamCalendar(),
     ]);
-    if (holidayRes.status === "fulfilled") holidays.value = holidayRes.value.data.data || [];
-    if (teamRes.status === "fulfilled") teamCalendar.value = teamRes.value.data || [];
+    if (holidayRes.status === "fulfilled")
+      holidays.value = holidayRes.value.data.data || [];
+    if (teamRes.status === "fulfilled")
+      teamCalendar.value = teamRes.value.data || [];
   } catch (err) {
     error.value = getNetworkErrorMessage(err);
   } finally {
@@ -158,24 +168,37 @@ onMounted(async () => {
   <div>
     <!-- Header -->
     <div class="mb-6">
-      <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('calendar.title') }}</h1>
-      <p class="text-sm text-gray-500">{{ t('calendar.subtitle') }}</p>
+      <h1 class="text-xl lg:text-2xl font-bold text-gray-800">
+        {{ t("calendar.title") }}
+      </h1>
+      <p class="text-sm text-gray-500">{{ t("calendar.subtitle") }}</p>
     </div>
 
     <div class="flex flex-col lg:flex-row gap-6">
       <!-- Kalender -->
-      <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6">
+      <div
+        class="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6"
+      >
         <!-- Header: Hari ini + Navigasi Bulan -->
         <div class="flex items-center justify-between mb-6">
           <button
             @click="goToToday"
             class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
             </svg>
-            {{ t('calendar.today') }}
+            {{ t("calendar.today") }}
           </button>
 
           <div class="flex items-center gap-3">
@@ -183,26 +206,50 @@ onMounted(async () => {
               @click="prevMonth"
               class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
             >
-              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              <svg
+                class="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
-            <span class="text-base font-semibold text-gray-800 min-w-[160px] text-center">
+            <span
+              class="text-base font-semibold text-gray-800 min-w-[160px] text-center"
+            >
               {{ monthNamesLong[currentMonth] }} {{ currentYear }}
             </span>
             <button
               @click="nextMonth"
               class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
             >
-              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                class="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>
         </div>
 
         <!-- Grid Kalender -->
-        <div class="grid grid-cols-7 border border-gray-200 rounded-lg overflow-hidden">
+        <div
+          class="grid grid-cols-7 border border-gray-200 rounded-lg overflow-hidden"
+        >
           <!-- Header Hari -->
           <div
             v-for="day in dayNamesShort"
@@ -220,17 +267,29 @@ onMounted(async () => {
             :class="[
               'min-h-[72px] p-1.5 border-b border-r border-gray-200 text-sm transition-colors relative cursor-pointer',
               !day.currentMonth && 'bg-gray-50/50 text-gray-300',
-              day.currentMonth && !isSelected(day.date) && 'bg-white hover:bg-gray-50',
-              isSelected(day.date) && 'ring-2 ring-inset ring-blue-500 bg-blue-50',
-              day.currentMonth && isToday(day.date) && !isSelected(day.date) && 'bg-blue-50/50',
+              day.currentMonth &&
+                !isSelected(day.date) &&
+                'bg-white hover:bg-gray-50',
+              isSelected(day.date) &&
+                'ring-2 ring-inset ring-blue-500 bg-blue-50',
+              day.currentMonth &&
+                isToday(day.date) &&
+                !isSelected(day.date) &&
+                'bg-blue-50/50',
             ]"
           >
             <span
               :class="[
                 'inline-block w-7 h-7 leading-7 text-center rounded-full text-sm font-medium',
                 isSelected(day.date) && 'bg-blue-600 text-white',
-                !isSelected(day.date) && day.currentMonth && isToday(day.date) && 'bg-blue-100 text-blue-700',
-                !isSelected(day.date) && day.currentMonth && (day.date.getDay() === 0 || day.date.getDay() === 6) && 'text-red-400',
+                !isSelected(day.date) &&
+                  day.currentMonth &&
+                  isToday(day.date) &&
+                  'bg-blue-100 text-blue-700',
+                !isSelected(day.date) &&
+                  day.currentMonth &&
+                  (day.date.getDay() === 0 || day.date.getDay() === 6) &&
+                  'text-red-400',
               ]"
             >
               {{ day.day }}
@@ -257,17 +316,18 @@ onMounted(async () => {
             </div>
 
             <!-- Libur Nasional -->
-            <div
-              v-if="day.currentMonth && isHoliday(day.date)"
-              class="mt-0.5"
-            >
+            <div v-if="day.currentMonth && isHoliday(day.date)" class="mt-0.5">
               <span
                 :class="[
                   'block text-[7px] leading-tight px-1 py-0.5 rounded truncate text-white',
                   isCutiBersama(day.date) ? 'bg-green-500' : 'bg-red-500',
                 ]"
               >
-                {{ isCutiBersama(day.date) ? 'Cuti Bersama' : getHolidayName(day.date) }}
+                {{
+                  isCutiBersama(day.date)
+                    ? "Cuti Bersama"
+                    : getHolidayName(day.date)
+                }}
               </span>
             </div>
           </div>
@@ -279,14 +339,27 @@ onMounted(async () => {
         <!-- Info Tanggal Terpilih -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <div
+              class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
             </div>
             <div>
-              <p class="text-lg font-bold text-gray-800">{{ selectedDateLabel }}</p>
+              <p class="text-lg font-bold text-gray-800">
+                {{ selectedDateLabel }}
+              </p>
               <p class="text-sm text-gray-500">{{ selectedDateDayName }}</p>
             </div>
           </div>
@@ -295,7 +368,9 @@ onMounted(async () => {
           <div>
             <div class="flex items-center gap-2 mb-2">
               <div class="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
-              <span class="text-sm font-semibold text-gray-700">{{ t('calendar.teamLeave') }}</span>
+              <span class="text-sm font-semibold text-gray-700">{{
+                t("calendar.teamLeave")
+              }}</span>
             </div>
             <div v-if="selectedDateTeamLeave.length > 0" class="space-y-2">
               <div
@@ -304,38 +379,52 @@ onMounted(async () => {
                 class="p-3 bg-gray-50 rounded-lg border border-gray-100"
               >
                 <p class="text-sm font-medium text-gray-800">{{ item.nama }}</p>
-                <p class="text-xs text-gray-500">{{ item.keterangan || item.jenis_cuti }}</p>
+                <p class="text-xs text-gray-500">
+                  {{ item.keterangan || item.jenis_cuti }}
+                </p>
                 <span
                   :class="[
                     'inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-medium',
-                    item.status === 'Disetujui' ? 'bg-green-100 text-green-700' :
-                    item.status === 'Ditolak' ? 'bg-red-100 text-red-700' :
-                    'bg-yellow-100 text-yellow-700',
+                    item.status === 'Disetujui'
+                      ? 'bg-green-100 text-green-700'
+                      : item.status === 'Ditolak'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700',
                   ]"
                 >
                   {{ item.status }}
                 </span>
               </div>
             </div>
-            <p v-else class="text-xs text-gray-400 italic">{{ t('calendar.noTeamLeave') }}</p>
+            <p v-else class="text-xs text-gray-400 italic">
+              {{ t("calendar.noTeamLeave") }}
+            </p>
           </div>
         </div>
 
         <!-- Keterangan / Legenda -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h3 class="text-sm font-bold text-gray-800 mb-3">{{ t('approval.keterangan') }}</h3>
+          <h3 class="text-sm font-bold text-gray-800 mb-3">
+            {{ t("approval.keterangan") }}
+          </h3>
           <div class="space-y-2.5">
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span class="text-sm text-gray-600">{{ t('leave.nationalHoliday') }}</span>
+              <span class="text-sm text-gray-600">{{
+                t("leave.nationalHoliday")
+              }}</span>
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span class="text-sm text-gray-600">{{ t('leave.collective') }}</span>
+              <span class="text-sm text-gray-600">{{
+                t("leave.collective")
+              }}</span>
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-              <span class="text-sm text-gray-600">{{ t('calendar.teamLeave') }}</span>
+              <span class="text-sm text-gray-600">{{
+                t("calendar.teamLeave")
+              }}</span>
             </div>
           </div>
         </div>
