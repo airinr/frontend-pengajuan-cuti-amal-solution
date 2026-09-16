@@ -293,7 +293,7 @@ onMounted(async () => {
               <textarea
                 v-model="rejectAlasan"
                 rows="3"
-                placeholder="contoh: Ada meeting dengan client"
+                placeholder="contoh: Jadwal sudah padat, tidak bisa diganti dengan rekan lain"
                 class="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               ></textarea>
             </div>

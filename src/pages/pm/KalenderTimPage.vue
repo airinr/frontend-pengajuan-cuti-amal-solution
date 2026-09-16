@@ -3,12 +3,15 @@ import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import { karyawanApi, type KalenderItem } from "../../services/karyawan.service";
+import { authApi } from "../../services/auth.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
 import { useCalendarNames } from "../../composables/useCalendarNames";
+import { getNetworkErrorMessage } from "../../lib/api";
+import type { CurrentUser } from "../../types";
 
 const { t } = useI18n();
 const { showError } = useErrorPopup();
-const { dayNamesShort, dayNamesFull, monthNamesLong } = useCalendarNames();
+const { dayNamesShort, dayNamesFull, monthNamesLong, getDayFull } = useCalendarNames();
 
 const today = new Date();
 const currentMonth = ref(today.getMonth());
@@ -16,7 +19,15 @@ const currentYear = ref(today.getFullYear());
 const selectedDate = ref<Date>(today);
 
 const holidays = ref<Holiday[]>([]);
+const myCalendar = ref<KalenderItem[]>([]);
 const teamCalendar = ref<KalenderItem[]>([]);
+const currentUser = ref<CurrentUser | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
+
+const filteredTeamCalendar = computed(() =>
+  teamCalendar.value.filter((item) => item.nama !== currentUser.value?.nama)
+);
 
 const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -81,11 +92,27 @@ const getHolidayName = (date: Date) => {
   return holidays.value.find((h) => h.date === dateStr)?.name || "";
 };
 
-const getTeamLeaveOnDate = (date: Date) => {
-  const dateStr = formatDate(date);
-  return teamCalendar.value.filter((item) => item.tanggal === dateStr);
+const isApprovedLeave = (status: string) => {
+  return status === 'disetujui_hr' || status === 'disetujui_direktur';
 };
 
+const getMyLeaveOnDate = (date: Date) => {
+  const dateStr = formatDate(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return [];
+  return myCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
+};
+
+const getTeamLeaveOnDate = (date: Date) => {
+  const dateStr = formatDate(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return [];
+  return filteredTeamCalendar.value.filter((item) => item.tanggal === dateStr && isApprovedLeave(item.status));
+};
+
+const selectedDateMyLeave = computed(() => getMyLeaveOnDate(selectedDate.value));
 const selectedDateTeamLeave = computed(() => getTeamLeaveOnDate(selectedDate.value));
 
 const selectedDateLabel = computed(() => {
@@ -96,7 +123,7 @@ const selectedDateLabel = computed(() => {
   return `${dayNum} ${monthName} ${year}`;
 });
 
-const selectedDateDayName = computed(() => dayNamesFull.value[selectedDate.value.getDay()]);
+const selectedDateDayName = computed(() => getDayFull(selectedDate.value));
 
 const goToToday = () => {
   const now = new Date();
@@ -128,15 +155,22 @@ const selectDate = (date: Date) => {
 };
 
 onMounted(async () => {
+  loading.value = true;
   try {
-    const [holidayRes, teamRes] = await Promise.all([
+    const [holidayRes, myRes, teamRes, userRes] = await Promise.allSettled([
       holidayApi.getByYear(currentYear.value),
+      karyawanApi.getMyCalendar(),
       karyawanApi.getTeamCalendar(),
+      authApi.me(),
     ]);
-    holidays.value = holidayRes.data.data || [];
-    teamCalendar.value = teamRes.data || [];
+    if (holidayRes.status === "fulfilled") holidays.value = holidayRes.value.data.data || [];
+    if (myRes.status === "fulfilled") myCalendar.value = myRes.value.data || [];
+    if (teamRes.status === "fulfilled") teamCalendar.value = teamRes.value.data || [];
+    if (userRes.status === "fulfilled") currentUser.value = userRes.value.data;
   } catch (err) {
-    showError(err);
+    error.value = getNetworkErrorMessage(err);
+  } finally {
+    loading.value = false;
   }
 });
 </script>
@@ -223,9 +257,23 @@ onMounted(async () => {
               {{ day.day }}
             </span>
 
+            <!-- Badge Cuti Saya -->
+            <div
+              v-if="day.currentMonth && getMyLeaveOnDate(day.date).length > 0"
+              class="mt-0.5"
+            >
+              <span
+                v-for="(item, i) in getMyLeaveOnDate(day.date).slice(0, 2)"
+                :key="'my-' + i"
+                class="block text-[8px] leading-tight px-1 py-0.5 bg-blue-500 text-white rounded truncate mb-0.5"
+              >
+                Cuti Saya
+              </span>
+            </div>
+
             <!-- Badge Team Leave -->
             <div
-              v-if="day.currentMonth && getTeamLeaveOnDate(day.date).length > 0"
+              v-if="day.currentMonth && getTeamLeaveOnDate(day.date).length > 0 && getMyLeaveOnDate(day.date).length === 0"
               class="mt-0.5"
             >
               <span
@@ -233,13 +281,27 @@ onMounted(async () => {
                 :key="i"
                 class="block text-[8px] leading-tight px-1 py-0.5 bg-gray-400 text-white rounded truncate mb-0.5"
               >
-                {{ item.nama.split(' ')[0] }}.
+                {{ item.nama }}
               </span>
               <span
                 v-if="getTeamLeaveOnDate(day.date).length > 2"
                 class="block text-[8px] leading-tight text-gray-500"
               >
                 +{{ getTeamLeaveOnDate(day.date).length - 2 }} lagi
+              </span>
+            </div>
+
+            <!-- Badge Campuran (ada cuti saya + tim) -->
+            <div
+              v-if="day.currentMonth && getMyLeaveOnDate(day.date).length > 0 && getTeamLeaveOnDate(day.date).length > 0"
+              class="mt-0.5"
+            >
+              <span
+                v-for="(item, i) in getTeamLeaveOnDate(day.date).slice(0, 1)"
+                :key="'tmix-' + i"
+                class="block text-[8px] leading-tight px-1 py-0.5 bg-gray-400 text-white rounded truncate mb-0.5"
+              >
+                {{ item.nama }}
               </span>
             </div>
 
@@ -254,7 +316,7 @@ onMounted(async () => {
                   isCutiBersama(day.date) ? 'bg-green-500' : 'bg-red-500',
                 ]"
               >
-                {{ isCutiBersama(day.date) ? 'Cuti B.' : getHolidayName(day.date).split(' ').slice(0, 2).join(' ') }}
+                {{ isCutiBersama(day.date) ? 'Cuti Bersama' : getHolidayName(day.date) }}
               </span>
             </div>
           </div>
@@ -276,6 +338,35 @@ onMounted(async () => {
               <p class="text-lg font-bold text-gray-800">{{ selectedDateLabel }}</p>
               <p class="text-sm text-gray-500">{{ selectedDateDayName }}</p>
             </div>
+          </div>
+
+          <!-- Cuti Saya -->
+          <div class="mb-4">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-2.5 h-2.5 bg-blue-500 rounded-full"></div>
+              <span class="text-sm font-semibold text-gray-700">{{ t('calendar.myLeave') }}</span>
+            </div>
+            <div v-if="selectedDateMyLeave.length > 0" class="space-y-2">
+              <div
+                v-for="(item, i) in selectedDateMyLeave"
+                :key="i"
+                class="p-3 bg-blue-50 rounded-lg border border-blue-100"
+              >
+                <p class="text-sm font-medium text-gray-800">{{ item.nama }}</p>
+                <p class="text-xs text-gray-500">{{ item.keterangan || item.jenis_cuti }}</p>
+                <span
+                  :class="[
+                    'inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-medium',
+                    item.status === 'Disetujui' ? 'bg-green-100 text-green-700' :
+                    item.status === 'Ditolak' ? 'bg-red-100 text-red-700' :
+                    'bg-yellow-100 text-yellow-700',
+                  ]"
+                >
+                  {{ item.status }}
+                </span>
+              </div>
+            </div>
+            <p v-else class="text-xs text-gray-400 italic">{{ t('calendar.noMyLeave') }}</p>
           </div>
 
           <!-- Jadwal Tim -->
@@ -326,7 +417,7 @@ onMounted(async () => {
             </div>
             <div class="flex items-center gap-2.5">
               <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-              <span class="text-sm text-gray-600">{{ t('calendar.teamLeave') }} ({{ t('status.approved') }})</span>
+              <span class="text-sm text-gray-600">{{ t('calendar.teamLeave') }}</span>
             </div>
           </div>
         </div>

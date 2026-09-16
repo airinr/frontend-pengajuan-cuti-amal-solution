@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { authApi } from '../../services/auth.service'
+import { departmentApi, type Department } from '../../services/department.service'
 import { useErrorPopup } from '../../composables/useErrorPopup'
 import type { CurrentUser } from '../../types'
 
@@ -11,9 +12,15 @@ const { showError } = useErrorPopup()
 const router = useRouter()
 
 const user = ref<CurrentUser | null>(null)
+const departments = ref<Department[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 const successMessage = ref('')
+
+const departmentName = computed(() => {
+  const dept = departments.value.find(d => d.id_departemen === user.value?.id_departemen)
+  return dept?.nama_departemen || '-'
+})
 
 const profileForm = ref({
   email: '',
@@ -34,6 +41,16 @@ const passwordSuccess = ref('')
 
 const currentLanguage = computed(() => locale.value === 'id' ? 'Bahasa Indonesia' : 'English')
 
+const roleLabel = computed(() => {
+  const roleMap: Record<string, string> = {
+    karyawan: 'Karyawan',
+    pm: 'Project Manager',
+    hr: 'Human Resources',
+    direktur: 'Direktur',
+  }
+  return roleMap[user.value?.role || ''] || user.value?.role || '-'
+})
+
 const selectLanguage = (lang: string) => {
   locale.value = lang
   localStorage.setItem('locale', lang)
@@ -44,10 +61,21 @@ const getInitials = (name: string) => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
+  const day = date.getDate()
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+  return `${day} ${months[date.getMonth()]} ${date.getFullYear()}`
+}
+
 onMounted(async () => {
   try {
-    const res = await authApi.me()
-    user.value = res.data
+    const [userRes, deptRes] = await Promise.all([
+      authApi.me(),
+      departmentApi.getAll(),
+    ])
+    user.value = userRes.data
+    departments.value = deptRes.data || []
     profileForm.value = {
       email: user.value?.email || '',
       no_telp: user.value?.no_telp || '',
@@ -120,7 +148,7 @@ const handleSaveProfile = async () => {
             {{ getInitials(user.nama) }}
           </div>
           <h2 class="text-lg font-semibold text-gray-800">{{ user.nama }}</h2>
-          <p class="text-sm text-gray-500 mb-3">{{ user.role === 'karyawan' ? t('nav.personal') : t('nav.hrAdmin') }}</p>
+          <p class="text-sm text-gray-500 mb-3">{{ roleLabel }}</p>
           <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
             {{ user.username.toUpperCase() }}
           </span>
@@ -138,47 +166,57 @@ const handleSaveProfile = async () => {
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+              <!-- Non-editable fields -->
               <div>
                 <label class="block text-sm text-gray-500 mb-1">{{ t('auth.username') }}</label>
-                <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <span class="text-sm text-gray-700">{{ user.username }}</span>
+                <div class="flex items-center gap-2 px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg">
+                  <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span class="text-sm text-gray-500">{{ user.username }}</span>
                 </div>
+                <p class="text-[10px] text-gray-400 mt-1">Diisi oleh perusahaan</p>
               </div>
               <div>
-                <label class="block text-sm text-gray-500 mb-1">Email</label>
+                <label class="block text-sm text-gray-500 mb-1">{{ t('employee.department') }}</label>
+                <div class="flex items-center gap-2 px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg">
+                  <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span class="text-sm text-gray-500">{{ departmentName }}</span>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-1">Diisi oleh perusahaan</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-500 mb-1">Tanggal Bergabung</label>
+                <div class="flex items-center gap-2 px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg">
+                  <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span class="text-sm text-gray-500">{{ user.tanggal_bergabung ? formatDate(user.tanggal_bergabung) : '-' }}</span>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-1">Diisi oleh perusahaan</p>
+              </div>
+              <div></div>
+
+              <!-- Editable fields -->
+              <div>
+                <label class="block text-sm text-gray-500 mb-1">Email <span class="text-red-500">*</span></label>
                 <input
                   v-model="profileForm.email"
                   type="email"
                   placeholder="email@example.com"
-                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                  class="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
                 />
               </div>
               <div>
-                <label class="block text-sm text-gray-500 mb-1">{{ t('employee.phone') }}</label>
+                <label class="block text-sm text-gray-500 mb-1">{{ t('employee.phone') }} <span class="text-red-500">*</span></label>
                 <input
                   v-model="profileForm.no_telp"
                   type="text"
                   placeholder="08xxxxxxxxxx"
-                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                  class="w-full px-4 py-3 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
                 />
-              </div>
-              <div>
-                <label class="block text-sm text-gray-500 mb-1">{{ t('employee.department') }}</label>
-                <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <span class="text-sm text-gray-700">{{ user.id_departemen }}</span>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-500 mb-1">{{ t('employee.joinDate') }}</label>
-                <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span class="text-sm text-gray-700">{{ user.tanggal_bergabung || '-' }}</span>
-                </div>
               </div>
             </div>
           </div>

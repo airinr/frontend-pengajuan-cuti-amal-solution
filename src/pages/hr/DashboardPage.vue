@@ -11,7 +11,9 @@ import {
   karyawanApi,
   type ActivityItem,
 } from "../../services/karyawan.service";
+import { authApi } from "../../services/auth.service";
 import { getNetworkErrorMessage } from "../../lib/api";
+import type { CurrentUser } from "../../types";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -19,8 +21,13 @@ const router = useRouter();
 const stats = ref<DashboardStats | null>(null);
 const cutiMendatang = ref<CutiMendatangItem[]>([]);
 const activities = ref<ActivityItem[]>([]);
+const currentUser = ref<CurrentUser | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
+
+const filteredCutiMendatang = computed(() =>
+  cutiMendatang.value.filter((item) => item.nama !== currentUser.value?.nama)
+);
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
@@ -52,23 +59,26 @@ const getInitials = (name: string) => {
 };
 
 const goToKalender = () => {
-  router.push("/hr/kalender-libur");
+  router.push("/hr/kalender-tim");
 };
 
 const fetchData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const [statsRes, mendatangRes, activityRes] = await Promise.allSettled([
+    const [statsRes, mendatangRes, activityRes, userRes] = await Promise.allSettled([
       hrApi.getDashboardStats(),
       hrApi.getCutiMendatang(),
       karyawanApi.getActivities(),
+      authApi.me(),
     ]);
     if (statsRes.status === "fulfilled") stats.value = statsRes.value.data;
     if (mendatangRes.status === "fulfilled")
       cutiMendatang.value = mendatangRes.value.data || [];
     if (activityRes.status === "fulfilled")
       activities.value = activityRes.value.data || [];
+    if (userRes.status === "fulfilled")
+      currentUser.value = userRes.value.data;
   } catch (err: any) {
     error.value = getNetworkErrorMessage(err);
   } finally {
@@ -107,160 +117,78 @@ onMounted(fetchData);
     </div>
 
     <template v-else>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
-          class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
-        >
-          <div class="flex items-center gap-3">
+      <div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        <div class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+            Total Hak Cuti
+          </p>
+          <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+            {{ stats?.total_cuti ?? "-" }}
+            <span class="text-sm font-normal text-gray-500">{{ t('dashboard.days') }}</span>
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+            Sisa Cuti Anda
+          </p>
+          <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+            {{ stats?.sisa_cuti ?? "-" }}
+            <span class="text-sm font-normal text-gray-500">{{ t('dashboard.days') }}</span>
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+            Cuti Terpakai
+          </p>
+          <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+            {{ stats?.cuti_terpakai ?? "-" }}
+            <span class="text-sm font-normal text-gray-500">{{ t('dashboard.days') }}</span>
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+            {{ t('dashboard.totalEmployees') }}
+          </p>
+          <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+            {{ stats?.total_karyawan ?? "-" }}
+            <span class="text-sm font-normal text-gray-500">{{ t('common.total') }}</span>
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 relative">
+          <p class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+            {{ t('status.waiting') }}
+          </p>
+          <div class="flex items-center gap-2">
+            <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+              {{ stats?.menunggu ?? "-" }}
+              <span class="text-sm font-normal text-gray-500">{{ t('common.total') }}</span>
+            </p>
             <div
-              class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"
+              v-if="stats && stats.menunggu > 0"
+              class="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
             >
-              <svg
-                class="w-5 h-5 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                />
+              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-            </div>
-            <div>
-              <p
-                class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium"
-              >
-                {{ t('dashboard.totalEmployees') }}
-              </p>
-              <p class="text-2xl lg:text-3xl font-bold text-gray-800">
-                {{ stats?.total_karyawan ?? "-" }}
-              </p>
             </div>
           </div>
         </div>
 
-        <div
-          class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 relative"
-        >
-          <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center"
-            >
-              <svg
-                class="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
-            </div>
-            <div>
-                <p
-                  class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium"
-                >
-                  {{ t('status.waiting') }}
-                </p>
-                <div class="flex items-center gap-2">
-                  <p class="text-2xl lg:text-3xl font-bold text-gray-800">
-                    {{ stats?.menunggu ?? "-" }}
-                  </p>
-                  <div
-                    v-if="stats && stats.menunggu > 0"
-                    class="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
-                >
-                  <svg
-                    class="w-3 h-3 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
-        >
-          <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"
-            >
-              <svg
-                class="w-5 h-5 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p
-                class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium"
-              >
-                Cuti Bulan Ini
-              </p>
-              <p class="text-2xl lg:text-3xl font-bold text-gray-800">
-                {{ stats?.total_cuti_bulan_ini ?? "-" }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
-        >
-          <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"
-            >
-              <svg
-                class="w-5 h-5 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p
-                class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium"
-              >
-                {{ t('dashboard.upcomingLeave') }}
-              </p>
-              <p class="text-2xl lg:text-3xl font-bold text-gray-800">
-                {{ stats?.total_cuti_bulan_depan ?? "-" }}
-              </p>
-            </div>
+        <div class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100">
+          <p class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+            Rekap Bulan Ini
+          </p>
+          <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+            {{ stats?.total_pengajuan ?? "-" }}
+            <span class="text-sm font-normal text-gray-500">{{ t('dashboard.submissions') }}</span>
+          </p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs text-green-600 font-medium">{{ stats?.total_pengajuan_diacc ?? 0 }} {{ t('dashboard.approve') }}</span>
+            <span class="text-xs text-red-500 font-medium">{{ stats?.total_pengajuan_ditolak ?? 0 }} {{ t('dashboard.reject') }}</span>
           </div>
         </div>
       </div>
@@ -284,14 +212,14 @@ onMounted(fetchData);
           </div>
           <div class="p-4 lg:p-6">
             <div
-              v-if="cutiMendatang.length === 0"
+              v-if="filteredCutiMendatang.length === 0"
               class="text-center text-gray-400 text-sm py-4"
             >
               {{ t('dashboard.noTeamLeave') }}
             </div>
             <div v-else class="space-y-4">
               <div
-                v-for="(item, i) in cutiMendatang"
+                v-for="(item, i) in filteredCutiMendatang"
                 :key="i"
                 class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >

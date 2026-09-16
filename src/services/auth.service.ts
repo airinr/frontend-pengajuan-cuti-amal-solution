@@ -1,5 +1,5 @@
 import api from '../lib/api'
-import type { AuthResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, RegisterResponse, UpdateProfileRequest } from '../types'
+import type { AuthResponse, ChangePasswordRequest, LoginRequest, UpdateProfileRequest } from '../types'
 
 export interface UserList {
   id_user: number
@@ -12,18 +12,22 @@ export interface RegisterAdminRequest {
   password: string
   role: string
   id_departemen: number
-  id_pm?: number | null
+  email: string
+  no_telp: string
+  tanggal_bergabung: string
+  id_pm_list: number[]
 }
 
 export interface UpdateKaryawanRequest {
   nama: string
   role: string
   id_departemen: number
-  id_pm?: number | null
   email: string
   no_telp: string
   tanggal_bergabung: string
   status: string
+  pm_add?: number[]
+  pm_remove?: number[]
 }
 
 export const authApi = {
@@ -35,9 +39,6 @@ export const authApi = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     })
   },
-
-  register: (data: RegisterRequest) =>
-    api.post<RegisterResponse>('/auth/register', data),
 
   registerAdmin: (data: RegisterAdminRequest) =>
     api.post('/auth/register-admin', data),

@@ -13,13 +13,22 @@ export interface ApprovalQueueItem {
   alasan: string;
 }
 
+export interface PmApprovalDetail {
+  nama_pm: string
+  status: string
+  processed_at: string | null
+}
+
 export interface PenambahanKerjaQueueItem {
-  id_pengajuan_kerja: number;
-  nama: string;
-  nama_departemen: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
-  keterangan: string;
+  id_pengajuan_kerja: number
+  nama: string
+  nama_departemen: string
+  tanggal_mulai: string
+  tanggal_selesai: string
+  keterangan: string
+  tanggal_pengajuan: string
+  status: string
+  approval_pm_detail: PmApprovalDetail[]
 }
 
 export const approvalApi = {

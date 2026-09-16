@@ -14,18 +14,23 @@
     "persetujuan": "Approval",
     "persetujuanBekerja": "Work Approval",
     "rekapCutiTim": "Team Leave Recap",
-    "kalenderTim": "Team Calendar",
+    "kalenderTim": "Leave Calendar",
     "pengajuanSaya": "My Requests",
     "logRekapCuti": "Leave Log & Recap",
     "dataKaryawan": "Employee Data",
     "jatahCuti": "Leave Quota",
-    "kalenderLibur": "Holiday Calendar",
     "managerView": "Project Manager",
     "personal": "Personal",
     "hrAdmin": "HR Admin",
     "direkturAdmin": "Director Admin",
     "cuti": "LEAVE",
-    "bekerja": "WORK"
+    "bekerja": "WORK",
+    "penambahanKerja": "ADDITIONAL WORK",
+    "persetujuanKerja": "Work Approval",
+    "logRekapKerja": "Work Log & Recap",
+    "karyawan": "EMPLOYEE",
+    "riwayatPengajuanKerja": "Work Request History",
+    "rekapPengajuanKerja": "Work Request Recap"
   },
   "auth": {
     "login": "Login",
@@ -47,14 +52,19 @@
     "selectPM": "Select Project Manager",
     "agreeTerms": "I agree to the Terms and Conditions",
     "loggingIn": "Signing in...",
-    "registering": "Registering..."
+    "registering": "Registering...",
+    "accountCreatedBy": "Account created by HR/Director"
   },
   "dashboard": {
     "title": "Dashboard",
     "leaveSummary": "Leave Summary",
     "yearPeriod": "Year Period",
     "totalLeave": "Total Leave Entitlement",
+    "totalLeaveDescription": "Leave valid for 1 year",
     "used": "Used",
+    "usedDescription": "You have used {count} days of leave",
+    "approved": "Approved",
+    "pendingDays": "Awaiting Approval",
     "remainingLeave": "Remaining Leave",
     "remainingFrom": "Remaining from",
     "days": "Days",
@@ -67,7 +77,7 @@
     "createLeave": "+ New Request",
     "viewCalendar": "View Calendar",
     "leaveUsed": "Leave Used",
-    "waiting": "Waiting",
+    "waiting": "Awaiting Approval",
     "monthRecap": "Monthly Recap",
     "submissions": "Submissions",
     "approve": "Approve",
@@ -83,10 +93,10 @@
     "teamLeaveUpcoming": "Employee Upcoming Leave"
   },
   "status": {
-    "waiting": "Waiting",
-    "waitingPM": "Waiting for PM",
-    "waitingHR": "Waiting for HR",
-    "waitingDirector": "Waiting for Director",
+    "waiting": "Awaiting Approval",
+    "waitingPM": "Awaiting PM Approval",
+    "waitingHR": "Awaiting HR Approval",
+    "waitingDirector": "Awaiting Director Approval",
     "approved": "Approved",
     "approvedPM": "Approved by PM",
     "approvedHR": "Approved by HR",
@@ -141,11 +151,14 @@
     "declarationPoint3": "I am fully responsible for the accuracy of the information provided above.",
     "remainingLeave": "Your Remaining Leave",
     "used": "Used",
-    "total": "Total"
+    "total": "Total",
+    "editRequest": "Edit Request",
+    "editSuccess": "Request updated successfully",
+    "editSuccessMsg": "Your request will be reprocessed by your supervisor."
   },
   "statusPage": {
     "title": "Leave Request Status",
-    "subtitle": "Monitor your leave request approval process in real-time. Contact your supervisor if the status hasn't changed within 2x24 hours.",
+    "subtitle": "Monitor your leave request approval process in real-time. Status will be updated periodically via email.",
     "activeRequests": "Active Requests",
     "noActive": "No active requests",
     "currentStatus": "Current Status",
@@ -155,18 +168,20 @@
     "title": "Leave History",
     "subtitle": "Track your previous leave requests and their status.",
     "noData": "No leave requests yet",
-    "allStatus": "All Status",
     "leaveDate": "Leave Date",
     "duration": "Duration",
     "leaveType": "Leave Type",
     "backup": "Backup",
     "status": "Status",
+    "keterangan": "Description",
     "submitted": "Submitted",
     "days": "Days",
     "showing": "Showing",
     "of": "of",
     "data": "data",
-    "noHistory": "No leave history data"
+    "noHistory": "No leave history data",
+    "newest": "Newest",
+    "oldest": "Oldest"
   },
   "calendar": {
     "title": "Leave Calendar",
@@ -178,7 +193,7 @@
     "legend": "Legend",
     "noMyLeave": "No leave on this date",
     "noTeamLeaveOnDate": "No team schedule on this date",
-    "teamLeaveApproved": "Team Schedule (Approved)",
+    "teamLeaveApproved": "Team Schedule",
     "nationalHoliday": "National Holiday",
     "collectiveLeave": "Collective Leave"
   },
@@ -201,9 +216,10 @@
     "workApproval": "Work Approval",
     "manageTeamLeave": "Manage your team's leave requests.",
     "manageTeamWork": "Manage your team's work requests.",
+    "approveWorkDescription": "Approve the employee to work on collective leave days.",
     "history": "Leave Approval History",
     "manageProcessed": "Manage and monitor all processed employee leave requests.",
-    "waiting": "Waiting",
+    "waiting": "Awaiting Approval",
     "historyTab": "History",
     "allPeriods": "All Periods",
     "thisMonth": "This Month",
@@ -211,7 +227,7 @@
     "noPending": "No pending approval requests",
     "department": "Department",
     "duration": "Duration",
-    "delegasiTugas": "Delegasi Tugas",
+    "delegasiTugas": "Task Delegation",
     "remainingLeave": "Remaining Leave",
     "leaveReason": "Leave Reason",
     "approve": "Approve",
@@ -223,12 +239,13 @@
     "rejectMessage": "You are about to reject the employee's request. Please provide a reason for this decision. This reason will be sent to the employee.",
     "rejectReason": "Rejection Reason",
     "rejectRequired": "*",
-    "rejectPlaceholder": "e.g: There's a meeting with client",
+    "rejectPlaceholder": "e.g: Schedule is fully booked, cannot be replaced by another colleague",
     "cancel": "Cancel",
     "confirmReject": "Confirm Reject",
     "approving": "Approving...",
     "rejecting": "Submitting...",
     "summary": "Team Summary",
+    "activeMembers": "Active Members",
     "month": "Month",
     "totalSubmissions": "Total Submissions",
     "waitingApproval": "Awaiting Approval",
@@ -271,6 +288,23 @@
     "activeRequests": "Active Requests",
     "noActive": "No active requests",
     "workTag": "Work"
+  },
+  "workHistory": {
+    "title": "Work Request History",
+    "subtitle": "Track your previous work request records.",
+    "workDate": "Work Date",
+    "noHistory": "No work request history data"
+  },
+  "rekapWork": {
+    "title": "Team Work Request Recap",
+    "subtitle": "Summary of your team's work requests.",
+    "totalMembers": "Total Members",
+    "totalSubmissions": "Total Submissions",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "active": "Active",
+    "inactive": "Inactive",
+    "workDates": "Work Dates"
   },
   "employee": {
     "title": "Employee Data",
@@ -315,7 +349,7 @@
     "saving": "Saving...",
     "save": "Save",
     "success": "Successfully Added!",
-    "successMsg": "New employee has been registered successfully.",
+    "successMsg": "New employee has been registered by HR/Director.",
     "close": "Close",
     "showing": "Showing",
     "of": "of",
@@ -353,6 +387,7 @@
     "employees": "employees",
     "adjustTitle": "Adjust Leave Quota",
     "adjustDescription": "Add leave quota for all employees.",
+    "quotaNote": "The additional leave allowance will be added to your employees' remaining leave balance.",
     "leaveYear": "Leave Year",
     "annualQuota": "Annual Leave Quota",
     "description": "Description",
@@ -383,6 +418,8 @@
     "backup": "Backup",
     "status": "Status",
     "hrApprover": "HR/Approver",
+    "approver": "Approver",
+    "submissionDate": "Submission Date",
     "totalPerYear": "Total Leave/Year (Days)",
     "remainingPerYear": "Remaining Leave (Days)",
     "searchPlaceholder": "Search employees...",
@@ -395,6 +432,16 @@
     "of": "of",
     "data": "data",
     "leaveLogData": "leave log"
+  },
+  "logRekapKerja": {
+    "title": "Work Request Log & Recap",
+    "subtitle": "Historical reports and employee work request statistics.",
+    "logTab": "Work Request Log",
+    "workDate": "Work Date",
+    "totalSubmissions": "Total Submissions",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "workLogData": "work request log"
   },
   "department": {
     "title": "Department",
@@ -444,6 +491,7 @@
     "agreeRules": "You must agree to the submission rules",
     "minAdvance": "Leave request must be at least 10 days in advance",
     "maxDays": "Maximum 4 days of leave",
+    "noRemainingLeave": "You have no remaining leave balance. Please contact HR for more information.",
     "profileLoadFailed": "Failed to load profile data. Check your connection.",
     "passwordMismatchConfirm": "New password confirmation does not match",
     "passwordChanged": "Password changed successfully",
@@ -451,7 +499,8 @@
     "profileSaved": "Profile saved successfully",
     "profileSaveFailed": "Failed to save profile",
     "selectCollectiveLeave": "Please select a collective leave date first",
-    "workReasonRequired": "Work reason is required"
+    "workReasonRequired": "Work reason is required",
+    "hasRejectedLeave": "You have a rejected leave request. Please edit it on the Leave Status page before submitting a new request."
   },
   "network": {
     "timeout": "Request timed out. Server may be slow.",
@@ -490,13 +539,47 @@
     "evening": "Good Evening"
   },
   "months": {
-    "short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    "long": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    "short": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ],
+    "long": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ]
   },
   "days": {
     "short": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     "mini": ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
-    "full": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    "full": [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday"
+    ]
   },
   "activity": {
     "submission": "Submitted",
@@ -506,6 +589,6 @@
   "registerAdmin": {
     "title": "Add Employee",
     "success": "Successfully Added!",
-    "successMsg": "New employee has been registered successfully."
+    "successMsg": "New employee has been registered by HR/Director."
   }
 }

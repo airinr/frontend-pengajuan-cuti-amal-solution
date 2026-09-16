@@ -14,18 +14,23 @@
     "persetujuan": "Persetujuan",
     "persetujuanBekerja": "Persetujuan Bekerja",
     "rekapCutiTim": "Rekap Cuti Tim",
-    "kalenderTim": "Kalender Tim",
+    "kalenderTim": "Kalender Cuti",
     "pengajuanSaya": "Pengajuan Saya",
     "logRekapCuti": "Log & Rekap Cuti",
     "dataKaryawan": "Data Karyawan",
     "jatahCuti": "Jatah Cuti",
-    "kalenderLibur": "Kalender & Libur",
     "managerView": "Project Manager",
     "personal": "Personal",
     "hrAdmin": "HR Admin",
     "direkturAdmin": "Direktur Admin",
     "cuti": "CUTI",
-    "bekerja": "BEKERJA"
+    "bekerja": "BEKERJA",
+    "penambahanKerja": "PENAMBAHAN KERJA",
+    "persetujuanKerja": "Persetujuan Kerja",
+    "logRekapKerja": "Log & Rekap Kerja",
+    "karyawan": "KARYAWAN",
+    "riwayatPengajuanKerja": "Riwayat Pengajuan Kerja",
+    "rekapPengajuanKerja": "Rekap Pengajuan Kerja"
   },
   "auth": {
     "login": "Login",
@@ -47,14 +52,19 @@
     "selectPM": "Pilih Project Manager",
     "agreeTerms": "Saya setuju dengan Syarat dan Ketentuan",
     "loggingIn": "Masuk...",
-    "registering": "Mendaftar..."
+    "registering": "Mendaftar...",
+    "accountCreatedBy": "Akun dibuat oleh HR/Direktur"
   },
   "dashboard": {
     "title": "Dashboard",
     "leaveSummary": "Ringkasan Cuti",
     "yearPeriod": "Periode Tahun",
     "totalLeave": "Total Hak Cuti",
+    "totalLeaveDescription": "Cuti berlaku selama 1 tahun",
     "used": "Terpakai",
+    "usedDescription": "Anda sudah menggunakan cuti sebanyak {count} Hari",
+    "approved": "Disetujui",
+    "pendingDays": "Menunggu Persetujuan",
     "remainingLeave": "Sisa Cuti Anda",
     "remainingFrom": "Tersisa dari",
     "days": "Hari",
@@ -67,7 +77,7 @@
     "createLeave": "+ Buat Pengajuan",
     "viewCalendar": "Lihat Kalender",
     "leaveUsed": "Cuti Terpakai",
-    "waiting": "Menunggu",
+    "waiting": "Menunggu Persetujuan",
     "monthRecap": "Rekap Bulan Ini",
     "submissions": "Pengajuan",
     "approve": "Setuju",
@@ -83,10 +93,10 @@
     "teamLeaveUpcoming": "Cuti Karyawan Mendatang"
   },
   "status": {
-    "waiting": "Menunggu",
-    "waitingPM": "Menunggu PM",
-    "waitingHR": "Menunggu HRD",
-    "waitingDirector": "Menunggu Direktur",
+    "waiting": "Menunggu Persetujuan",
+    "waitingPM": "Menunggu Persetujuan PM",
+    "waitingHR": "Menunggu Persetujuan HRD",
+    "waitingDirector": "Menunggu Persetujuan Direktur",
     "approved": "Disetujui",
     "approvedPM": "Disetujui PM",
     "approvedHR": "Disetujui HRD",
@@ -141,11 +151,14 @@
     "declarationPoint3": "Saya bertanggung jawab penuh atas kebenaran informasi yang saya sampaikan di atas.",
     "remainingLeave": "Sisa Cuti Anda",
     "used": "Digunakan",
-    "total": "Total"
+    "total": "Total",
+    "editRequest": "Edit Pengajuan",
+    "editSuccess": "Pengajuan berhasil diperbarui",
+    "editSuccessMsg": "Pengajuan Anda akan diproses ulang oleh atasan."
   },
   "statusPage": {
     "title": "Status Pengajuan Cuti",
-    "subtitle": "Pantau proses persetujuan pengajuan cuti Anda secara real-time. Hubungi atasan jika status belum berubah dalam 2x24 jam.",
+    "subtitle": "Pantau proses persetujuan pengajuan cuti Anda secara real-time. Status akan diupdate secara berkala melalui email.",
     "activeRequests": "Pengajuan Aktif",
     "noActive": "Tidak ada pengajuan aktif",
     "currentStatus": "Status Saat Ini",
@@ -155,18 +168,20 @@
     "title": "Riwayat Cuti",
     "subtitle": "Lacak rekam jejak dan status pengajuan cuti Anda sebelumnya.",
     "noData": "Belum ada pengajuan cuti",
-    "allStatus": "Semua Status",
     "leaveDate": "Tanggal Cuti",
     "duration": "Durasi",
     "leaveType": "Jenis Cuti",
     "backup": "Backup",
     "status": "Status",
+    "keterangan": "Keterangan",
     "submitted": "Diajukan",
     "days": "Hari",
     "showing": "Menampilkan",
     "of": "dari",
     "data": "data",
-    "noHistory": "Tidak ada data riwayat cuti"
+    "noHistory": "Tidak ada data riwayat cuti",
+    "newest": "Terbaru",
+    "oldest": "Terlama"
   },
   "calendar": {
     "title": "Kalender Cuti",
@@ -178,7 +193,7 @@
     "legend": "Keterangan",
     "noMyLeave": "Tidak ada cuti pada tanggal ini",
     "noTeamLeaveOnDate": "Tidak ada jadwal tim pada tanggal ini",
-    "teamLeaveApproved": "Jadwal Tim (Disetujui)",
+    "teamLeaveApproved": "Jadwal Tim",
     "nationalHoliday": "Libur Nasional",
     "collectiveLeave": "Cuti Bersama"
   },
@@ -201,9 +216,10 @@
     "workApproval": "Persetujuan Bekerja",
     "manageTeamLeave": "Kelola pengajuan cuti anggota tim Anda.",
     "manageTeamWork": "Kelola pengajuan tetap bekerja anggota tim Anda.",
+    "approveWorkDescription": "Setujui karyawan untuk tetap bekerja pada hari cuti bersama.",
     "history": "Riwayat Persetujuan Cuti",
     "manageProcessed": "Kelola dan pantau seluruh permohonan cuti karyawan yang telah diproses.",
-    "waiting": "Menunggu",
+    "waiting": "Menunggu Persetujuan",
     "historyTab": "Riwayat",
     "allPeriods": "Semua Periode",
     "thisMonth": "Bulan Ini",
@@ -223,12 +239,13 @@
     "rejectMessage": "Anda akan menolak permintaan dari karyawan. Tolong berikan alasan atas keputusan ini. Alasan ini akan dikirim ke karyawan tersebut.",
     "rejectReason": "Alasan Penolakan",
     "rejectRequired": "*",
-    "rejectPlaceholder": "contoh: Ada meeting dengan client",
+    "rejectPlaceholder": "contoh: Jadwal sudah padat, tidak bisa diganti dengan rekan lain",
     "cancel": "Batal",
     "confirmReject": "Konfirmasi Tolak",
     "approving": "Menyetujui...",
     "rejecting": "Mengirim...",
     "summary": "Ringkasan Tim",
+    "activeMembers": "Anggota Aktif",
     "month": "Bulan",
     "totalSubmissions": "Total Pengajuan",
     "waitingApproval": "Menunggu Persetujuan",
@@ -271,6 +288,23 @@
     "activeRequests": "Pengajuan Aktif",
     "noActive": "Tidak ada pengajuan aktif",
     "workTag": "Kerja"
+  },
+  "workHistory": {
+    "title": "Riwayat Pengajuan Kerja",
+    "subtitle": "Lacak rekam jejak pengajuan kerja Anda sebelumnya.",
+    "workDate": "Tanggal Kerja",
+    "noHistory": "Tidak ada data riwayat pengajuan kerja"
+  },
+  "rekapWork": {
+    "title": "Rekap Pengajuan Kerja Tim",
+    "subtitle": "Ringkasan pengajuan kerja anggota tim Anda.",
+    "totalMembers": "Total Anggota",
+    "totalSubmissions": "Total Pengajuan",
+    "approved": "Disetujui",
+    "rejected": "Ditolak",
+    "active": "Aktif",
+    "inactive": "Tidak Aktif",
+    "workDates": "Tanggal Kerja"
   },
   "employee": {
     "title": "Data Karyawan",
@@ -315,7 +349,7 @@
     "saving": "Menyimpan...",
     "save": "Simpan",
     "success": "Berhasil Ditambahkan!",
-    "successMsg": "Karyawan baru telah berhasil didaftarkan.",
+    "successMsg": "Karyawan baru telah berhasil didaftarkan oleh HR/Direktur.",
     "close": "Tutup",
     "showing": "Menampilkan",
     "of": "dari",
@@ -353,6 +387,7 @@
     "employees": "karyawan",
     "adjustTitle": "Sesuaikan Kuota Cuti",
     "adjustDescription": "Tambahkan kuota cuti untuk semua karyawan.",
+    "quotaNote": "Kuota cuti tambahan akan bertambah ke sisa saldo cuti Karyawan.",
     "leaveYear": "Tahun Jatah",
     "annualQuota": "Jatah Cuti Tahunan",
     "description": "Keterangan",
@@ -383,6 +418,8 @@
     "backup": "Pengganti",
     "status": "Status",
     "hrApprover": "HR/Approver",
+    "approver": "Approver",
+    "submissionDate": "Tanggal Pengajuan",
     "totalPerYear": "Total Cuti/Tahun (Hari)",
     "remainingPerYear": "Sisa Cuti (Hari)",
     "searchPlaceholder": "Cari karyawan...",
@@ -395,6 +432,16 @@
     "of": "dari",
     "data": "data",
     "leaveLogData": "log cuti"
+  },
+  "logRekapKerja": {
+    "title": "Log & Rekapitulasi Pengajuan Kerja",
+    "subtitle": "Laporan historis dan statistik pengajuan kerja karyawan.",
+    "logTab": "Log Pengajuan Kerja",
+    "workDate": "Tanggal Kerja",
+    "totalSubmissions": "Total Pengajuan",
+    "approved": "Disetujui",
+    "rejected": "Ditolak",
+    "workLogData": "log pengajuan kerja"
   },
   "department": {
     "title": "Departemen",
@@ -444,6 +491,7 @@
     "agreeRules": "Anda harus menyetujui aturan pengajuan",
     "minAdvance": "Pengajuan cuti minimal H-10 sebelum tanggal cuti",
     "maxDays": "Maksimal 4 hari cuti",
+    "noRemainingLeave": "Anda tidak memiliki sisa cuti yang tersisa. Silakan hubungi HR untuk informasi lebih lanjut.",
     "profileLoadFailed": "Gagal memuat data profil. Periksa koneksi Anda.",
     "passwordMismatchConfirm": "Konfirmasi password baru tidak cocok",
     "passwordChanged": "Password berhasil diubah",
@@ -451,7 +499,8 @@
     "profileSaved": "Profil berhasil disimpan",
     "profileSaveFailed": "Gagal menyimpan profil",
     "selectCollectiveLeave": "Pilih tanggal cuti bersama terlebih dahulu",
-    "workReasonRequired": "Alasan tetap bekerja wajib diisi"
+    "workReasonRequired": "Alasan tetap bekerja wajib diisi",
+    "hasRejectedLeave": "Anda memiliki pengajuan cuti yang ditolak. Silakan edit pengajuan tersebut di halaman Status Pengajuan sebelum mengajukan cuti baru."
   },
   "network": {
     "timeout": "Permintaan melewati batas waktu. Server mungkin sedang lambat.",
@@ -490,8 +539,34 @@
     "evening": "Selamat Malam"
   },
   "months": {
-    "short": ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"],
-    "long": ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+    "short": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "Mei",
+      "Jun",
+      "Jul",
+      "Agu",
+      "Sep",
+      "Okt",
+      "Nov",
+      "Des"
+    ],
+    "long": [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember"
+    ]
   },
   "days": {
     "short": ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"],
@@ -506,6 +581,6 @@
   "registerAdmin": {
     "title": "Tambah Karyawan",
     "success": "Berhasil Ditambahkan!",
-    "successMsg": "Karyawan baru telah berhasil didaftarkan."
+    "successMsg": "Karyawan baru telah berhasil didaftarkan oleh HR/Direktur."
   }
 }

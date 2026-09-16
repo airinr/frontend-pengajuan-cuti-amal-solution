@@ -3,8 +3,9 @@ import api from "../lib/api";
 export interface DashboardStats {
   total_karyawan: number;
   menunggu: number;
-  total_cuti_bulan_ini: number;
-  total_cuti_bulan_depan: number;
+  total_pengajuan: number;
+  total_pengajuan_diacc: number;
+  total_pengajuan_ditolak: number;
 }
 
 export interface ActivityItem {
@@ -80,7 +81,7 @@ export interface KaryawanItem {
   jabatan: string;
   email: string;
   status: string;
-  nama_pm?: string;
+  nama_pm?: string[];
 }
 
 export interface DepartemenItem {

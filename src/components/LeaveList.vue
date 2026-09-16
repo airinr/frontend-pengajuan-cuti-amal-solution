@@ -64,7 +64,7 @@ const statusBadge = (status: string) => {
 
 const statusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    pending: 'Menunggu',
+    pending: t('status.waiting'),
     approved: 'Disetujui',
     rejected: 'Ditolak',
   }

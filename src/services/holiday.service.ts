@@ -19,7 +19,18 @@ export interface HolidayResponse {
   data: Holiday[]
 }
 
+const holidayCache = new Map<number, HolidayResponse>()
+
 export const holidayApi = {
-  getByYear: (year: number) =>
-    axios.get<HolidayResponse>(`https://api.kemendesa.link/libur-nasional/api/holidays/${year}.json`),
+  getByYear: async (year: number): Promise<{ data: HolidayResponse }> => {
+    if (holidayCache.has(year)) {
+      return { data: holidayCache.get(year)! }
+    }
+    const response = await axios.get<HolidayResponse>(
+      `https://api.kemendesa.link/libur-nasional/api/holidays/${year}.json`,
+      { timeout: 10000 }
+    )
+    holidayCache.set(year, response.data)
+    return response
+  },
 }

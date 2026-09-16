@@ -1,7 +1,7 @@
 import { test as base, type Page } from '@playwright/test'
 import { setupMockRoutes } from '../mocks/handlers'
 
-type UserRole = 'karyawan' | 'karyawan_dept3' | 'pm_user' | 'hr_user' | 'direktur_user'
+type UserRole = 'karyawan' | 'karyawan_dept3' | 'pm_user' | 'hr_user' | 'direktur_user' | 'staff_hr_user'
 
 interface MockUserRole {
   page: Page
@@ -21,6 +21,7 @@ export const test = base.extend<MockUserRole>({
         pm_user: { id_user: 2, username: 'pm_user', nama: 'Andi PM', role: 'pm', id_departemen: 1 },
         hr_user: { id_user: 3, username: 'hr_user', nama: 'Sari HR', role: 'hr', id_departemen: 2 },
         direktur_user: { id_user: 4, username: 'direktur_user', nama: 'Dewi Direktur', role: 'direktur', id_departemen: 3 },
+        staff_hr_user: { id_user: 5, username: 'staff_hr_user', nama: 'Rina Staff HR', role: 'staff_hr', id_departemen: 2 },
       }
       const userData = tokenMap[role]
       const exp = Math.floor(Date.now() / 1000) + 86400
@@ -35,6 +36,7 @@ export const test = base.extend<MockUserRole>({
         pm_user: '/pm/dashboard',
         hr_user: '/hr/dashboard',
         direktur_user: '/direktur/dashboard',
+        staff_hr_user: '/staff_hr/dashboard',
       }
 
       await page.goto('/login')

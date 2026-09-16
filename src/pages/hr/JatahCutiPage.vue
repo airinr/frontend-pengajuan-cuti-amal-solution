@@ -60,20 +60,19 @@ const goToPage = (page: number) => {
 
 const showModal = ref(false);
 const formTahun = ref(new Date().getFullYear());
-const formKuota = ref(12);
+const formKuota = ref(0);
 const formKeterangan = ref("");
 const applyLoading = ref(false);
 const applyError = ref("");
 const applySuccess = ref("");
 
-const years = computed(() => {
-  const current = new Date().getFullYear();
-  return Array.from({ length: 5 }, (_, i) => current - i);
+const isFormValid = computed(() => {
+  return formKuota.value > 0 && formKeterangan.value.trim() !== "";
 });
 
 const openModal = () => {
   formTahun.value = new Date().getFullYear();
-  formKuota.value = 12;
+  formKuota.value = 0;
   formKeterangan.value = "";
   applyError.value = "";
   applySuccess.value = "";
@@ -425,6 +424,14 @@ onMounted(() => {
             <p class="text-sm text-gray-500 mb-5">
               {{ t('leaveQuota.adjustDescription') }}
             </p>
+            <div class="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+              <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-xs text-blue-700">
+                {{ t('leaveQuota.quotaNote') }}
+              </p>
+            </div>
 
             <div class="space-y-4">
               <div>
@@ -433,20 +440,15 @@ onMounted(() => {
                 >
                   {{ t('leaveQuota.leaveYear') }}
                 </label>
-                <select
-                  v-model="formTahun"
-                  class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option v-for="y in years" :key="y" :value="y">
-                    {{ y }}
-                  </option>
-                </select>
+                <div class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
+                  {{ formTahun }}
+                </div>
               </div>
               <div>
                 <label
                   class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1"
                 >
-                  {{ t('leaveQuota.annualQuota') }}
+                  {{ t('leaveQuota.annualQuota') }} <span class="text-red-500">*</span>
                 </label>
                 <div class="flex items-center gap-2">
                   <button
@@ -475,7 +477,7 @@ onMounted(() => {
                 <label
                   class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1"
                 >
-                  {{ t('leaveQuota.description') }}
+                  {{ t('leaveQuota.description') }} <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="formKeterangan"
@@ -502,8 +504,8 @@ onMounted(() => {
               </button>
               <button
                 @click="handleApply"
-                :disabled="applyLoading"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                :disabled="applyLoading || !isFormValid"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {{ applyLoading ? t('leaveQuota.saving') : t('leaveQuota.apply') }}
               </button>

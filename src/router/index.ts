@@ -1,42 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
-import LoginPage from '../pages/LoginPage.vue'
-import RegisterPage from '../pages/RegisterPage.vue'
-import KaryawanLayout from '../layouts/KaryawanLayout.vue'
-import DashboardPage from '../pages/karyawan/DashboardPage.vue'
-import PengajuanCutiPage from '../pages/karyawan/PengajuanCutiPage.vue'
-import StatusPengajuanPage from '../pages/karyawan/StatusPengajuanPage.vue'
-import RiwayatCutiPage from '../pages/karyawan/RiwayatCutiPage.vue'
-import KalenderCutiPage from '../pages/karyawan/KalenderCutiPage.vue'
-import ProfilPage from '../pages/karyawan/ProfilPage.vue'
-import PengajuanTetapBekerjaPage from '../pages/karyawan/PengajuanTetapBekerjaPage.vue'
-import StatusPengajuanKerjaPage from '../pages/karyawan/StatusPengajuanKerjaPage.vue'
-
-import PmLayout from '../layouts/PmLayout.vue'
-import PmDashboardPage from '../pages/pm/DashboardPage.vue'
-import PmPersetujuanPage from '../pages/pm/PersetujuanPage.vue'
-import PmPersetujuanBekerjaPage from '../pages/pm/PersetujuanBekerjaPage.vue'
-import PmRekapCutiTimPage from '../pages/pm/RekapCutiTimPage.vue'
-import PmKalenderTimPage from '../pages/pm/KalenderTimPage.vue'
-
-import HrLayout from '../layouts/HrLayout.vue'
-import HrDashboardPage from '../pages/hr/DashboardPage.vue'
-import HrPersetujuanPage from '../pages/hr/PersetujuanPage.vue'
-import HrLogRekapCutiPage from '../pages/hr/LogRekapCutiPage.vue'
-import HrDataKaryawanPage from '../pages/hr/DataKaryawanPage.vue'
-import HrJatahCutiPage from '../pages/hr/JatahCutiPage.vue'
-import HrKalenderLiburPage from '../pages/hr/KalenderLiburPage.vue'
-
-import DirekturLayout from '../layouts/DirekturLayout.vue'
-import DirekturDashboardPage from '../pages/direktur/DashboardPage.vue'
-import DirekturPersetujuanPage from '../pages/direktur/PersetujuanPage.vue'
-import DirekturLogRekapCutiPage from '../pages/direktur/LogRekapCutiPage.vue'
-import DirekturDataKaryawanPage from '../pages/direktur/DataKaryawanPage.vue'
-import DirekturJatahCutiPage from '../pages/direktur/JatahCutiPage.vue'
-import DirekturKalenderLiburPage from '../pages/direktur/KalenderLiburPage.vue'
-import DirekturProfilPage from '../pages/direktur/ProfilPage.vue'
-import KalenderTimPage from '../pages/pm/KalenderTimPage.vue'
-
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -45,18 +8,12 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
-    component: LoginPage,
-    meta: { requiresGuest: true }
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: RegisterPage,
+    component: () => import('../pages/LoginPage.vue'),
     meta: { requiresGuest: true }
   },
   {
     path: '/karyawan',
-    component: KaryawanLayout,
+    component: () => import('../layouts/KaryawanLayout.vue'),
     meta: { requiresAuth: true, role: 'karyawan' },
     children: [
       {
@@ -66,48 +23,53 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'dashboard',
         name: 'KaryawanDashboard',
-        component: DashboardPage
+        component: () => import('../pages/karyawan/DashboardPage.vue')
       },
       {
         path: 'pengajuan-cuti',
         name: 'KaryawanPengajuanCuti',
-        component: PengajuanCutiPage
+        component: () => import('../pages/karyawan/PengajuanCutiPage.vue')
       },
       {
         path: 'status-pengajuan',
         name: 'KaryawanStatusPengajuan',
-        component: StatusPengajuanPage
+        component: () => import('../pages/karyawan/StatusPengajuanPage.vue')
       },
       {
         path: 'riwayat-cuti',
         name: 'KaryawanRiwayatCuti',
-        component: RiwayatCutiPage
+        component: () => import('../pages/karyawan/RiwayatCutiPage.vue')
       },
       {
         path: 'kalender-cuti',
         name: 'KaryawanKalenderCuti',
-        component: KalenderCutiPage
+        component: () => import('../pages/karyawan/KalenderCutiPage.vue')
       },
       {
         path: 'profil',
         name: 'KaryawanProfil',
-        component: ProfilPage
+        component: () => import('../pages/karyawan/ProfilPage.vue')
       },
       {
         path: 'pengajuan-bekerja',
         name: 'KaryawanPengajuanBekerja',
-        component: PengajuanTetapBekerjaPage
+        component: () => import('../pages/karyawan/PengajuanTetapBekerjaPage.vue')
       },
       {
         path: 'status-pengajuan-kerja',
         name: 'KaryawanStatusPengajuanKerja',
-        component: StatusPengajuanKerjaPage
+        component: () => import('../pages/karyawan/StatusPengajuanKerjaPage.vue')
+      },
+      {
+        path: 'riwayat-pengajuan-kerja',
+        name: 'KaryawanRiwayatPengajuanKerja',
+        component: () => import('../pages/karyawan/RiwayatPengajuanKerjaPage.vue')
       }
     ]
   },
   {
     path: '/pm',
-    component: PmLayout,
+    component: () => import('../layouts/PmLayout.vue'),
     meta: { requiresAuth: true, role: 'pm' },
     children: [
       {
@@ -117,53 +79,58 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'dashboard',
         name: 'PmDashboard',
-        component: PmDashboardPage
+        component: () => import('../pages/pm/DashboardPage.vue')
       },
       {
         path: 'persetujuan',
         name: 'PmPersetujuan',
-        component: PmPersetujuanPage
+        component: () => import('../pages/pm/PersetujuanPage.vue')
       },
       {
         path: 'persetujuan-bekerja',
         name: 'PmPersetujuanBekerja',
-        component: PmPersetujuanBekerjaPage
+        component: () => import('../pages/pm/PersetujuanBekerjaPage.vue')
+      },
+      {
+        path: 'rekap-pengajuan-kerja',
+        name: 'PmRekapPengajuanKerja',
+        component: () => import('../pages/pm/RekapPengajuanKerjaTimPage.vue')
       },
       {
         path: 'rekap-cuti-tim',
         name: 'PmRekapCutiTim',
-        component: PmRekapCutiTimPage
+        component: () => import('../pages/pm/RekapCutiTimPage.vue')
       },
       {
         path: 'kalender-tim',
         name: 'PmKalenderTim',
-        component: PmKalenderTimPage
+        component: () => import('../pages/pm/KalenderTimPage.vue')
       },
       {
         path: 'pengajuan-cuti',
         name: 'PmPengajuanCuti',
-        component: PengajuanCutiPage
+        component: () => import('../pages/karyawan/PengajuanCutiPage.vue')
       },
       {
         path: 'riwayat-cuti',
         name: 'PmRiwayatCuti',
-        component: RiwayatCutiPage
+        component: () => import('../pages/karyawan/RiwayatCutiPage.vue')
       },
       {
         path: 'status-pengajuan',
         name: 'PmStatusPengajuan',
-        component: StatusPengajuanPage
+        component: () => import('../pages/karyawan/StatusPengajuanPage.vue')
       },
       {
         path: 'profil',
         name: 'PmProfil',
-        component: ProfilPage
+        component: () => import('../pages/karyawan/ProfilPage.vue')
       }
     ]
   },
   {
     path: '/hr',
-    component: HrLayout,
+    component: () => import('../layouts/HrLayout.vue'),
     meta: { requiresAuth: true, role: 'hr' },
     children: [
       {
@@ -173,63 +140,139 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'dashboard',
         name: 'HrDashboard',
-        component: HrDashboardPage
+        component: () => import('../pages/hr/DashboardPage.vue')
       },
       {
         path: 'persetujuan',
         name: 'HrPersetujuan',
-        component: HrPersetujuanPage
+        component: () => import('../pages/hr/PersetujuanPage.vue')
       },
       {
         path: 'log-rekap-cuti',
         name: 'HrLogRekapCuti',
-        component: HrLogRekapCutiPage
+        component: () => import('../pages/hr/LogRekapCutiPage.vue')
       },
       {
         path: 'data-karyawan',
         name: 'HrDataKaryawan',
-        component: HrDataKaryawanPage
+        component: () => import('../pages/hr/DataKaryawanPage.vue')
       },
       {
         path: 'jatah-cuti',
         name: 'HrJatahCuti',
-        component: HrJatahCutiPage
-      },
-      {
-        path: 'kalender-libur',
-        name: 'HrKalenderLibur',
-        component: HrKalenderLiburPage
+        component: () => import('../pages/hr/JatahCutiPage.vue')
       },
       {
         path: 'kalender-tim',
         name: 'HrKalenderTim',
-        component: KalenderTimPage
+        component: () => import('../pages/pm/KalenderTimPage.vue')
+      },
+      {
+        path: 'persetujuan-kerja',
+        name: 'HrPersetujuanKerja',
+        component: () => import('../pages/hr/PersetujuanPenambahanKerjaPage.vue')
+      },
+      {
+        path: 'log-rekap-kerja',
+        name: 'HrLogRekapKerja',
+        component: () => import('../pages/hr/LogRekapPenambahanKerjaPage.vue')
       },
       {
         path: 'pengajuan-cuti',
         name: 'HrPengajuanCuti',
-        component: PengajuanCutiPage
+        component: () => import('../pages/karyawan/PengajuanCutiPage.vue')
       },
       {
         path: 'riwayat-cuti',
         name: 'HrRiwayatCuti',
-        component: RiwayatCutiPage
+        component: () => import('../pages/karyawan/RiwayatCutiPage.vue')
       },
       {
         path: 'status-pengajuan',
         name: 'HrStatusPengajuan',
-        component: StatusPengajuanPage
+        component: () => import('../pages/karyawan/StatusPengajuanPage.vue')
       },
       {
         path: 'profil',
         name: 'HrProfil',
-        component: ProfilPage
+        component: () => import('../pages/karyawan/ProfilPage.vue')
+      }
+    ]
+  },
+  {
+    path: '/staff_hr',
+    component: () => import('../layouts/StaffHrLayout.vue'),
+    meta: { requiresAuth: true, role: 'staff_hr' },
+    children: [
+      {
+        path: '',
+        redirect: '/staff_hr/dashboard'
+      },
+      {
+        path: 'dashboard',
+        name: 'StaffHrDashboard',
+        component: () => import('../pages/hr/DashboardPage.vue')
+      },
+      {
+        path: 'persetujuan',
+        name: 'StaffHrPersetujuan',
+        component: () => import('../pages/hr/PersetujuanPage.vue')
+      },
+      {
+        path: 'log-rekap-cuti',
+        name: 'StaffHrLogRekapCuti',
+        component: () => import('../pages/hr/LogRekapCutiPage.vue')
+      },
+      {
+        path: 'data-karyawan',
+        name: 'StaffHrDataKaryawan',
+        component: () => import('../pages/hr/DataKaryawanPage.vue')
+      },
+      {
+        path: 'jatah-cuti',
+        name: 'StaffHrJatahCuti',
+        component: () => import('../pages/hr/JatahCutiPage.vue')
+      },
+      {
+        path: 'kalender-tim',
+        name: 'StaffHrKalenderTim',
+        component: () => import('../pages/pm/KalenderTimPage.vue')
+      },
+      {
+        path: 'persetujuan-kerja',
+        name: 'StaffHrPersetujuanKerja',
+        component: () => import('../pages/hr/PersetujuanPenambahanKerjaPage.vue')
+      },
+      {
+        path: 'log-rekap-kerja',
+        name: 'StaffHrLogRekapKerja',
+        component: () => import('../pages/hr/LogRekapPenambahanKerjaPage.vue')
+      },
+      {
+        path: 'pengajuan-cuti',
+        name: 'StaffHrPengajuanCuti',
+        component: () => import('../pages/karyawan/PengajuanCutiPage.vue')
+      },
+      {
+        path: 'riwayat-cuti',
+        name: 'StaffHrRiwayatCuti',
+        component: () => import('../pages/karyawan/RiwayatCutiPage.vue')
+      },
+      {
+        path: 'status-pengajuan',
+        name: 'StaffHrStatusPengajuan',
+        component: () => import('../pages/karyawan/StatusPengajuanPage.vue')
+      },
+      {
+        path: 'profil',
+        name: 'StaffHrProfil',
+        component: () => import('../pages/karyawan/ProfilPage.vue')
       }
     ]
   },
   {
     path: '/direktur',
-    component: DirekturLayout,
+    component: () => import('../layouts/DirekturLayout.vue'),
     meta: { requiresAuth: true, role: 'direktur' },
     children: [
       {
@@ -239,52 +282,47 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'dashboard',
         name: 'DirekturDashboard',
-        component: DirekturDashboardPage
+        component: () => import('../pages/direktur/DashboardPage.vue')
       },
       {
         path: 'persetujuan',
         name: 'DirekturPersetujuan',
-        component: DirekturPersetujuanPage
+        component: () => import('../pages/direktur/PersetujuanPage.vue')
       },
       {
         path: 'log-rekap-cuti',
         name: 'DirekturLogRekapCuti',
-        component: DirekturLogRekapCutiPage
+        component: () => import('../pages/direktur/LogRekapCutiPage.vue')
       },
       {
         path: 'data-karyawan',
         name: 'DirekturDataKaryawan',
-        component: DirekturDataKaryawanPage
+        component: () => import('../pages/direktur/DataKaryawanPage.vue')
       },
       {
         path: 'jatah-cuti',
         name: 'DirekturJatahCuti',
-        component: DirekturJatahCutiPage
-      },
-      {
-        path: 'kalender-libur',
-        name: 'DirekturKalenderLibur',
-        component: DirekturKalenderLiburPage
+        component: () => import('../pages/direktur/JatahCutiPage.vue')
       },
       {
         path: 'kalender-tim',
         name: 'DirekturKalenderTim',
-        component: KalenderTimPage
+        component: () => import('../pages/direktur/KalenderTimPage.vue')
       },
       {
-        path: 'pengajuan-cuti',
-        name: 'DirekturPengajuanCuti',
-        component: PengajuanCutiPage
+        path: 'persetujuan-kerja',
+        name: 'DirekturPersetujuanKerja',
+        component: () => import('../pages/hr/PersetujuanPenambahanKerjaPage.vue')
       },
       {
-        path: 'riwayat-cuti',
-        name: 'DirekturRiwayatCuti',
-        component: RiwayatCutiPage
+        path: 'log-rekap-kerja',
+        name: 'DirekturLogRekapKerja',
+        component: () => import('../pages/hr/LogRekapPenambahanKerjaPage.vue')
       },
       {
         path: 'profil',
         name: 'DirekturProfil',
-        component: DirekturProfilPage
+        component: () => import('../pages/karyawan/ProfilPage.vue')
       }
     ]
   }

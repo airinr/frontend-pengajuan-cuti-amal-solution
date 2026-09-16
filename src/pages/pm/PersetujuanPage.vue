@@ -10,7 +10,7 @@ import { approvalApi, type ApprovalQueueItem } from "../../services/approval.ser
 import { useErrorPopup } from "../../composables/useErrorPopup";
 import { useCalendarNames } from "../../composables/useCalendarNames";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { showError } = useErrorPopup();
 const { monthNamesShort } = useCalendarNames();
 
@@ -80,8 +80,8 @@ const fetchHistory = async () => {
     totalItems.value = allHistoryList.value.length;
     totalPages.value = Math.ceil(totalItems.value / 10) || 1;
     applyPagination();
-  } catch {
-    // silent fail
+  } catch (err) {
+    showError(err);
   }
 };
 
@@ -89,9 +89,10 @@ const applyPagination = () => {
   const start = (currentPage.value - 1) * 10;
   const end = start + 10;
   const filtered = allHistoryList.value.filter((item) => {
-    if (!searchQuery.value) return true;
+    const statusMatch = item.status === 'Disetujui' || item.status === 'disetujui_hr';
+    if (!searchQuery.value) return statusMatch;
     const q = searchQuery.value.toLowerCase();
-    return (
+    return statusMatch && (
       item.nama.toLowerCase().includes(q) ||
       item.jenis_cuti.toLowerCase().includes(q) ||
       item.keterangan.toLowerCase().includes(q)
@@ -345,7 +346,7 @@ onMounted(async () => {
             <!-- Ringkasan Tim -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
               <h3 class="text-sm font-bold text-gray-800 mb-1">{{ t('approval.summary') }}</h3>
-              <p class="text-xs text-gray-400 mb-4">{{ t('approval.month') }} {{ new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) }}</p>
+              <p class="text-xs text-gray-400 mb-4">{{ t('approval.month') }} {{ new Date().toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { month: 'long', year: 'numeric' }) }}</p>
               <div class="space-y-3">
                 <div class="flex justify-between items-center">
                   <span class="text-sm text-gray-600">{{ t('approval.totalSubmissions') }}</span>
@@ -426,11 +427,11 @@ onMounted(async () => {
                       :class="[
                         'inline-block text-[10px] px-2.5 py-1 rounded-full font-medium',
                         item.status === 'Disetujui' ? 'bg-green-100 text-green-700' :
-                        item.status === 'Ditolak' ? 'bg-red-100 text-red-700' :
+                        item.status === 'disetujui_hr' ? 'bg-green-100 text-green-700' :
                         'bg-yellow-100 text-yellow-700',
                       ]"
                     >
-                      {{ item.status }}
+                      {{ t('status.approved') }}
                     </span>
                   </td>
                 </tr>

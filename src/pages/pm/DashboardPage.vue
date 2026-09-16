@@ -44,26 +44,19 @@ const fetchData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const userRes = await authApi.me();
-    user.value = userRes.data;
+    const [userRes, statsRes, pendingRes, activityRes] = await Promise.allSettled([
+      authApi.me(),
+      pmApi.getDashboardStats(),
+      pmApi.getDashboardTim(),
+      karyawanApi.getActivities(),
+    ]);
+    if (userRes.status === "fulfilled") user.value = userRes.value.data;
+    else error.value = getNetworkErrorMessage(new Error("Gagal memuat data user"));
+    if (statsRes.status === "fulfilled") stats.value = statsRes.value.data;
+    if (pendingRes.status === "fulfilled") pendingLeaves.value = pendingRes.value.data || [];
+    if (activityRes.status === "fulfilled") activities.value = activityRes.value.data || [];
   } catch (err: any) {
     error.value = getNetworkErrorMessage(err);
-  }
-
-  try {
-    const statsRes = await pmApi.getDashboardStats();
-    stats.value = statsRes.data;
-  } catch {}
-
-  try {
-    const pendingRes = await pmApi.getDashboardTim();
-    pendingLeaves.value = pendingRes.data || [];
-  } catch {}
-
-  try {
-    const activityRes = await karyawanApi.getActivities();
-    activities.value = activityRes.data || [];
-  } catch {
   } finally {
     loading.value = false;
   }
@@ -102,7 +95,21 @@ onMounted(fetchData);
     </div>
 
     <template v-else>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div
+          class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
+        >
+          <p
+            class="text-[10px] lg:text-xs text-gray-400 uppercase tracking-wide font-medium mb-1"
+          >
+            {{ t('dashboard.totalLeave') }}
+          </p>
+          <p class="text-2xl lg:text-3xl font-bold text-gray-800">
+            {{ stats?.jatah_cuti ?? "-" }}
+            <span class="text-sm font-normal text-gray-500">            {{ t('dashboard.days') }}</span>
+          </p>
+        </div>
+
         <div
           class="bg-white rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100"
         >
@@ -353,7 +360,7 @@ onMounted(fetchData);
                   </svg>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm text-gray-700">{{ item.keterangan }}</p>
+                  <p class="text-sm text-gray-700">{{ item.keterangan.replace(/\b(\w+)\s+\1\b/gi, '$1') }}</p>
                   <p class="text-xs text-gray-400 mt-0.5">{{ item.tanggal }}</p>
                 </div>
               </div>

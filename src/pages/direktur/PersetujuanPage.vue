@@ -11,26 +11,23 @@ import { useErrorPopup } from "../../composables/useErrorPopup";
 const { t } = useI18n();
 const { showError } = useErrorPopup();
 
+const activeTab = ref<"menunggu">("menunggu");
 const pendingList = ref<ApprovalQueueItem[]>([]);
-const ringkasan = ref<RingkasanPersetujuan>({
-  total_menunggu: 0,
-  disetujui_bulan_ini: 0,
-  ditolak_bulan_ini: 0,
-});
-
+const ringkasan = ref<RingkasanPersetujuan | null>(null);
 const loading = ref(true);
 const processingId = ref<number | null>(null);
 
-// Modal States
 const showApproveModal = ref(false);
+const approveTarget = ref<ApprovalQueueItem | null>(null);
+
 const showRejectModal = ref(false);
-const selectedItem = ref<ApprovalQueueItem | null>(null);
-const rejectReason = ref("");
+const rejectTarget = ref<ApprovalQueueItem | null>(null);
+const rejectAlasan = ref("");
+const rejectLoading = ref(false);
 
 const formatDateRange = (start: string, end: string) => {
-  if (!start) return "-";
   const s = new Date(start);
-  const e = new Date(end || start);
+  const e = new Date(end);
   const months = [
     "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
     "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
@@ -41,45 +38,50 @@ const formatDateRange = (start: string, end: string) => {
   return `${s.getDate()} ${months[s.getMonth()]} ${s.getFullYear()} - ${e.getDate()} ${months[e.getMonth()]} ${e.getFullYear()}`;
 };
 
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
 const fetchPending = async () => {
   try {
     const [pendingRes, ringkasanRes] = await Promise.allSettled([
       approvalApi.getApprovalQueue(),
       direkturApi.getRingkasan(),
     ]);
-    if (pendingRes.status === "fulfilled" && Array.isArray(pendingRes.value.data)) {
-      pendingList.value = pendingRes.value.data;
-    }
-    if (ringkasanRes.status === "fulfilled" && ringkasanRes.value.data) {
-      ringkasan.value = ringkasanRes.value.data;
-    }
+    if (pendingRes.status === "fulfilled") pendingList.value = pendingRes.value.data || [];
+    if (ringkasanRes.status === "fulfilled") ringkasan.value = ringkasanRes.value.data;
   } catch (err) {
     showError(err);
   }
 };
 
-const openApproveConfirm = (item: ApprovalQueueItem) => {
-  selectedItem.value = item;
+const openApproveModal = (item: ApprovalQueueItem) => {
+  approveTarget.value = item;
   showApproveModal.value = true;
 };
 
-const openRejectConfirm = (item: ApprovalQueueItem) => {
-  selectedItem.value = item;
-  rejectReason.value = "";
-  showRejectModal.value = true;
+const closeApproveModal = () => {
+  showApproveModal.value = false;
+  approveTarget.value = null;
 };
 
-const confirmApprove = async () => {
-  if (!selectedItem.value) return;
-  const id = selectedItem.value.id_log_cuti;
+const handleApprove = async () => {
+  if (!approveTarget.value) return;
+  const id = approveTarget.value.id_log_cuti;
   processingId.value = id;
   try {
     await approvalApi.approve(id);
     pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
-    ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
-    ringkasan.value.disetujui_bulan_ini += 1;
-    showApproveModal.value = false;
-    selectedItem.value = null;
+    if (ringkasan.value) {
+      ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
+      ringkasan.value.disetujui_bulan_ini += 1;
+    }
+    closeApproveModal();
   } catch (err) {
     showError(err);
   } finally {
@@ -87,22 +89,35 @@ const confirmApprove = async () => {
   }
 };
 
-const confirmReject = async () => {
-  if (!selectedItem.value || !rejectReason.value.trim()) return;
-  const id = selectedItem.value.id_log_cuti;
-  processingId.value = id;
+const openRejectModal = (item: ApprovalQueueItem) => {
+  rejectTarget.value = item;
+  rejectAlasan.value = "";
+  showRejectModal.value = true;
+};
+
+const closeRejectModal = () => {
+  showRejectModal.value = false;
+  rejectTarget.value = null;
+  rejectAlasan.value = "";
+};
+
+const handleReject = async () => {
+  if (!rejectTarget.value || !rejectAlasan.value.trim()) return;
+  rejectLoading.value = true;
   try {
-    await approvalApi.reject(id, rejectReason.value);
-    pendingList.value = pendingList.value.filter((item) => item.id_log_cuti !== id);
-    ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
-    ringkasan.value.ditolak_bulan_ini += 1;
-    showRejectModal.value = false;
-    selectedItem.value = null;
-    rejectReason.value = "";
+    await approvalApi.reject(rejectTarget.value.id_log_cuti, rejectAlasan.value);
+    pendingList.value = pendingList.value.filter(
+      (item) => item.id_log_cuti !== rejectTarget.value!.id_log_cuti
+    );
+    if (ringkasan.value) {
+      ringkasan.value.total_menunggu = Math.max(0, ringkasan.value.total_menunggu - 1);
+      ringkasan.value.ditolak_bulan_ini += 1;
+    }
+    closeRejectModal();
   } catch (err) {
     showError(err);
   } finally {
-    processingId.value = null;
+    rejectLoading.value = false;
   }
 };
 
@@ -114,235 +129,256 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6 max-w-7xl mx-auto">
+  <div>
     <!-- Header -->
-    <div>
-      <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-        {{ t('approval.leaveApproval') }}
-      </h1>
-      <p class="text-sm text-gray-500 mt-1">
-        {{ t('approval.manageTeamLeave') }}
-      </p>
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
+      <div>
+        <h1 class="text-xl lg:text-2xl font-bold text-gray-800">{{ t('approval.leaveApproval') }}</h1>
+        <p class="text-sm text-gray-500">{{ t('approval.manageTeamLeave') }}</p>
+      </div>
     </div>
 
-    <!-- Content Layout: 2 Columns -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-      <!-- Left Column: Pending Leaves List (8 Cols) -->
-      <div class="lg:col-span-8 space-y-5">
-        <div v-if="loading" class="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm flex justify-center items-center">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f4bb4]"></div>
+    <div v-if="loading" class="flex justify-center items-center py-12">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+
+    <template v-else>
+      <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Left: Cards -->
+        <div class="flex-1 space-y-4">
+          <div v-if="pendingList.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
+            {{ t('approval.noPending') }}
+          </div>
+
+          <div
+            v-for="item in pendingList"
+            :key="item.id_log_cuti"
+            class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div class="flex">
+              <!-- Left border color -->
+              <div
+                class="w-1 flex-shrink-0 bg-red-500"
+              ></div>
+              <div class="flex-1 p-4 lg:p-5">
+                <!-- Header: Avatar + Name + Status -->
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                      {{ getInitials(item.nama) }}
+                    </div>
+                    <div>
+                      <p class="text-sm font-semibold text-gray-800">{{ item.nama }}</p>
+                      <p class="text-xs text-gray-500">{{ item.nama_departemen }}</p>
+                    </div>
+                  </div>
+                  <span
+                    class="flex items-center gap-1.5 text-xs font-medium text-yellow-600 bg-yellow-50 px-2.5 py-1 rounded-full"
+                  >
+                    <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
+                    {{ t('status.pending').toUpperCase() }}
+                  </span>
+                </div>
+
+                <!-- Info Grid -->
+                <div class="grid grid-cols-5 gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.jenisCuti') }}</p>
+                    <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.jenis_cuti }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.dateRange') }}</p>
+                    <p class="text-xs font-medium text-gray-700 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.duration') }}</p>
+                    <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.durasi }} Hari</p>
+                  </div>
+                  <div>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.delegasiTugas') }}</p>
+                    <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.pengganti || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.remainingLeave') }}</p>
+                    <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.sisa_cuti }}</p>
+                  </div>
+                </div>
+
+                <!-- Alasan -->
+                <div class="mb-4">
+                  <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium mb-1">{{ t('approval.leaveReason') }}</p>
+                  <p class="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{{ item.alasan || '-' }}</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-end gap-3">
+                  <button
+                    @click="openRejectModal(item)"
+                    :disabled="processingId === item.id_log_cuti"
+                    class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    {{ t('approval.reject') }}
+                  </button>
+                  <button
+                    @click="openApproveModal(item)"
+                    :disabled="processingId === item.id_log_cuti"
+                    class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {{ t('approval.approve') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div v-else-if="pendingList.length === 0" class="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
-          <p class="text-base font-semibold text-gray-800">{{ t('approval.noPending') }}</p>
-          <p class="text-sm text-gray-400 mt-1">Semua pengajuan cuti telah selesai diproses.</p>
+        <!-- Right Sidebar -->
+        <div class="w-full lg:w-72">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h3 class="text-sm font-bold text-gray-800 mb-4">{{ t('approval.summary') }}</h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span class="text-sm text-gray-600">{{ t('approval.waiting') }}</span>
+                <span class="text-lg font-bold text-gray-800">{{ ringkasan?.total_menunggu ?? '-' }}</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span class="text-sm text-gray-600">{{ t('approval.disetujuiBulanIni') }}</span>
+                <span class="text-lg font-bold text-green-600">{{ ringkasan?.disetujui_bulan_ini ?? '-' }}</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span class="text-sm text-gray-600">{{ t('approval.ditolakBulanIni') }}</span>
+                <span class="text-lg font-bold text-red-600">{{ ringkasan?.ditolak_bulan_ini ?? '-' }}</span>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+    </template>
 
+    <!-- Reject Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
         <div
-          v-else
-          v-for="item in pendingList"
-          :key="item.id_log_cuti"
-          class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-7 space-y-5"
+          v-if="showRejectModal"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="closeRejectModal"
         >
-          <!-- User Info Header -->
-          <div>
-            <h2 class="text-xl font-bold text-gray-900">{{ item.nama }}</h2>
-            <p class="text-xs text-gray-500 mt-1">{{ item.nama_departemen }}</p>
-          </div>
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">{{ t('approval.rejectTitle') }}</h3>
+              <button
+                @click="closeRejectModal"
+                class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
-          <!-- Metadata Pill Box -->
-          <div class="bg-[#f0f5ff] rounded-xl p-4 lg:p-5">
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 text-left">
-              <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.jenisCuti') }}</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.jenis_cuti }}</p>
-              </div>
-              <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.dateRange') }}</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">
-                  {{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}
-                </p>
-              </div>
-              <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.duration') }}</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.durasi }} Hari</p>
-              </div>
-              <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.delegasiTugas') }}</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.pengganti || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ t('approval.remainingLeave') }}</p>
-                <p class="text-xs font-bold text-gray-900 mt-1">{{ item.sisa_cuti }} Hari</p>
-              </div>
+            <p class="text-sm text-gray-500 mb-4">
+              {{ t('approval.rejectMessage') }}
+            </p>
+
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                {{ t('approval.rejectReason') }} <span class="text-red-500">*</span>
+              </label>
+              <textarea
+                v-model="rejectAlasan"
+                rows="3"
+                placeholder="contoh: Jadwal sudah padat, tidak bisa diganti dengan rekan lain"
+                class="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              ></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-3">
+              <button
+                @click="closeRejectModal"
+                class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              >
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                @click="handleReject"
+                :disabled="!rejectAlasan.trim() || rejectLoading"
+                class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {{ rejectLoading ? t('approval.rejecting') : t('approval.confirmReject') }}
+              </button>
             </div>
           </div>
+        </div>
+      </Transition>
+    </Teleport>
 
-          <!-- Reason / Notes Section -->
-          <div>
-            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">{{ t('approval.leaveReason') }}</p>
-            <div class="bg-[#f0f5ff] rounded-xl p-4 text-xs text-gray-700 leading-relaxed font-normal">
-              {{ item.alasan || '-' }}
+    <!-- Approve Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showApproveModal"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="closeApproveModal"
+        >
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">{{ t('approval.approveConfirm') }}</h3>
+              <button
+                @click="closeApproveModal"
+                class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p class="text-sm text-gray-500 mb-4">
+              Anda akan menyetujui pengajuan cuti dari <span class="font-semibold text-gray-800">{{ approveTarget?.nama }}</span>.
+              Apakah Anda yakin ingin menyetujui?
+            </p>
+
+            <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
+              <p><span class="text-gray-500">Jenis Cuti:</span> <span class="font-medium text-gray-800">{{ approveTarget?.jenis_cuti }}</span></p>
+              <p><span class="text-gray-500">Tanggal:</span> <span class="font-medium text-gray-800">{{ approveTarget ? formatDateRange(approveTarget.tanggal_mulai, approveTarget.tanggal_selesai) : '' }}</span></p>
+              <p><span class="text-gray-500">Durasi:</span> <span class="font-medium text-gray-800">{{ approveTarget?.durasi }} Hari</span></p>
+            </div>
+
+            <div class="flex items-center justify-end gap-3">
+              <button
+                @click="closeApproveModal"
+                class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              >
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                @click="handleApprove"
+                :disabled="processingId !== null"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {{ processingId ? t('approval.approving') : t('approval.approve') }}
+              </button>
             </div>
           </div>
-
-          <!-- Action Buttons -->
-          <div class="flex items-center justify-end gap-3 pt-2">
-            <button
-              @click="openRejectConfirm(item)"
-              class="px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              <span>{{ t('approval.reject') }}</span>
-            </button>
-            <button
-              @click="openApproveConfirm(item)"
-              class="px-6 py-2.5 text-xs font-bold text-white bg-[#0f4bb4] hover:bg-blue-700 rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>{{ t('approval.approve') }}</span>
-            </button>
-          </div>
         </div>
-      </div>
-
-      <!-- Right Column: Ringkasan Persetujuan (4 Cols) -->
-      <div class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
-        <h2 class="text-base lg:text-lg font-bold text-gray-900">
-          {{ t('approval.summary') }}
-        </h2>
-
-        <div class="space-y-3 pt-1">
-          <!-- Menunggu -->
-          <div class="bg-[#f0f5ff] rounded-xl p-4 flex items-center justify-between">
-            <span class="text-xs font-semibold text-gray-700">{{ t('approval.waiting') }}</span>
-            <span class="text-xl font-extrabold text-[#0f4bb4]">{{ ringkasan.total_menunggu }}</span>
-          </div>
-
-          <!-- Disetujui Bulan Ini -->
-          <div class="bg-[#f0f5ff] rounded-xl p-4 flex items-center justify-between">
-            <span class="text-xs font-semibold text-gray-700">{{ t('approval.disetujuiBulanIni') }}</span>
-            <span class="text-xl font-extrabold text-[#0f4bb4]">{{ ringkasan.disetujui_bulan_ini }}</span>
-          </div>
-
-          <!-- Ditolak Bulan Ini -->
-          <div class="bg-[#f0f5ff] rounded-xl p-4 flex items-center justify-between">
-            <span class="text-xs font-semibold text-gray-700">{{ t('approval.ditolakBulanIni') }}</span>
-            <span class="text-xl font-extrabold text-red-600">{{ ringkasan.ditolak_bulan_ini }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- POPUP MODAL: Konfirmasi Setujui Cuti -->
-    <div
-      v-if="showApproveModal && selectedItem"
-      class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
-    >
-      <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-        <div class="w-12 h-12 rounded-full bg-blue-100 text-[#0f4bb4] flex items-center justify-center mx-auto shadow-xs">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-
-        <div class="text-center space-y-1">
-          <h3 class="text-lg font-bold text-gray-900">{{ t('approval.approveConfirm') }}</h3>
-          <p class="text-xs text-gray-500">
-            {{ t('approval.approveMessage') }}
-          </p>
-        </div>
-
-        <div class="bg-gray-50 p-4 rounded-xl space-y-2 text-xs">
-          <div class="flex justify-between">
-            <span class="text-gray-500">{{ t('employee.name') }}:</span>
-            <span class="font-bold text-gray-900">{{ selectedItem.nama }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-500">{{ t('approval.jenisCuti') }}:</span>
-            <span class="font-semibold text-[#0f4bb4]">{{ selectedItem.jenis_cuti }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-500">{{ t('approval.duration') }}:</span>
-            <span class="font-bold text-gray-900">{{ selectedItem.durasi }} Hari</span>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-3 pt-2">
-          <button
-            @click="showApproveModal = false"
-            class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            @click="confirmApprove"
-            :disabled="processingId !== null"
-            class="flex-1 py-2.5 bg-[#0f4bb4] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
-          >
-            {{ processingId !== null ? t('approval.approving') : t('approval.approve') }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- POPUP MODAL: PENOLAKAN CUTI -->
-    <div
-      v-if="showRejectModal && selectedItem"
-      class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
-    >
-      <div class="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-          <h3 class="text-base sm:text-lg font-bold text-gray-900">
-            {{ t('approval.rejectTitle') }}
-          </h3>
-          <button @click="showRejectModal = false" class="text-gray-400 hover:text-gray-600 cursor-pointer">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Description Note -->
-        <p class="text-xs text-gray-600 leading-relaxed">
-            {{ t('approval.rejectMessage') }}
-        </p>
-
-        <!-- Form Textarea -->
-        <div>
-          <label class="block text-xs font-bold text-gray-900 mb-1.5">
-            {{ t('approval.rejectReason') }} <span class="text-red-500">*</span>
-          </label>
-          <textarea
-            v-model="rejectReason"
-            rows="3"
-            placeholder="{{ t('approval.rejectPlaceholder') }}"
-            class="w-full p-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-xs outline-none focus:border-red-500 focus:bg-white transition-all text-gray-800"
-          ></textarea>
-        </div>
-
-        <!-- Footer Actions -->
-        <div class="flex items-center justify-end gap-3 pt-2">
-          <button
-            @click="showRejectModal = false"
-            class="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            @click="confirmReject"
-            :disabled="!rejectReason.trim() || processingId !== null"
-            class="px-5 py-2.5 bg-[#c91818] hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
-          >
-            {{ processingId !== null ? t('approval.rejecting') : t('approval.confirmReject') }}
-          </button>
-        </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

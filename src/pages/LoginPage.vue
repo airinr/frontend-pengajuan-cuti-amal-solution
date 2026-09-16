@@ -35,11 +35,12 @@ const handleSubmit = async (e: Event) => {
       router.push("/hr/dashboard");
     } else if (role === "direktur") {
       router.push("/direktur/dashboard");
+    } else if (role === "staff_hr") {
+      router.push("/staff_hr/dashboard");
     } else {
       router.push("/karyawan/dashboard");
     }
   } catch (err: any) {
-    console.error("Login error:", err);
     error.value = err.response?.data?.detail || t('error.loginFailed');
   } finally {
     loading.value = false;
@@ -83,7 +84,7 @@ const handleSubmit = async (e: Event) => {
         <form @submit="handleSubmit" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >{{ t('auth.username') }}</label
+              >{{ t('auth.username') }} <span class="text-red-500">*</span></label
             >
             <div class="relative">
               <span
@@ -116,7 +117,7 @@ const handleSubmit = async (e: Event) => {
           <div>
             <div class="flex justify-between items-center mb-1.5">
               <label class="text-sm font-medium text-gray-700"
-                >{{ t('auth.password') }}</label
+                >{{ t('auth.password') }} <span class="text-red-500">*</span></label
               >
               <button
                 type="button"
@@ -221,15 +222,8 @@ const handleSubmit = async (e: Event) => {
           </button>
         </form>
 
-        <p class="mt-6 text-center text-sm text-gray-500">
-          {{ t('auth.noAccount') }}
-          <button
-            type="button"
-            @click="router.push('/register')"
-            class="text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
-          >
-            {{ t('auth.registerLink') }}
-          </button>
+        <p class="mt-4 text-center text-xs text-gray-400">
+          {{ t('auth.accountCreatedBy') }}
         </p>
       </div>
     </div>
