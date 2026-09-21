@@ -4,6 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  const port = Number(env.PORT || env.VITE_PORT) || 5173;
+  const host = env.HOST || env.VITE_HOST || "0.0.0.0";
   return {
     plugins: [vue(), tailwindcss()],
     resolve: {
@@ -12,6 +14,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      host: host,
+      port: port,
+      allowedHosts: true,
       proxy: {
         "/api": {
           target: env.VITE_API_BASE_URL || "http://amal-dev.rutherweb.my.id",
