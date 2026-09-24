@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { authApi } from "../services";
@@ -7,6 +7,11 @@ import type { LoginRequest } from "../types";
 
 const { t } = useI18n();
 const router = useRouter();
+
+onMounted(() => {
+  localStorage.clear();
+  sessionStorage.clear();
+});
 
 const emit = defineEmits<{
   switchToRegister: [];
@@ -16,6 +21,10 @@ const form = ref<LoginRequest>({ username: "", password: "" });
 const showPassword = ref(false);
 const loading = ref(false);
 const error = ref<string | null>(null);
+
+const showForgotPasswordConfirm = ref(false);
+const forgotPasswordLoading = ref(false);
+const showForgotPasswordSuccess = ref(false);
 
 const handleSubmit = async (e: Event) => {
   e.preventDefault();
@@ -31,7 +40,7 @@ const handleSubmit = async (e: Event) => {
     const role = payload.role?.toLowerCase();
     if (role === "pm") {
       router.push("/pm/dashboard");
-    } else if (role === "hr") {
+    } else if (role === "hr_manager") {
       router.push("/hr/dashboard");
     } else if (role === "direktur") {
       router.push("/direktur/dashboard");
@@ -44,6 +53,33 @@ const handleSubmit = async (e: Event) => {
     error.value = err.response?.data?.detail || t('error.loginFailed');
   } finally {
     loading.value = false;
+  }
+};
+
+const openForgotPasswordConfirm = () => {
+  if (!form.value.username.trim()) {
+    error.value = t('error.usernameRequired');
+    return;
+  }
+  error.value = null;
+  showForgotPasswordConfirm.value = true;
+};
+
+const closeForgotPasswordConfirm = () => {
+  showForgotPasswordConfirm.value = false;
+};
+
+const handleForgotPassword = async () => {
+  forgotPasswordLoading.value = true;
+  try {
+    await authApi.forgotPassword({ username: form.value.username });
+    showForgotPasswordConfirm.value = false;
+    showForgotPasswordSuccess.value = true;
+  } catch (err: any) {
+    showForgotPasswordConfirm.value = false;
+    error.value = err.response?.data?.detail || t('error.forgotPasswordFailed');
+  } finally {
+    forgotPasswordLoading.value = false;
   }
 };
 </script>
@@ -81,7 +117,7 @@ const handleSubmit = async (e: Event) => {
           {{ error }}
         </div>
 
-        <form @submit="handleSubmit" class="space-y-4">
+        <form @submit="handleSubmit" class="space-y-4" autocomplete="off">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"
               >{{ t('auth.username') }} <span class="text-red-500">*</span></label
@@ -107,6 +143,7 @@ const handleSubmit = async (e: Event) => {
               <input
                 v-model="form.username"
                 type="text"
+                autocomplete="username"
                 class="w-full pl-10 pr-4 py-3 bg-gray-50 border-0 rounded-xl text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                 placeholder="John Doe"
                 required
@@ -121,6 +158,7 @@ const handleSubmit = async (e: Event) => {
               >
               <button
                 type="button"
+                @click="openForgotPasswordConfirm"
                 class="text-sm text-blue-600 hover:text-blue-700 cursor-pointer"
               >
                 {{ t('auth.forgotPassword') }}
@@ -147,6 +185,7 @@ const handleSubmit = async (e: Event) => {
               <input
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
+                autocomplete="new-password"
                 class="w-full pl-10 pr-12 py-3 bg-gray-50 border-0 rounded-xl text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                 :placeholder="t('auth.password')"
                 required
@@ -228,4 +267,55 @@ const handleSubmit = async (e: Event) => {
       </div>
     </div>
   </div>
+
+  <!-- Forgot Password Confirmation Popup -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div v-if="showForgotPasswordConfirm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="closeForgotPasswordConfirm">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-800">{{ t('auth.forgotPasswordConfirmTitle') }}</h3>
+            <button @click="closeForgotPasswordConfirm" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div class="mb-6">
+            <div class="flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mx-auto mb-4">
+              <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <p class="text-sm text-gray-600 text-center">{{ t('auth.forgotPasswordConfirmMsg') }}</p>
+            <p class="text-sm font-semibold text-gray-800 text-center mt-2">"{{ form.username }}"</p>
+          </div>
+          <div class="flex items-center justify-end gap-3">
+            <button @click="closeForgotPasswordConfirm" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">{{ t('common.cancel') }}</button>
+            <button @click="handleForgotPassword" :disabled="forgotPasswordLoading" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+              {{ forgotPasswordLoading ? t('auth.sending') : t('auth.send') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- Forgot Password Success Popup -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div v-if="showForgotPasswordSuccess" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showForgotPasswordSuccess = false">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+          <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('auth.forgotPasswordSuccess') }}</h3>
+          <p class="text-sm text-gray-500 mb-6">{{ t('auth.forgotPasswordSuccessMsg') }}</p>
+          <button @click="showForgotPasswordSuccess = false" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer">
+            {{ t('common.close') }}
+          </button>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>

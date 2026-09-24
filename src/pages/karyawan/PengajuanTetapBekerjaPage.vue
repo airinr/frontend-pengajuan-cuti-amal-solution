@@ -59,8 +59,7 @@ const handleSubmit = async () => {
   submitting.value = true;
   try {
     await penambahanKerjaApi.submit({
-      tanggal_mulai: form.value.tanggal_cuti_bersama,
-      tanggal_selesai: form.value.tanggal_cuti_bersama,
+      tanggal: [form.value.tanggal_cuti_bersama],
       keterangan: form.value.keterangan,
     });
     showSuccessPopup.value = true;

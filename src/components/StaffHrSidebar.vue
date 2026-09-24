@@ -29,7 +29,7 @@ const cutiMenu = computed(() => [
   { label: t('nav.kalenderTim'), icon: "calendar", route: "/staff_hr/kalender-tim" },
 ]);
 
-const kerjaMenu = computed(() => [
+const pengajuanKerjaMenu = computed(() => [
   { label: t('nav.persetujuanKerja'), icon: "check-circle", route: "/staff_hr/persetujuan-kerja" },
   { label: t('nav.logRekapKerja'), icon: "clipboard", route: "/staff_hr/log-rekap-kerja" },
 ]);
@@ -38,10 +38,16 @@ const karyawanMenu = computed(() => [
   { label: t('nav.dataKaryawan'), icon: "users", route: "/staff_hr/data-karyawan" },
 ]);
 
-const personalMenu = computed(() => [
+const personalCutiMenu = computed(() => [
   { label: t('nav.pengajuanSaya'), icon: "file-plus", route: "/staff_hr/pengajuan-cuti" },
   { label: t('nav.statusPengajuan'), icon: "clipboard-list", route: "/staff_hr/status-pengajuan" },
   { label: t('nav.riwayatCuti'), icon: "history", route: "/staff_hr/riwayat-cuti" },
+]);
+
+const personalBekerjaMenu = computed(() => [
+  { label: t('nav.pengajuanBekerja'), icon: "briefcase", route: "/staff_hr/pengajuan-bekerja" },
+  { label: t('nav.statusPengajuanBekerja'), icon: "clock", route: "/staff_hr/status-pengajuan-kerja" },
+  { label: t('nav.riwayatPengajuanKerja'), icon: "history", route: "/staff_hr/riwayat-pengajuan-kerja" },
   { label: t('nav.profil'), icon: "user", route: "/staff_hr/profil" },
 ]);
 
@@ -153,10 +159,10 @@ const getInitials = (name: string) => {
           </li>
         </ul>
 
-        <!-- PENAMBAHAN KERJA -->
-        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">{{ t('nav.penambahanKerja') }}</p>
+        <!-- PENGAJUAN KERJA -->
+        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">{{ t('nav.bekerja') }}</p>
         <ul class="space-y-1 mb-6">
-          <li v-for="item in kerjaMenu" :key="item.route">
+          <li v-for="item in pengajuanKerjaMenu" :key="item.route">
             <button
               @click="navigateTo(item.route)"
               :class="[
@@ -200,8 +206,11 @@ const getInitials = (name: string) => {
 
         <!-- PERSONAL -->
         <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">{{ t('nav.personal') }}</p>
-        <ul class="space-y-1">
-          <li v-for="item in personalMenu" :key="item.route">
+
+        <!-- Personal CUTI -->
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-2 px-4 ml-2">{{ t('nav.cuti') }}</p>
+        <ul class="space-y-1 mb-4">
+          <li v-for="item in personalCutiMenu" :key="item.route">
             <button
               @click="navigateTo(item.route)"
               :class="[
@@ -216,6 +225,33 @@ const getInitials = (name: string) => {
               </svg>
               <svg v-else-if="item.icon === 'clipboard-list'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              <svg v-else-if="item.icon === 'history'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ item.label }}
+            </button>
+          </li>
+        </ul>
+
+        <!-- Personal BEKERJA -->
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-2 px-4 ml-2">{{ t('nav.bekerja') }}</p>
+        <ul class="space-y-1">
+          <li v-for="item in personalBekerjaMenu" :key="item.route">
+            <button
+              @click="navigateTo(item.route)"
+              :class="[
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                isActive(item.route)
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
+              ]"
+            >
+              <svg v-if="item.icon === 'briefcase'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <svg v-else-if="item.icon === 'clock'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <svg v-else-if="item.icon === 'history'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

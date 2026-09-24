@@ -28,15 +28,21 @@ const cutiMenu = computed(() => [
   { label: t('nav.kalenderCuti'), icon: "calendar", route: "/pm/kalender-tim" },
 ]);
 
-const bekerjaMenu = computed(() => [
+const pengajuanKerjaMenu = computed(() => [
   { label: t('approval.workApproval'), icon: "check-circle", route: "/pm/persetujuan-bekerja" },
   { label: t('nav.rekapPengajuanKerja'), icon: "clipboard", route: "/pm/rekap-pengajuan-kerja" },
 ]);
 
-const personalMenu = computed(() => [
+const personalCutiMenu = computed(() => [
   { label: t('nav.pengajuanSaya'), icon: "file-plus", route: "/pm/pengajuan-cuti" },
   { label: t('nav.statusPengajuan'), icon: "clipboard-list", route: "/pm/status-pengajuan" },
   { label: t('nav.riwayatCuti'), icon: "history", route: "/pm/riwayat-cuti" },
+]);
+
+const personalBekerjaMenu = computed(() => [
+  { label: t('nav.pengajuanBekerja'), icon: "briefcase", route: "/pm/pengajuan-bekerja" },
+  { label: t('nav.statusPengajuanBekerja'), icon: "clock", route: "/pm/status-pengajuan-kerja" },
+  { label: t('nav.riwayatPengajuanKerja'), icon: "history", route: "/pm/riwayat-pengajuan-kerja" },
   { label: t('nav.profil'), icon: "user", route: "/pm/profil" },
 ]);
 
@@ -156,10 +162,10 @@ const getInitials = (name: string) => {
           </li>
         </ul>
 
-        <!-- BEKERJA -->
+        <!-- PENGAJUAN KERJA -->
         <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">{{ t('nav.bekerja') }}</p>
         <ul class="space-y-1 mb-6">
-          <li v-for="item in bekerjaMenu" :key="item.route">
+          <li v-for="item in pengajuanKerjaMenu" :key="item.route">
             <button
               @click="navigateTo(item.route)"
               :class="[
@@ -175,9 +181,6 @@ const getInitials = (name: string) => {
               <svg v-else-if="item.icon === 'clipboard'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <svg v-else-if="item.icon === 'briefcase'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
               {{ item.label }}
             </button>
           </li>
@@ -185,8 +188,11 @@ const getInitials = (name: string) => {
 
         <!-- PERSONAL -->
         <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">{{ t('nav.personal') }}</p>
-        <ul class="space-y-1">
-          <li v-for="item in personalMenu" :key="item.route">
+
+        <!-- Personal CUTI -->
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-2 px-4 ml-2">{{ t('nav.cuti') }}</p>
+        <ul class="space-y-1 mb-4">
+          <li v-for="item in personalCutiMenu" :key="item.route">
             <button
               @click="navigateTo(item.route)"
               :class="[
@@ -196,65 +202,44 @@ const getInitials = (name: string) => {
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
               ]"
             >
-              <!-- file-plus -->
-              <svg
-                v-if="item.icon === 'file-plus'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
+              <svg v-if="item.icon === 'file-plus'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <!-- clipboard-list -->
-              <svg
-                v-else-if="item.icon === 'clipboard-list'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                />
+              <svg v-else-if="item.icon === 'clipboard-list'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
-              <!-- history -->
-              <svg
-                v-else-if="item.icon === 'history'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
+              <svg v-else-if="item.icon === 'history'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <!-- user -->
-              <svg
-                v-else-if="item.icon === 'user'"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
+              {{ item.label }}
+            </button>
+          </li>
+        </ul>
+
+        <!-- Personal BEKERJA -->
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-2 px-4 ml-2">{{ t('nav.bekerja') }}</p>
+        <ul class="space-y-1">
+          <li v-for="item in personalBekerjaMenu" :key="item.route">
+            <button
+              @click="navigateTo(item.route)"
+              :class="[
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                isActive(item.route)
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800',
+              ]"
+            >
+              <svg v-if="item.icon === 'briefcase'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <svg v-else-if="item.icon === 'clock'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <svg v-else-if="item.icon === 'history'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <svg v-else-if="item.icon === 'user'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               {{ item.label }}
             </button>

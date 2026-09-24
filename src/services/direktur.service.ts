@@ -22,8 +22,7 @@ export interface PersetujuanItem {
   jabatan: string;
   departemen: string;
   jenis_cuti: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   durasi: number;
   delegasi_tugas: string;
   sisa_cuti: number;
@@ -41,16 +40,14 @@ export interface RingkasanPersetujuan {
 export interface RekapItem {
   nama: string;
   nama_departemen: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   total_cuti: number;
   sisa_cuti: number;
 }
 
 export interface LogCutiItem {
   nama: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   durasi: number;
   jenis_cuti: string;
   keterangan: string;
@@ -62,8 +59,7 @@ export interface LogCutiItem {
 export interface CutiMendatangItem {
   nama: string;
   jenis_cuti: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   status: string;
 }
 

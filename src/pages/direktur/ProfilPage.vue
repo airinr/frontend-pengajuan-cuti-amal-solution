@@ -29,7 +29,10 @@ const passwordForm = ref({
 });
 const passwordLoading = ref(false);
 const passwordError = ref("");
-const passwordSuccess = ref("");
+const showPasswordSuccessPopup = ref(false);
+const showOldPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
 
 const showLanguageModal = ref(false);
 
@@ -41,7 +44,8 @@ const roleLabel = computed(() => {
   const roleMap: Record<string, string> = {
     karyawan: 'Karyawan',
     pm: 'Project Manager',
-    hr: 'Human Resources',
+    hr_manager: 'HR Manager',
+    staff_hr: 'Staff HR',
     direktur: 'Direktur',
   };
   return roleMap[user.value?.role || ''] || user.value?.role || '-';
@@ -52,6 +56,18 @@ const selectLanguage = (lang: string) => {
   localStorage.setItem("locale", lang);
   showLanguageModal.value = false;
 };
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const profileEmailError = computed(() => {
+  if (!profileForm.value.email) return '';
+  return emailRegex.test(profileForm.value.email) ? '' : t('error.invalidEmail');
+});
+
+const profilePhoneError = computed(() => {
+  if (!profileForm.value.no_telp) return '';
+  return /^\d+$/.test(profileForm.value.no_telp) ? '' : t('error.invalidPhone');
+});
 
 const fetchProfile = async () => {
   loading.value = true;
@@ -71,7 +87,6 @@ const fetchProfile = async () => {
 
 const handleChangePassword = async () => {
   passwordError.value = "";
-  passwordSuccess.value = "";
 
   if (passwordForm.value.password_baru !== passwordForm.value.konfirmasi) {
     passwordError.value = "Konfirmasi kata sandi baru tidak cocok";
@@ -85,19 +100,11 @@ const handleChangePassword = async () => {
       password_baru: passwordForm.value.password_baru,
       konfirmasi_password_baru: passwordForm.value.konfirmasi,
     });
-    passwordSuccess.value = "Kata sandi berhasil diubah";
-    setTimeout(() => {
-      showPasswordModal.value = false;
-      passwordForm.value = {
-        password_lama: "",
-        password_baru: "",
-        konfirmasi: "",
-      };
-      passwordSuccess.value = "";
-    }, 1200);
+    showPasswordModal.value = false;
+    showPasswordSuccessPopup.value = true;
+    passwordForm.value = { password_lama: "", password_baru: "", konfirmasi: "" };
   } catch (err: any) {
-    passwordError.value =
-      err.response?.data?.detail || "Gagal mengubah kata sandi";
+    passwordError.value = err.response?.data?.detail || "Gagal mengubah kata sandi";
   } finally {
     passwordLoading.value = false;
   }
@@ -220,9 +227,11 @@ onMounted(() => {
               <input
                 v-model="profileForm.email"
                 type="email"
+                autocomplete="email"
                 placeholder="Masukkan email"
-                class="w-full mt-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
+                :class="['w-full mt-1 px-3 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white', profileEmailError ? 'border border-red-300' : 'border border-gray-200']"
               />
+              <p v-if="profileEmailError" class="text-xs text-red-500 mt-1">{{ profileEmailError }}</p>
             </div>
             <div>
               <p
@@ -233,9 +242,11 @@ onMounted(() => {
               <input
                 v-model="profileForm.no_telp"
                 type="text"
+                autocomplete="off"
                 placeholder="Masukkan nomor telepon"
-                class="w-full mt-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
+                :class="['w-full mt-1 px-3 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white', profilePhoneError ? 'border border-red-300' : 'border border-gray-200']"
               />
+              <p v-if="profilePhoneError" class="text-xs text-red-500 mt-1">{{ profilePhoneError }}</p>
             </div>
           </div>
         </div>
@@ -416,43 +427,58 @@ onMounted(() => {
         >
           {{ passwordError }}
         </div>
-        <div
-          v-if="passwordSuccess"
-          class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-semibold"
-        >
-          {{ passwordSuccess }}
-        </div>
 
         <div class="space-y-3">
           <div>
             <label class="block text-xs font-semibold text-gray-700 mb-1">{{
               t("profile.oldPassword")
             }}</label>
-            <input
-              v-model="passwordForm.password_lama"
-              type="password"
-              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
-            />
+            <div class="relative">
+              <input
+                v-model="passwordForm.password_lama"
+                :type="showOldPassword ? 'text' : 'password'"
+                      autocomplete="new-password"
+                class="w-full px-3 py-2 pr-9 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
+              />
+              <button type="button" @click="showOldPassword = !showOldPassword" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg v-if="showOldPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              </button>
+            </div>
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-700 mb-1">{{
               t("profile.newPassword")
             }}</label>
-            <input
-              v-model="passwordForm.password_baru"
-              type="password"
-              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
-            />
+            <div class="relative">
+              <input
+                v-model="passwordForm.password_baru"
+                :type="showNewPassword ? 'text' : 'password'"
+                autocomplete="new-password"
+                class="w-full px-3 py-2 pr-9 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
+              />
+              <button type="button" @click="showNewPassword = !showNewPassword" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg v-if="showNewPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              </button>
+            </div>
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-700 mb-1">{{
               t("profile.confirmNewPassword")
             }}</label>
-            <input
-              v-model="passwordForm.konfirmasi"
-              type="password"
-              class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
-            />
+            <div class="relative">
+              <input
+                v-model="passwordForm.konfirmasi"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                autocomplete="new-password"
+                class="w-full px-3 py-2 pr-9 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0f4bb4] focus:bg-white"
+              />
+              <button type="button" @click="showConfirmPassword = !showConfirmPassword" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg v-if="showConfirmPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              </button>
+            </div>
           </div>
         </div>
         <div class="flex justify-end gap-2 pt-2">
@@ -561,5 +587,32 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Password Changed Success Popup -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showPasswordSuccessPopup"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          @click.self="handleLogout"
+        >
+          <div class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('error.passwordChanged') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">Silakan login kembali dengan kata sandi baru.</p>
+            <button
+              @click="handleLogout"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition cursor-pointer"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>

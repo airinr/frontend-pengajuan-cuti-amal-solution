@@ -4,16 +4,18 @@ import { useI18n } from 'vue-i18n'
 import { karyawanApi, type RiwayatCuti } from '../../services/karyawan.service'
 import { useErrorPopup } from '../../composables/useErrorPopup'
 import { useCalendarNames } from '../../composables/useCalendarNames'
+import { useFormatTanggal } from '../../composables/useFormatTanggal'
 
 const { t } = useI18n()
 const { showError } = useErrorPopup()
 const { monthNamesShort } = useCalendarNames()
+const { formatTanggal } = useFormatTanggal()
 const riwayat = ref<RiwayatCuti[]>([])
 const loading = ref(true)
 const selectedYear = ref(new Date().getFullYear())
 const sortDirection = ref<'desc' | 'asc'>('desc')
 const currentPage = ref(1)
-const itemsPerPage = 5
+const itemsPerPage = 10
 
 const years = computed(() => {
   const current = new Date().getFullYear();
@@ -23,7 +25,7 @@ const years = computed(() => {
 
 const filteredRiwayat = computed(() => {
   const filtered = riwayat.value.filter(item => {
-    const itemYear = new Date(item.tanggal_mulai).getFullYear()
+    const itemYear = new Date(item.tanggal[0]).getFullYear()
     const yearMatch = itemYear === selectedYear.value
     return yearMatch
   })
@@ -47,21 +49,6 @@ const formatDate = (dateStr: string) => {
   const month = monthNamesShort.value[date.getMonth()]
   const year = date.getFullYear()
   return `${day} ${month} ${year}`
-}
-
-const formatDateRange = (start: string, end: string) => {
-  const s = new Date(start)
-  const e = new Date(end)
-
-  if (start === end) {
-    return `${s.getDate()} ${monthNamesShort.value[s.getMonth()]} ${s.getFullYear()}`
-  }
-
-  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
-    return `${s.getDate()} - ${e.getDate()} ${monthNamesShort.value[s.getMonth()]} ${s.getFullYear()}`
-  }
-
-  return `${s.getDate()} ${monthNamesShort.value[s.getMonth()]} - ${e.getDate()} ${monthNamesShort.value[e.getMonth()]} ${s.getFullYear()}`
 }
 
 const getStatusStyle = (status: string) => {
@@ -172,7 +159,7 @@ onMounted(async () => {
             >
               <td class="px-6 py-4">
                 <p class="text-xs text-gray-400">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_pengajuan) }}</p>
-                <p class="font-medium text-gray-800 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
+                <p class="font-medium text-gray-800 mt-0.5">{{ formatTanggal(item.tanggal) }}</p>
               </td>
               <td class="px-6 py-4">
                 <span class="text-sm text-gray-700">{{ item.durasi }} {{ t('history.days') }}</span>
@@ -220,7 +207,7 @@ onMounted(async () => {
             <div class="flex justify-between items-start">
               <div>
                 <p class="text-xs text-gray-400">{{ t('history.submitted') }}: {{ formatDate(item.tanggal_pengajuan) }}</p>
-                <p class="font-medium text-gray-800 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
+                <p class="font-medium text-gray-800 mt-0.5">{{ formatTanggal(item.tanggal) }}</p>
               </div>
               <span :class="['inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium', getStatusStyle(item.status)]">
                 <span :class="[

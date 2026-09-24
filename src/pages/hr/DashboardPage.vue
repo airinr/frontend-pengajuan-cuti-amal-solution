@@ -14,9 +14,11 @@ import {
 import { authApi } from "../../services/auth.service";
 import { getNetworkErrorMessage } from "../../lib/api";
 import type { CurrentUser } from "../../types";
+import { useFormatTanggal } from "../../composables/useFormatTanggal";
 
 const { t } = useI18n();
 const router = useRouter();
+const { formatTanggal } = useFormatTanggal();
 
 const stats = ref<DashboardStats | null>(null);
 const cutiMendatang = ref<CutiMendatangItem[]>([]);
@@ -35,19 +37,6 @@ const greeting = computed(() => {
   if (hour < 18) return t('greeting.afternoon');
   return t('greeting.evening');
 });
-
-const formatDateRange = (start: string, end: string) => {
-  const s = new Date(start);
-  const e = new Date(end);
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-  ];
-  if (s.getMonth() === e.getMonth()) {
-    return `${s.getDate()} - ${e.getDate()} ${months[s.getMonth()]}`;
-  }
-  return `${s.getDate()} ${months[s.getMonth()]} - ${e.getDate()} ${months[e.getMonth()]}`;
-};
 
 const getInitials = (name: string) => {
   return name
@@ -239,7 +228,7 @@ onMounted(fetchData);
                 <div class="text-right">
                   <p class="text-xs text-gray-500">
                     {{
-                      formatDateRange(item.tanggal_mulai, item.tanggal_selesai)
+                      formatTanggal(item.tanggal)
                     }}
                   </p>
                   <span

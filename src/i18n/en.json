@@ -53,7 +53,13 @@
     "agreeTerms": "I agree to the Terms and Conditions",
     "loggingIn": "Signing in...",
     "registering": "Registering...",
-    "accountCreatedBy": "Account created by HR/Director"
+    "accountCreatedBy": "Account created by HR/Director",
+    "forgotPasswordConfirmTitle": "Reset Password Confirmation",
+    "forgotPasswordConfirmMsg": "A password reset link will be sent to the registered email for username",
+    "send": "Send",
+    "sending": "Sending...",
+    "forgotPasswordSuccess": "Success!",
+    "forgotPasswordSuccessMsg": "The password reset link has been sent to your email."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -94,9 +100,10 @@
   },
   "status": {
     "waiting": "Awaiting Approval",
-    "waitingPM": "Awaiting PM Approval",
+    "waitingPM": "PM Approval",
     "waitingHR": "Awaiting HR Approval",
     "waitingDirector": "Awaiting Director Approval",
+    "approvalPM": "PM Approval",
     "approved": "Approved",
     "approvedPM": "Approved by PM",
     "approvedHR": "Approved by HR",
@@ -358,7 +365,22 @@
     "departmentNameLabel": "Department Name",
     "departmentNamePlaceholder": "Enter department name",
     "departmentAdded": "Department added successfully!",
-    "departmentUpdated": "Department updated successfully!"
+    "departmentUpdated": "Department updated successfully!",
+    "delete": "Delete",
+    "deleteModalTitle": "Delete Employee Confirmation",
+    "deleteConfirmMsg": "Are you sure you want to delete this employee? This action cannot be undone.",
+    "deleting": "Deleting...",
+    "deleteSuccess": "Successfully Deleted!",
+    "deleteSuccessMsg": "Employee has been removed from the system.",
+    "accountSection": "Employee Account",
+    "dataSection": "Employee Data",
+    "resetPasswordDefault": "Reset Password to Default",
+    "resetPassword": "Reset Password",
+    "resetting": "Resetting...",
+    "resetPasswordConfirmTitle": "Reset Password Confirmation",
+    "resetPasswordConfirmMsg": "The default password will be sent to the employee via the registered employee email",
+    "resetPasswordSuccess": "Password Reset Successfully!",
+    "resetPasswordSuccessMsg": "The default password has been successfully sent to the employee's email."
   },
   "leaveQuota": {
     "title": "Leave Quota",
@@ -398,7 +420,13 @@
     "userNotFound": "User data not found",
     "defaultDescription": "Leave quota adjustment",
     "applySuccess": "Leave quota successfully added for all employees",
-    "applyFailed": "Failed to add leave quota"
+    "applySuccessSubtract": "Leave quota successfully reduced for all employees",
+    "applyFailed": "Failed to add leave quota",
+    "adjustmentType": "Adjustment Type",
+    "addLeave": "Add Leave",
+    "subtractLeave": "Reduce Leave",
+    "subtractInfo": "Leave will be reduced by {days} days",
+    "addInfo": "Leave will be increased by {days} days"
   },
   "leaveLog": {
     "title": "Leave Log & Recap",
@@ -500,7 +528,13 @@
     "profileSaveFailed": "Failed to save profile",
     "selectCollectiveLeave": "Please select a collective leave date first",
     "workReasonRequired": "Work reason is required",
-    "hasRejectedLeave": "You have a rejected leave request. Please edit it on the Leave Status page before submitting a new request."
+    "hasRejectedLeave": "You have a rejected leave request. Please edit it on the Leave Status page before submitting a new request.",
+    "invalidEmail": "Invalid email format",
+    "invalidPhone": "Phone number must be numeric",
+    "fieldRequired": "All required fields must be filled",
+    "usernameNoSpaces": "Username cannot contain spaces",
+    "usernameRequired": "Username is required first",
+    "forgotPasswordFailed": "Failed to send reset link. Please try again."
   },
   "network": {
     "timeout": "Request timed out. Server may be slow.",

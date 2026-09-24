@@ -19,6 +19,7 @@ export interface RegisterAdminRequest {
 }
 
 export interface UpdateKaryawanRequest {
+  username: string
   nama: string
   role: string
   id_departemen: number
@@ -26,6 +27,7 @@ export interface UpdateKaryawanRequest {
   no_telp: string
   tanggal_bergabung: string
   status: string
+  password?: string
   pm_add?: number[]
   pm_remove?: number[]
 }
@@ -45,6 +47,15 @@ export const authApi = {
 
   updateKaryawan: (userId: number, data: UpdateKaryawanRequest) =>
     api.put(`/hr/karyawan/${userId}`, data),
+
+  deleteKaryawan: (userId: number) =>
+    api.delete(`/hr/karyawan/${userId}`),
+
+  resetPassword: (userId: number) =>
+    api.put(`/hr/karyawan/${userId}/reset-password`),
+
+  forgotPassword: (data: { username: string }) =>
+    api.post('/auth/forgot-password', data),
 
   logout: () =>
     api.post('/auth/logout'),

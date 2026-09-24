@@ -5,20 +5,40 @@ import {
   penambahanKerjaApi,
   type PenambahanKerjaItem,
 } from "../../services/penambahanKerja.service";
+import { authApi } from "../../services/auth.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useFormatTanggal } from "../../composables/useFormatTanggal";
 
 const { t } = useI18n();
 const { showError } = useErrorPopup();
+const { formatTanggal } = useFormatTanggal();
 
 const loading = ref(true);
 const statusList = ref<PenambahanKerjaItem[]>([]);
+const userRole = ref<string>('');
 
-const steps = computed(() => [
-  { label: t('status.submitted'), statusKey: "submitted", completedLabel: t('status.submitted'), rejectedLabel: t('status.submitted') },
-  { label: t('status.waitingPM'), statusKey: "pm", completedLabel: t('status.approvedPM'), rejectedLabel: t('status.rejectedPM') },
-  { label: t('status.waitingHR'), statusKey: "hr", completedLabel: t('status.approvedHR'), rejectedLabel: t('status.rejectedHR') },
-  { label: t('status.completed'), statusKey: "selesai", completedLabel: t('status.completed'), rejectedLabel: t('status.completed') },
-]);
+const steps = computed(() => {
+  if (userRole.value === 'pm' || userRole.value === 'staff_hr') {
+    return [
+      { label: t('status.submitted'), statusKey: "submitted", completedLabel: t('status.submitted'), rejectedLabel: t('status.submitted') },
+      { label: t('status.waitingHR'), statusKey: "hr", completedLabel: t('status.approvedHR'), rejectedLabel: t('status.rejectedHR') },
+      { label: t('status.completed'), statusKey: "selesai", completedLabel: t('status.completed'), rejectedLabel: t('status.completed') },
+    ];
+  }
+  if (userRole.value === 'hr_manager') {
+    return [
+      { label: t('status.submitted'), statusKey: "submitted", completedLabel: t('status.submitted'), rejectedLabel: t('status.submitted') },
+      { label: t('status.waitingDirector'), statusKey: "direktur", completedLabel: t('status.approvedDirector'), rejectedLabel: t('status.rejectedDirector') },
+      { label: t('status.completed'), statusKey: "selesai", completedLabel: t('status.completed'), rejectedLabel: t('status.completed') },
+    ];
+  }
+  return [
+    { label: t('status.submitted'), statusKey: "submitted", completedLabel: t('status.submitted'), rejectedLabel: t('status.submitted') },
+    { label: t('status.waitingPM'), statusKey: "pm", completedLabel: t('status.approvedPM'), rejectedLabel: t('status.rejectedPM') },
+    { label: t('status.waitingHR'), statusKey: "hr", completedLabel: t('status.approvedHR'), rejectedLabel: t('status.rejectedHR') },
+    { label: t('status.completed'), statusKey: "selesai", completedLabel: t('status.completed'), rejectedLabel: t('status.completed') },
+  ];
+});
 
 const hasMultiplePm = (item: PenambahanKerjaItem) => {
   return item.approval_pm_detail && item.approval_pm_detail.length > 1;
@@ -30,27 +50,19 @@ const getPmApprovalStatus = (item: PenambahanKerjaItem) => {
   return { approved, total: item.approval_pm_detail.length };
 };
 
-const formatDateRange = (start: string, end: string) => {
-  const s = new Date(start);
-  const e = new Date(end);
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-  ];
-  if (start === end) {
-    return `${s.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
-  }
-  return `${s.getDate()} ${months[s.getMonth()]} ${s.getFullYear()} - ${e.getDate()} ${months[e.getMonth()]} ${e.getFullYear()}`;
-};
-
 const getStatusConfig = (status: string, item?: PenambahanKerjaItem) => {
   const pmStatus = item && hasMultiplePm(item) ? ` (${getPmApprovalStatus(item).approved}/${getPmApprovalStatus(item).total})` : '';
   const configs: Record<string, { label: string; color: string; bgColor: string; borderColor: string }> = {
     menunggu_pm: { label: t('status.waitingPM') + pmStatus, color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
     menunggu_hr: { label: t('status.waitingHR'), color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
+    menunggu_direktur: { label: t('status.waitingDirector'), color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
     disetujui_pm: { label: t('status.approvedPM'), color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
+    disetujui_hr: { label: t('status.approvedHR'), color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
+    disetujui_direktur: { label: t('status.approvedDirector'), color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
     disetujui: { label: t('status.approved'), color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
     ditolak_pm: { label: t('status.rejectedPM'), color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-200" },
+    ditolak_hr: { label: t('status.rejectedHR'), color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-200" },
+    ditolak_direktur: { label: t('status.rejectedDirector'), color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-200" },
   };
   return configs[status] || { label: status, color: "text-gray-600", bgColor: "bg-gray-50", borderColor: "border-gray-200" };
 };
@@ -62,17 +74,23 @@ const getStepStatus = (item: PenambahanKerjaItem, stepIndex: number) => {
 
   if (status.includes("ditolak")) {
     if (stepIndex === 0) return "completed";
-    if (step.statusKey === "pm") return "rejected";
-    if (step.statusKey === "hr") return "pending";
+    const currentStepStatusKey = step.statusKey;
+    if (status === `ditolak_${currentStepStatusKey}`) return "rejected";
+    const currentStepIndex = steps.value.findIndex(s => s.statusKey === currentStepStatusKey);
+    const rejectedStepIndex = steps.value.findIndex(s => status === `ditolak_${s.statusKey}`);
+    if (currentStepIndex < rejectedStepIndex) return "completed";
     return "pending";
   }
 
   if (stepIndex === 0) return "completed";
 
-  if (stepIndex === 1 && status === 'menunggu_hr') return 'completed';
-
   if (status === `menunggu_${step.statusKey}`) return "active";
+
   if (status === `disetujui_${step.statusKey}` || status === "disetujui") return "completed";
+
+  const currentStepIndex = steps.value.findIndex(s => s.statusKey === step.statusKey);
+  const activeStepIndex = steps.value.findIndex(s => status === `menunggu_${s.statusKey}`);
+  if (activeStepIndex >= 0 && currentStepIndex < activeStepIndex) return "completed";
 
   return "pending";
 };
@@ -101,10 +119,18 @@ const getCardBorderColor = (item: PenambahanKerjaItem) => {
 
 onMounted(async () => {
   try {
-    const res = await penambahanKerjaApi.getMyPenambahanKerja();
-    statusList.value = (res.data || [])
-      .filter((item) => !item.status.includes('disetujui'))
-      .sort((a, b) => new Date(b.tanggal_pengajuan).getTime() - new Date(a.tanggal_pengajuan).getTime());
+    const [statusRes, userRes] = await Promise.allSettled([
+      penambahanKerjaApi.getMyPenambahanKerja(),
+      authApi.me(),
+    ]);
+    if (userRes.status === 'fulfilled') {
+      userRole.value = userRes.value.data.role || '';
+    }
+    if (statusRes.status === 'fulfilled') {
+      statusList.value = (statusRes.value.data || [])
+        .filter((item) => !item.status.includes('disetujui'))
+        .sort((a, b) => new Date(b.tanggal_pengajuan).getTime() - new Date(a.tanggal_pengajuan).getTime());
+    }
   } catch (err) {
     showError(err);
     statusList.value = [];
@@ -157,7 +183,7 @@ onMounted(async () => {
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  {{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}
+                  {{ formatTanggal(item.tanggal) }}
                 </div>
               </div>
 

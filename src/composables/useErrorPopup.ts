@@ -9,10 +9,16 @@ const errorCode = ref<number | null>(null);
 
 export function useErrorPopup() {
   const showError = (error: any) => {
-    if (error?.response?.data?.detail) {
-      errorMessage.value = error.response.data.detail;
-    } else if (error?.response?.data?.message) {
-      errorMessage.value = error.response.data.message;
+    const detail = error?.response?.data?.detail || error?.response?.data?.message || '';
+
+    if (detail && (detail.includes('already exists') || detail.includes('sudah ada') || detail.includes('Duplicate'))) {
+      errorMessage.value = 'Data sudah digunakan. Silakan gunakan data lain.';
+    } else if (error?.response?.status === 422) {
+      errorMessage.value = 'Data yang dikirim tidak valid. Periksa kembali isian form.';
+    } else if (error?.response?.status >= 500) {
+      errorMessage.value = 'Server sedang bermasalah. Silakan coba lagi nanti.';
+    } else if (detail) {
+      errorMessage.value = detail;
     } else if (error?.message) {
       errorMessage.value = error.message;
     } else {
