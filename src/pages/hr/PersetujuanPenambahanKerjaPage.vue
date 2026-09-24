@@ -58,7 +58,7 @@ const formatDateShort = (dateStr: string) => {
 const fetchPending = async () => {
   try {
     const res = await approvalApi.getPenambahanKerjaQueue();
-    pendingList.value = (res.data || []).filter(item => item.status === 'menunggu_hr');
+    pendingList.value = res.data || [];
   } catch (err) {
     showError(err);
     pendingList.value = [];
