@@ -33,11 +33,7 @@ const filteredRiwayat = computed(() => {
   const filtered = riwayat.value.filter((item) => {
     const itemYear = new Date(item.tanggal[0]).getFullYear();
     const yearMatch = itemYear === selectedYear.value;
-    const statusMatch =
-      item.status === "disetujui_hr" ||
-      item.status === "disetujui_pm" ||
-      item.status === "ditolak_pm" ||
-      item.status === "ditolak_hr";
+    const statusMatch = !item.status.includes("menunggu");
     return yearMatch && statusMatch;
   });
   return filtered.sort((a, b) => {
@@ -204,7 +200,7 @@ onMounted(async () => {
               </td>
               <td class="px-6 py-4">
                 <span class="text-sm text-gray-700"
-                  >{{ item.durasi || 1 }} {{ t("history.days") }}</span
+                  >{{ item.tanggal?.length || 1 }} {{ t("history.days") }}</span
                 >
               </td>
               <td class="px-6 py-4">
@@ -255,7 +251,7 @@ onMounted(async () => {
           </div>
           <div class="space-y-1 text-sm text-gray-600">
             <p>
-              {{ t("history.duration") }}: {{ item.durasi || 1 }}
+              {{ t("history.duration") }}: {{ item.tanggal?.length || 1 }}
               {{ t("history.days") }}
             </p>
             <p>
