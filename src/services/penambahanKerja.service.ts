@@ -14,6 +14,10 @@ export interface PenambahanKerjaItem {
   keterangan_pengajuan: string
   status: string
   approval_pm_detail: PmApprovalDetail[]
+  approved_by_hr: string | null
+  approved_at_hr: string | null
+  approved_by_direktur: string | null
+  approved_at_direktur: string | null
 }
 
 export interface PenambahanKerjaRequest {

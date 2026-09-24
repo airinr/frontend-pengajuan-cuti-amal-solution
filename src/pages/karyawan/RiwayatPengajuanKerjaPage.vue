@@ -73,6 +73,23 @@ const getStatusBadge = (status: string) => {
   return { label: status, class: "bg-gray-100 text-gray-700" };
 };
 
+const getProcessedBy = (item: PenambahanKerjaItem) => {
+  if (item.status.includes("direktur")) return item.approved_by_direktur || "-";
+  if (item.status.includes("hr")) return item.approved_by_hr || "-";
+  if (item.status.includes("pm")) {
+    const pm = item.approval_pm_detail?.find(
+      (p) => p.status === "disetujui" || p.status === "ditolak",
+    );
+    return pm?.nama_pm || "-";
+  }
+  return (
+    item.approved_by_direktur ||
+    item.approved_by_hr ||
+    item.approval_pm_detail?.[0]?.nama_pm ||
+    "-"
+  );
+};
+
 const goToPage = (page: number) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
@@ -173,12 +190,13 @@ onMounted(async () => {
               <th class="px-6 py-4">{{ t("history.duration") }}</th>
               <th class="px-6 py-4">{{ t("history.keterangan") }}</th>
               <th class="px-6 py-4">{{ t("history.status") }}</th>
+              <th class="px-6 py-4">{{ t("history.processedBy") }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="paginatedRiwayat.length === 0">
               <td
-                colspan="4"
+                colspan="5"
                 class="px-6 py-12 text-center text-gray-400 text-sm"
               >
                 {{ t("workHistory.noHistory") }}
@@ -217,6 +235,9 @@ onMounted(async () => {
                 >
                   {{ getStatusBadge(item.status).label }}
                 </span>
+              </td>
+              <td class="px-6 py-4">
+                <span class="text-sm text-gray-700">{{ getProcessedBy(item) }}</span>
               </td>
             </tr>
           </tbody>
@@ -257,6 +278,9 @@ onMounted(async () => {
             <p>
               {{ t("history.keterangan") }}:
               {{ item.keterangan_pengajuan || "-" }}
+            </p>
+            <p>
+              {{ t("history.processedBy") }}: {{ getProcessedBy(item) }}
             </p>
             <p class="text-xs text-gray-400">
               {{ t("history.submitted") }}:

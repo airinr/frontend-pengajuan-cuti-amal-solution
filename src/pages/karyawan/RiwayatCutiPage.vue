@@ -69,6 +69,23 @@ const getStatusLabel = (status: string) => {
   return labels[status] || status
 }
 
+const getProcessedBy = (item: RiwayatCuti) => {
+  if (item.status.includes('direktur')) return item.approved_by_direktur || '-'
+  if (item.status.includes('hr')) return item.approved_by_hr || '-'
+  if (item.status.includes('pm')) {
+    const pm = item.approval_pm_detail?.find(
+      (p) => p.status === 'disetujui' || p.status === 'ditolak'
+    )
+    return pm?.nama_pm || '-'
+  }
+  return (
+    item.approved_by_direktur ||
+    item.approved_by_hr ||
+    item.approval_pm_detail?.[0]?.nama_pm ||
+    '-'
+  )
+}
+
 const getInitials = (name: string) => {
   return name
     .split(' ')
@@ -144,11 +161,12 @@ onMounted(async () => {
               <th class="px-6 py-4">{{ t('history.leaveType') }}</th>
               <th class="px-6 py-4">{{ t('history.backup') }}</th>
               <th class="px-6 py-4">{{ t('history.status') }}</th>
+              <th class="px-6 py-4">{{ t('history.processedBy') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="paginatedRiwayat.length === 0">
-              <td colspan="5" class="px-6 py-12 text-center text-gray-400 text-sm">
+              <td colspan="6" class="px-6 py-12 text-center text-gray-400 text-sm">
                 {{ t('history.noHistory') }}
               </td>
             </tr>
@@ -188,6 +206,9 @@ onMounted(async () => {
                   {{ getStatusLabel(item.status) }}
                 </span>
               </td>
+              <td class="px-6 py-4">
+                <span class="text-sm text-gray-700">{{ getProcessedBy(item) }}</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -222,6 +243,9 @@ onMounted(async () => {
               <span>{{ item.durasi }} {{ t('history.days') }}</span>
               <span class="capitalize">{{ item.jenis_cuti }}</span>
             </div>
+            <p class="text-sm text-gray-600">
+              {{ t('history.processedBy') }}: {{ getProcessedBy(item) }}
+            </p>
             <div v-if="item.nama_pengganti" class="flex items-center gap-2">
               <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-[10px] font-medium text-blue-700">
                 {{ getInitials(item.nama_pengganti) }}

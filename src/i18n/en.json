@@ -179,6 +179,7 @@
     "duration": "Duration",
     "leaveType": "Leave Type",
     "backup": "Backup",
+    "processedBy": "Processed by",
     "status": "Status",
     "keterangan": "Description",
     "submitted": "Submitted",
