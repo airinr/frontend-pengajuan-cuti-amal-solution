@@ -13,11 +13,13 @@ import {
 import { holidayApi, type Holiday } from "../../services/holiday.service";
 import { getNetworkErrorMessage } from "../../lib/api";
 import { useCalendarNames } from "../../composables/useCalendarNames";
+import { useFormatTanggal } from "../../composables/useFormatTanggal";
 import type { CurrentUser } from "../../types";
 
 const { t } = useI18n();
 const router = useRouter();
 const { monthNamesShort } = useCalendarNames();
+const { formatTanggal } = useFormatTanggal();
 
 const user = ref<CurrentUser | null>(null);
 const ringkasan = ref<RingkasanCuti | null>(null);
@@ -48,10 +50,6 @@ const formatDate = (dateStr: string) => {
   const d = new Date(dateStr);
   const day = d.getDate();
   return `${day} ${monthNamesShort.value[d.getMonth()]} ${d.getFullYear()}`;
-};
-
-const formatDateRange = (start: string, end: string) => {
-  return `${formatDate(start)} - ${formatDate(end)}`;
 };
 
 const statusLabel = (status: string) => {
@@ -323,10 +321,7 @@ onMounted(fetchData);
                     </p>
                     <p class="text-xs text-gray-500">
                       {{
-                        formatDateRange(
-                          item.tanggal_mulai,
-                          item.tanggal_selesai,
-                        )
+                        formatTanggal(item.tanggal)
                       }}
                       &bull; {{ item.durasi }} Hari
                     </p>

@@ -13,8 +13,7 @@ export interface DashboardStats {
 export interface DashboardTimItem {
   nama: string;
   jenis_cuti: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   status: string;
 }
 
@@ -52,8 +51,7 @@ export interface RekapTimSummary {
 }
 
 export interface HistoryCutiItem {
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   nama: string;
   jenis_cuti: string;
   keterangan: string;
@@ -69,7 +67,7 @@ export interface RekapPengajuanKerjaItem {
   disetujui: number;
   ditolak: number;
   status: string;
-  tanggal_kerja: { tanggal_mulai: string; tanggal_selesai: string }[];
+  tanggal_kerja: string[];
 }
 
 export const pmApi = {

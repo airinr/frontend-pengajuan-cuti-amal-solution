@@ -32,7 +32,10 @@ const showEditModal = ref(false);
 const addSubmitting = ref(false);
 const editSubmitting = ref(false);
 const showAddPassword = ref(false);
+const showEditPassword = ref(false);
 const showSuccessPopup = ref(false);
+const addFormError = ref('');
+const editFormError = ref('');
 
 const showAddDeptModal = ref(false);
 const showEditDeptModal = ref(false);
@@ -43,6 +46,16 @@ const editDeptName = ref("");
 const editDeptId = ref<number | null>(null);
 const showDeptSuccessPopup = ref(false);
 const deptSuccessMessage = ref("");
+
+const showDeleteModal = ref(false);
+const deleteUserId = ref<number | null>(null);
+const deleteUserName = ref("");
+const deleteSubmitting = ref(false);
+const showDeleteSuccessPopup = ref(false);
+
+const showResetPasswordConfirm = ref(false);
+const resetPasswordSubmitting = ref(false);
+const showResetPasswordSuccess = ref(false);
 
 const addForm = ref({
   username: "",
@@ -77,6 +90,8 @@ const removePmFromAddList = (pm: { id_user: number; nama: string }) => {
 };
 
 const editForm = ref({
+  username: "",
+  password: "",
   nama: "",
   role: "karyawan",
   id_departemen: 0,
@@ -92,6 +107,38 @@ const editPmRemove = ref<number[]>([]);
 const editPmDropdownOpen = ref(false);
 
 const departemenOptions = computed(() => departemenList.value);
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const addEmailError = computed(() => {
+  if (!addForm.value.email) return '';
+  return emailRegex.test(addForm.value.email) ? '' : t('error.invalidEmail');
+});
+
+const addPhoneError = computed(() => {
+  if (!addForm.value.no_telp) return '';
+  return /^\d+$/.test(addForm.value.no_telp) ? '' : t('error.invalidPhone');
+});
+
+const editEmailError = computed(() => {
+  if (!editForm.value.email) return '';
+  return emailRegex.test(editForm.value.email) ? '' : t('error.invalidEmail');
+});
+
+const editPhoneError = computed(() => {
+  if (!editForm.value.no_telp) return '';
+  return /^\d+$/.test(editForm.value.no_telp) ? '' : t('error.invalidPhone');
+});
+
+const addUsernameError = computed(() => {
+  if (!addForm.value.username) return '';
+  return /\s/.test(addForm.value.username) ? t('error.usernameNoSpaces') : '';
+});
+
+const editUsernameError = computed(() => {
+  if (!editForm.value.username) return '';
+  return /\s/.test(editForm.value.username) ? t('error.usernameNoSpaces') : '';
+});
 
 const filteredKaryawan = computed(() => {
   return karyawanList.value.filter((item) => {
@@ -168,6 +215,29 @@ const closeAddModal = () => {
 };
 
 const handleAddSubmit = async () => {
+  addFormError.value = '';
+
+  if (!addForm.value.username || !addForm.value.nama || !addForm.value.password) {
+    addFormError.value = t('error.fieldRequired');
+    return;
+  }
+
+  if (/\s/.test(addForm.value.username)) {
+    addFormError.value = t('error.usernameNoSpaces');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (addForm.value.email && !emailRegex.test(addForm.value.email)) {
+    addFormError.value = t('error.invalidEmail');
+    return;
+  }
+
+  if (addForm.value.no_telp && !/^\d+$/.test(addForm.value.no_telp)) {
+    addFormError.value = t('error.invalidPhone');
+    return;
+  }
+
   addSubmitting.value = true;
   try {
     await authApi.registerAdmin({
@@ -194,8 +264,10 @@ const handleAddSubmit = async () => {
 const openEditModal = (item: any) => {
   editUserId.value = item.id_user || null;
   editForm.value = {
+    username: item.username || "",
+    password: "",
     nama: item.nama || "",
-    role: item.role || "karyawan",
+    role: item.jabatan || "karyawan",
     id_departemen: departemenOptions.value.find((d) => d.nama_departemen === item.departemen)?.id_departemen || 0,
     email: item.email || "",
     no_telp: item.no_telp || "",
@@ -209,6 +281,7 @@ const openEditModal = (item: any) => {
   editPmAdd.value = [];
   editPmRemove.value = [];
   editPmDropdownOpen.value = false;
+  showEditPassword.value = false;
   showEditModal.value = true;
 };
 
@@ -241,10 +314,33 @@ const editAvailablePmList = computed(() => {
 });
 
 const handleEditSubmit = async () => {
-  if (!editUserId.value || !editForm.value.nama) return;
+  editFormError.value = '';
+
+  if (!editUserId.value || !editForm.value.nama || !editForm.value.username) {
+    editFormError.value = t('error.fieldRequired');
+    return;
+  }
+
+  if (/\s/.test(editForm.value.username)) {
+    editFormError.value = t('error.usernameNoSpaces');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (editForm.value.email && !emailRegex.test(editForm.value.email)) {
+    editFormError.value = t('error.invalidEmail');
+    return;
+  }
+
+  if (editForm.value.no_telp && !/^\d+$/.test(editForm.value.no_telp)) {
+    editFormError.value = t('error.invalidPhone');
+    return;
+  }
+
   editSubmitting.value = true;
   try {
     await authApi.updateKaryawan(editUserId.value, {
+      username: editForm.value.username,
       nama: editForm.value.nama,
       role: editForm.value.role,
       id_departemen: editForm.value.id_departemen,
@@ -322,6 +418,60 @@ const handleEditDeptSubmit = async () => {
   } finally {
     editDeptSubmitting.value = false;
   }
+};
+
+const openDeleteModal = (item: any) => {
+  deleteUserId.value = item.id_user || null;
+  deleteUserName.value = item.nama || "";
+  showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false;
+  deleteUserId.value = null;
+  deleteUserName.value = "";
+};
+
+const handleDeleteSubmit = async () => {
+  if (!deleteUserId.value) return;
+  deleteSubmitting.value = true;
+  try {
+    await authApi.deleteKaryawan(deleteUserId.value);
+    closeDeleteModal();
+    showDeleteSuccessPopup.value = true;
+    await fetchData();
+  } catch (err) {
+    showError(err);
+  } finally {
+    deleteSubmitting.value = false;
+  }
+};
+
+const openResetPasswordConfirm = () => {
+  showResetPasswordConfirm.value = true;
+};
+
+const closeResetPasswordConfirm = () => {
+  showResetPasswordConfirm.value = false;
+};
+
+const handleResetPassword = async () => {
+  if (!editUserId.value) return;
+  resetPasswordSubmitting.value = true;
+  try {
+    await authApi.resetPassword(editUserId.value);
+    closeResetPasswordConfirm();
+    showResetPasswordSuccess.value = true;
+  } catch (err) {
+    showError(err);
+  } finally {
+    resetPasswordSubmitting.value = false;
+  }
+};
+
+const closeResetPasswordSuccess = () => {
+  showResetPasswordSuccess.value = false;
+  closeEditModal();
 };
 
 onMounted(() => {
@@ -463,7 +613,7 @@ onMounted(() => {
               >
                 <td class="px-2 py-2 text-sm text-gray-500 text-center">{{ index + 1 }}</td>
                 <td class="px-2 py-2 text-sm font-medium text-gray-800">{{ item.nama }}</td>
-                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.jabatan === 'pm' ? 'Project Manager' : item.jabatan === 'hr' ? 'Human Resources' : item.jabatan === 'staff_hr' ? 'Staff HR' : item.jabatan">{{ item.jabatan === 'pm' ? 'PM' : item.jabatan === 'hr' ? 'HR' : item.jabatan === 'staff_hr' ? 'Staff HR' : item.jabatan }}</td>
+                <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.jabatan === 'pm' ? 'Project Manager' : item.jabatan === 'hr_manager' ? 'HR Manager' : item.jabatan === 'staff_hr' ? 'Staff HR' : item.jabatan">{{ item.jabatan === 'pm' ? 'PM' : item.jabatan === 'hr_manager' ? 'HR Manager' : item.jabatan === 'staff_hr' ? 'Staff HR' : item.jabatan }}</td>
                 <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.email">{{ item.email }}</td>
                 <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.no_telp || '-'">{{ item.no_telp || '-' }}</td>
                 <td class="px-2 py-2 text-sm text-gray-600 truncate" :title="item.tanggal_bergabung || '-'">{{ item.tanggal_bergabung || '-' }}</td>
@@ -478,7 +628,10 @@ onMounted(() => {
                   </span>
                 </td>
                 <td class="px-2 py-2 text-center">
-                  <button @click="openEditModal(item)" class="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer">{{ t('employee.edit') }}</button>
+                  <div class="flex items-center justify-center gap-2">
+                    <button @click="openEditModal(item)" class="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer">{{ t('employee.edit') }}</button>
+                    <button @click="openDeleteModal(item)" class="text-xs text-red-600 hover:text-red-700 font-medium cursor-pointer">{{ t('employee.delete') }}</button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -500,30 +653,40 @@ onMounted(() => {
             </div>
 
             <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.username') }} <span class="text-red-500">*</span></label>
-                <input v-model="addForm.username" type="text" :placeholder="t('employee.usernamePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <!-- Section: Akun Karyawan -->
+              <div class="border-b border-gray-200 pb-2 mb-4">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">{{ t('employee.accountSection') }}</h4>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.name') }} <span class="text-red-500">*</span></label>
-                <input v-model="addForm.nama" type="text" :placeholder="t('employee.namePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.username') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.username" type="text" :placeholder="t('employee.usernamePlaceholder')" :class="['w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', addUsernameError ? 'border-red-300' : 'border-gray-200']" />
+                <p v-if="addUsernameError" class="text-xs text-red-500 mt-1">{{ addUsernameError }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.password') }} <span class="text-red-500">*</span></label>
                 <div class="relative">
-                  <input v-model="addForm.password" :type="showAddPassword ? 'text' : 'password'" :placeholder="t('employee.passwordPlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input v-model="addForm.password" :type="showAddPassword ? 'text' : 'password'" autocomplete="new-password" :placeholder="t('employee.passwordPlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   <button type="button" @click="showAddPassword = !showAddPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
                     <svg v-if="showAddPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
                     <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                   </button>
                 </div>
               </div>
+
+              <!-- Section: Data Karyawan -->
+              <div class="border-b border-gray-200 pb-2 mb-4 mt-6">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">{{ t('employee.dataSection') }}</h4>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.name') }} <span class="text-red-500">*</span></label>
+                <input v-model="addForm.nama" type="text" :placeholder="t('employee.namePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.role') }} <span class="text-red-500">*</span></label>
                 <select v-model="addForm.role" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="karyawan">{{ t('employee.karyawanTab') }}</option>
                   <option value="pm">{{ t('employee.projectManager') }}</option>
-                  <option value="hr">HR</option>
+                  <option value="hr_manager">HR Manager</option>
                   <option value="staff_hr">Staff HR</option>
                   <option value="direktur">Direktur</option>
                 </select>
@@ -581,16 +744,22 @@ onMounted(() => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.email') }} <span class="text-red-500">*</span></label>
-                <input v-model="addForm.email" type="email" :placeholder="t('employee.emailPlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input v-model="addForm.email" type="email" :placeholder="t('employee.emailPlaceholder')" :class="['w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', addEmailError ? 'border-red-300' : 'border-gray-200']" />
+                <p v-if="addEmailError" class="text-xs text-red-500 mt-1">{{ addEmailError }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.phone') }} <span class="text-red-500">*</span></label>
-                <input v-model="addForm.no_telp" type="text" :placeholder="t('employee.phonePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input v-model="addForm.no_telp" type="text" :placeholder="t('employee.phonePlaceholder')" :class="['w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', addPhoneError ? 'border-red-300' : 'border-gray-200']" />
+                <p v-if="addPhoneError" class="text-xs text-red-500 mt-1">{{ addPhoneError }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.joinDate') }} <span class="text-red-500">*</span></label>
                 <input v-model="addForm.tanggal_bergabung" type="date" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
+            </div>
+
+            <div v-if="addFormError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              {{ addFormError }}
             </div>
 
             <div class="flex items-center justify-end gap-3 mt-6">
@@ -617,6 +786,26 @@ onMounted(() => {
             </div>
 
             <div class="space-y-4">
+              <!-- Section: Akun Karyawan -->
+              <div class="border-b border-gray-200 pb-2 mb-4">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">{{ t('employee.accountSection') }}</h4>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.username') }} <span class="text-red-500">*</span></label>
+                <input v-model="editForm.username" type="text" :placeholder="t('employee.usernamePlaceholder')" :class="['w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', editUsernameError ? 'border-red-300' : 'border-gray-200']" />
+                <p v-if="editUsernameError" class="text-xs text-red-500 mt-1">{{ editUsernameError }}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.password') }}</label>
+                <button type="button" @click="openResetPasswordConfirm" class="w-full px-4 py-2.5 text-sm font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors cursor-pointer">
+                  {{ t('employee.resetPasswordDefault') }}
+                </button>
+              </div>
+
+              <!-- Section: Data Karyawan -->
+              <div class="border-b border-gray-200 pb-2 mb-4 mt-6">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">{{ t('employee.dataSection') }}</h4>
+              </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.name') }} <span class="text-red-500">*</span></label>
                 <input v-model="editForm.nama" type="text" :placeholder="t('employee.namePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -626,7 +815,7 @@ onMounted(() => {
                 <select v-model="editForm.role" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="karyawan">{{ t('employee.karyawanTab') }}</option>
                   <option value="pm">{{ t('employee.projectManager') }}</option>
-                  <option value="hr">HR</option>
+                  <option value="hr_manager">HR Manager</option>
                   <option value="staff_hr">Staff HR</option>
                   <option value="direktur">Direktur</option>
                 </select>
@@ -684,11 +873,17 @@ onMounted(() => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.email') }} <span class="text-red-500">*</span></label>
-                <input v-model="editForm.email" type="email" :placeholder="t('employee.emailPlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input v-model="editForm.email" type="email" :placeholder="t('employee.emailPlaceholder')" :class="['w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', editEmailError ? 'border-red-300' : 'border-gray-200']" />
+                <p v-if="editEmailError" class="text-xs text-red-500 mt-1">{{ editEmailError }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.phone') }} <span class="text-red-500">*</span></label>
-                <input v-model="editForm.no_telp" type="text" :placeholder="t('employee.phonePlaceholder')" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input v-model="editForm.no_telp" type="text" :placeholder="t('employee.phonePlaceholder')" :class="['w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', editPhoneError ? 'border-red-300' : 'border-gray-200']" />
+                <p v-if="editPhoneError" class="text-xs text-red-500 mt-1">{{ editPhoneError }}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.joinDate') }} <span class="text-red-500">*</span></label>
+                <input v-model="editForm.tanggal_bergabung" type="date" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.status') }} <span class="text-red-500">*</span></label>
@@ -697,10 +892,10 @@ onMounted(() => {
                   <option value="Cuti">{{ t('employee.inactive') }}</option>
                 </select>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('employee.joinDate') }} <span class="text-red-500">*</span></label>
-                <input v-model="editForm.tanggal_bergabung" type="date" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
+            </div>
+
+            <div v-if="editFormError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              {{ editFormError }}
             </div>
 
             <div class="flex items-center justify-end gap-3 mt-6">
@@ -818,6 +1013,121 @@ onMounted(() => {
               class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
             >
               {{ t('common.close') }}
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Modal Konfirmasi Hapus Karyawan -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showDeleteModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="closeDeleteModal">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">{{ t('employee.deleteModalTitle') }}</h3>
+              <button @click="closeDeleteModal" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div class="mb-6">
+              <div class="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <p class="text-sm text-gray-600 text-center">{{ t('employee.deleteConfirmMsg') }}</p>
+              <p class="text-sm font-semibold text-gray-800 text-center mt-2">{{ deleteUserName }}</p>
+            </div>
+            <div class="flex items-center justify-end gap-3">
+              <button @click="closeDeleteModal" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">{{ t('employee.cancel') }}</button>
+              <button @click="handleDeleteSubmit" :disabled="deleteSubmitting" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+                {{ deleteSubmitting ? t('employee.deleting') : t('employee.delete') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Delete Success Popup -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showDeleteSuccessPopup"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="showDeleteSuccessPopup = false"
+        >
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('employee.deleteSuccess') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">{{ t('employee.deleteSuccessMsg') }}</p>
+            <button
+              @click="showDeleteSuccessPopup = false"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+            >
+              {{ t('employee.close') }}
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Modal Konfirmasi Reset Password -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showResetPasswordConfirm" class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" @click.self="closeResetPasswordConfirm">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-800">{{ t('employee.resetPasswordConfirmTitle') }}</h3>
+              <button @click="closeResetPasswordConfirm" class="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div class="mb-6">
+              <div class="flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mx-auto mb-4">
+                <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <p class="text-sm text-gray-600 text-center">{{ t('employee.resetPasswordConfirmMsg') }}</p>
+            </div>
+            <div class="flex items-center justify-end gap-3">
+              <button @click="closeResetPasswordConfirm" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">{{ t('employee.cancel') }}</button>
+              <button @click="handleResetPassword" :disabled="resetPasswordSubmitting" class="px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+                {{ resetPasswordSubmitting ? t('employee.resetting') : t('employee.resetPassword') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Reset Password Success Popup -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showResetPasswordSuccess"
+          class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+          @click.self="closeResetPasswordSuccess"
+        >
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('employee.resetPasswordSuccess') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">{{ t('employee.resetPasswordSuccessMsg') }}</p>
+            <button
+              @click="closeResetPasswordSuccess"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+            >
+              {{ t('employee.close') }}
             </button>
           </div>
         </div>

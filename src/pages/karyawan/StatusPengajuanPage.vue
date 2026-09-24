@@ -5,10 +5,12 @@ import { useI18n } from 'vue-i18n'
 import { karyawanApi, type OngoingCuti } from '../../services/karyawan.service'
 import { authApi } from '../../services/auth.service'
 import { useErrorPopup } from '../../composables/useErrorPopup'
+import { useFormatTanggal } from '../../composables/useFormatTanggal'
 
 const { t } = useI18n()
 const router = useRouter()
 const { showError } = useErrorPopup()
+const { formatTanggal } = useFormatTanggal()
 
 const ongoingList = ref<OngoingCuti[]>([])
 const loading = ref(true)
@@ -61,18 +63,6 @@ const formatDateShort = (dateStr: string) => {
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${day} ${month}, ${hours}:${minutes}`
-}
-
-const formatDateRange = (start: string, end: string) => {
-  const s = new Date(start)
-  const e = new Date(end)
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-
-  if (start === end) {
-    return `${s.getDate()} ${monthNames[s.getMonth()]} ${s.getFullYear()}`
-  }
-
-  return `${s.getDate()} ${monthNames[s.getMonth()]} ${s.getFullYear()} - ${e.getDate()} ${monthNames[e.getMonth()]} ${e.getFullYear()}`
 }
 
 const getStatusConfig = (status: string, item?: OngoingCuti) => {
@@ -171,8 +161,7 @@ const getCardBorderColor = (item: OngoingCuti) => {
 const goToEdit = (item: OngoingCuti) => {
   sessionStorage.setItem('editCuti', JSON.stringify({
     id: item.id_log_cuti,
-    tanggal_mulai: item.tanggal_mulai,
-    tanggal_selesai: item.tanggal_selesai,
+    tanggal: item.tanggal,
     keterangan_cuti: item.keterangan_cuti,
     pengganti: item.id_pengganti,
   }))
@@ -249,7 +238,7 @@ onMounted(async () => {
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  {{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}
+                  {{ formatTanggal(item.tanggal) }}
                 </div>
               </div>
 

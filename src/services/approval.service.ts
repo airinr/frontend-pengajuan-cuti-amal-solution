@@ -5,12 +5,12 @@ export interface ApprovalQueueItem {
   nama: string;
   nama_departemen: string;
   jenis_cuti: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   durasi: number;
   pengganti: string;
   sisa_cuti: number;
   alasan: string;
+  approval_pm_detail: PmApprovalDetail[];
 }
 
 export interface PmApprovalDetail {
@@ -23,8 +23,7 @@ export interface PenambahanKerjaQueueItem {
   id_pengajuan_kerja: number
   nama: string
   nama_departemen: string
-  tanggal_mulai: string
-  tanggal_selesai: string
+  tanggal: string[]
   keterangan: string
   tanggal_pengajuan: string
   status: string

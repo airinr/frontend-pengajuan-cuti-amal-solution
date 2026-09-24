@@ -6,9 +6,11 @@ import {
   type PenambahanKerjaQueueItem,
 } from "../../services/approval.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useFormatTanggal } from "../../composables/useFormatTanggal";
 
 const { t } = useI18n();
 const { showError } = useErrorPopup();
+const { formatTanggal } = useFormatTanggal();
 
 const pendingList = ref<PenambahanKerjaQueueItem[]>([]);
 const loading = ref(true);
@@ -21,22 +23,6 @@ const showRejectModal = ref(false);
 const rejectTarget = ref<PenambahanKerjaQueueItem | null>(null);
 const rejectAlasan = ref("");
 const rejectLoading = ref(false);
-
-const formatDateRange = (start: string, end: string) => {
-  const s = new Date(start);
-  const e = new Date(end);
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-  ];
-  if (start === end) {
-    return `${s.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
-  }
-  if (s.getMonth() === e.getMonth()) {
-    return `${s.getDate()} - ${e.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
-  }
-  return `${s.getDate()} ${months[s.getMonth()]} - ${e.getDate()} ${months[e.getMonth()]} ${s.getFullYear()}`;
-};
 
 const getInitials = (name: string) => {
   return name
@@ -174,11 +160,46 @@ onMounted(async () => {
               <div class="grid grid-cols-2 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
                 <div>
                   <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.dateRange') }}</p>
-                  <p class="text-xs font-medium text-gray-700 mt-0.5">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
+                  <p class="text-xs font-medium text-gray-700 mt-0.5">{{ formatTanggal(item.tanggal) }}</p>
                 </div>
                 <div>
                   <p class="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{{ t('approval.keterangan') }}</p>
                   <p class="text-xs font-medium text-gray-700 mt-0.5">{{ item.keterangan || '-' }}</p>
+                </div>
+              </div>
+
+              <!-- PM Approval Details -->
+              <div v-if="item.approval_pm_detail && item.approval_pm_detail.length > 0" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-xs font-semibold text-blue-800 mb-2">
+                  {{ t('status.approvalPM') }}
+                  <span v-if="item.approval_pm_detail.length > 1" class="font-normal">
+                    ({{ item.approval_pm_detail.filter(pm => pm.status === 'disetujui').length }}/{{ item.approval_pm_detail.length }})
+                  </span>
+                </p>
+                <div class="space-y-1.5">
+                  <div v-for="(pm, i) in item.approval_pm_detail" :key="i" class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <div :class="[
+                        'w-5 h-5 rounded-full flex items-center justify-center',
+                        pm.status === 'disetujui' ? 'bg-green-100' : pm.status === 'ditolak' ? 'bg-red-100' : 'bg-gray-100'
+                      ]">
+                        <svg v-if="pm.status === 'disetujui'" class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <svg v-else-if="pm.status === 'ditolak'" class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <span v-else class="text-[10px] text-gray-500">{{ i + 1 }}</span>
+                      </div>
+                      <span class="text-xs text-gray-700">{{ pm.nama_pm }}</span>
+                    </div>
+                    <span :class="[
+                      'text-[10px] font-medium',
+                      pm.status === 'disetujui' ? 'text-green-600' : pm.status === 'ditolak' ? 'text-red-600' : 'text-gray-400'
+                    ]">
+                      {{ pm.status === 'disetujui' ? t('status.approved') : pm.status === 'ditolak' ? t('status.rejected') : t('status.waiting') }}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -238,7 +259,7 @@ onMounted(async () => {
             </p>
 
             <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
-              <p><span class="text-gray-500">Tanggal:</span> <span class="font-medium text-gray-800">{{ approveTarget ? formatDateRange(approveTarget.tanggal_mulai, approveTarget.tanggal_selesai) : '' }}</span></p>
+              <p><span class="text-gray-500">Tanggal:</span> <span class="font-medium text-gray-800">{{ approveTarget ? formatTanggal(approveTarget.tanggal) : '' }}</span></p>
               <p><span class="text-gray-500">Keterangan:</span> <span class="font-medium text-gray-800">{{ approveTarget?.keterangan }}</span></p>
             </div>
 

@@ -65,9 +65,10 @@ const formKeterangan = ref("");
 const applyLoading = ref(false);
 const applyError = ref("");
 const applySuccess = ref("");
+const showSuccessPopup = ref(false);
 
 const isFormValid = computed(() => {
-  return formKuota.value > 0 && formKeterangan.value.trim() !== "";
+  return formKuota.value !== 0 && formKeterangan.value.trim() !== "";
 });
 
 const openModal = () => {
@@ -98,7 +99,11 @@ const handleApply = async () => {
       jumlah_hari: formKuota.value,
       keterangan: formKeterangan.value || t('leaveQuota.defaultDescription'),
     });
-    applySuccess.value = t('leaveQuota.applySuccess');
+    closeModal();
+    applySuccess.value = formKuota.value < 0 
+      ? t('leaveQuota.applySuccessSubtract') 
+      : t('leaveQuota.applySuccess');
+    showSuccessPopup.value = true;
     await fetchData();
   } catch (err: any) {
     applyError.value = err.response?.data?.detail || t('leaveQuota.applyFailed');
@@ -452,7 +457,7 @@ onMounted(() => {
                 </label>
                 <div class="flex items-center gap-2">
                   <button
-                    @click="formKuota = Math.max(0, formKuota - 1)"
+                    @click="formKuota--"
                     class="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 cursor-pointer text-lg font-medium"
                   >
                     -
@@ -472,6 +477,16 @@ onMounted(() => {
                     +
                   </button>
                 </div>
+                <p 
+                  v-if="formKuota !== 0"
+                  class="text-xs mt-2 font-medium"
+                  :class="formKuota < 0 ? 'text-red-500' : 'text-green-500'"
+                >
+                  {{ formKuota < 0 
+                    ? t('leaveQuota.subtractInfo', { days: Math.abs(formKuota) }) 
+                    : t('leaveQuota.addInfo', { days: formKuota }) 
+                  }}
+                </p>
               </div>
               <div>
                 <label
@@ -510,6 +525,33 @@ onMounted(() => {
                 {{ applyLoading ? t('leaveQuota.saving') : t('leaveQuota.apply') }}
               </button>
             </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Success Popup -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showSuccessPopup"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="showSuccessPopup = false"
+        >
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('common.success') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">{{ applySuccess }}</p>
+            <button
+              @click="showSuccessPopup = false"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+            >
+              {{ t('common.close') }}
+            </button>
           </div>
         </div>
       </Transition>

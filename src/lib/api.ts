@@ -27,7 +27,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !isRedirecting) {
+    if (error.response?.status === 401 && !isRedirecting && window.location.pathname !== "/login") {
       isRedirecting = true;
       localStorage.removeItem("token");
       localStorage.removeItem("token_type");

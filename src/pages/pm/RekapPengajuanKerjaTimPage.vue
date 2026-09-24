@@ -6,9 +6,11 @@ import {
   type RekapPengajuanKerjaItem,
 } from "../../services/pm.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useFormatTanggal } from "../../composables/useFormatTanggal";
 
 const { t } = useI18n();
 const { showError } = useErrorPopup();
+const { formatTanggal } = useFormatTanggal();
 
 const allList = ref<RekapPengajuanKerjaItem[]>([]);
 const loading = ref(true);
@@ -68,16 +70,6 @@ const openDetail = (item: RekapPengajuanKerjaItem) => {
 const closeModal = () => {
   showModal.value = false;
   selectedItem.value = null;
-};
-
-const formatDateRange = (start: string, end: string) => {
-  const s = new Date(start);
-  const e = new Date(end);
-  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-  if (start === end) {
-    return `${s.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
-  }
-  return `${s.getDate()} ${months[s.getMonth()]} - ${e.getDate()} ${months[e.getMonth()]} ${s.getFullYear()}`;
 };
 
 onMounted(async () => {
@@ -237,7 +229,7 @@ onMounted(async () => {
                   <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span class="text-sm text-gray-700">{{ formatDateRange(tk.tanggal_mulai, tk.tanggal_selesai) }}</span>
+                  <span class="text-sm text-gray-700">{{ formatTanggal(tk.tanggal) }}</span>
                 </div>
               </div>
               <p v-else class="text-sm text-gray-400 text-center py-4">{{ t('leaveLog.noData') }}</p>

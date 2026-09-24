@@ -9,8 +9,7 @@ export interface PmApprovalDetail {
 export interface PenambahanKerjaItem {
   id_pengajuan_kerja: number
   id_user: number
-  tanggal_mulai: string
-  tanggal_selesai: string
+  tanggal: string[]
   tanggal_pengajuan: string
   keterangan_pengajuan: string
   status: string
@@ -18,8 +17,7 @@ export interface PenambahanKerjaItem {
 }
 
 export interface PenambahanKerjaRequest {
-  tanggal_mulai: string
-  tanggal_selesai: string
+  tanggal: string[]
   keterangan: string
 }
 

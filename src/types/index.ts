@@ -91,8 +91,7 @@ export interface UpdateProfileRequest {
 }
 
 export interface CreateKaryawanLeaveRequest {
-  tanggal_mulai: string
-  tanggal_selesai: string
+  tanggal: string[]
   keterangan_cuti: string
   pengganti: number
 }
@@ -101,8 +100,7 @@ export interface KaryawanLeaveResponse {
   id_log_cuti: number
   id_user: number
   jenis_cuti: string
-  tanggal_mulai: string
-  tanggal_selesai: string
+  tanggal: string[]
   keterangan_cuti: string
   status: string
   alasan_penolakan: string | null

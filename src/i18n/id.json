@@ -53,7 +53,13 @@
     "agreeTerms": "Saya setuju dengan Syarat dan Ketentuan",
     "loggingIn": "Masuk...",
     "registering": "Mendaftar...",
-    "accountCreatedBy": "Akun dibuat oleh HR/Direktur"
+    "accountCreatedBy": "Akun dibuat oleh HR/Direktur",
+    "forgotPasswordConfirmTitle": "Konfirmasi Reset Password",
+    "forgotPasswordConfirmMsg": "Link reset password akan dikirim ke email yang terdaftar untuk username",
+    "send": "Kirim",
+    "sending": "Mengirim...",
+    "forgotPasswordSuccess": "Berhasil!",
+    "forgotPasswordSuccessMsg": "Link reset password telah dikirim ke email Anda."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -94,9 +100,10 @@
   },
   "status": {
     "waiting": "Menunggu Persetujuan",
-    "waitingPM": "Menunggu Persetujuan PM",
+    "waitingPM": "Persetujuan PM",
     "waitingHR": "Menunggu Persetujuan HRD",
     "waitingDirector": "Menunggu Persetujuan Direktur",
+    "approvalPM": "Persetujuan PM",
     "approved": "Disetujui",
     "approvedPM": "Disetujui PM",
     "approvedHR": "Disetujui HRD",
@@ -358,7 +365,22 @@
     "departmentNameLabel": "Nama Departemen",
     "departmentNamePlaceholder": "Masukkan nama departemen",
     "departmentAdded": "Departemen berhasil ditambahkan!",
-    "departmentUpdated": "Departemen berhasil diperbarui!"
+    "departmentUpdated": "Departemen berhasil diperbarui!",
+    "delete": "Hapus",
+    "deleteModalTitle": "Konfirmasi Hapus Karyawan",
+    "deleteConfirmMsg": "Apakah Anda yakin ingin menghapus karyawan ini? Tindakan ini tidak dapat dibatalkan.",
+    "deleting": "Menghapus...",
+    "deleteSuccess": "Berhasil Dihapus!",
+    "deleteSuccessMsg": "Karyawan berhasil dihapus dari sistem.",
+    "accountSection": "Akun Karyawan",
+    "dataSection": "Data Karyawan",
+    "resetPasswordDefault": "Reset Password Default",
+    "resetPassword": "Reset Password",
+    "resetting": "Mereset...",
+    "resetPasswordConfirmTitle": "Konfirmasi Reset Password",
+    "resetPasswordConfirmMsg": "Password default akan dikirim ke karyawan melalui email karyawan yang sudah terdaftar",
+    "resetPasswordSuccess": "Password Berhasil Direset!",
+    "resetPasswordSuccessMsg": "Password default telah berhasil dikirim ke email karyawan."
   },
   "leaveQuota": {
     "title": "Jatah Cuti",
@@ -398,7 +420,13 @@
     "userNotFound": "Data user tidak ditemukan",
     "defaultDescription": "Penyesuaian kuota cuti",
     "applySuccess": "Kuota cuti berhasil ditambahkan untuk semua karyawan",
-    "applyFailed": "Gagal menambahkan kuota cuti"
+    "applySuccessSubtract": "Kuota cuti berhasil dikurangi untuk semua karyawan",
+    "applyFailed": "Gagal menambahkan kuota cuti",
+    "adjustmentType": "Jenis Penyesuaian",
+    "addLeave": "Tambah Cuti",
+    "subtractLeave": "Kurangi Cuti",
+    "subtractInfo": "Cuti akan dikurangi {days} hari",
+    "addInfo": "Cuti akan bertambah {days} hari"
   },
   "leaveLog": {
     "title": "Log & Rekapitulasi Cuti",
@@ -500,7 +528,13 @@
     "profileSaveFailed": "Gagal menyimpan profil",
     "selectCollectiveLeave": "Pilih tanggal cuti bersama terlebih dahulu",
     "workReasonRequired": "Alasan tetap bekerja wajib diisi",
-    "hasRejectedLeave": "Anda memiliki pengajuan cuti yang ditolak. Silakan edit pengajuan tersebut di halaman Status Pengajuan sebelum mengajukan cuti baru."
+    "hasRejectedLeave": "Anda memiliki pengajuan cuti yang ditolak. Silakan edit pengajuan tersebut di halaman Status Pengajuan sebelum mengajukan cuti baru.",
+    "invalidEmail": "Format email tidak valid",
+    "invalidPhone": "Nomor telepon harus berupa angka",
+    "fieldRequired": "Semua kolom wajib harus diisi",
+    "usernameNoSpaces": "Username tidak boleh mengandung spasi",
+    "usernameRequired": "Username harus diisi terlebih dahulu",
+    "forgotPasswordFailed": "Gagal mengirim link reset. Silakan coba lagi."
   },
   "network": {
     "timeout": "Permintaan melewati batas waktu. Server mungkin sedang lambat.",

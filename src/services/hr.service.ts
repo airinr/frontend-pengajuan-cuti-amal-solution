@@ -25,8 +25,7 @@ export interface PersetujuanItem {
   jabatan: string;
   departemen: string;
   jenis_cuti: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   durasi: number;
   delegasi_tugas: string;
   sisa_cuti: number;
@@ -51,8 +50,7 @@ export interface RekapItem {
 
 export interface LogCutiItem {
   nama: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   durasi: number;
   jenis_cuti: string;
   keterangan: string;
@@ -65,8 +63,7 @@ export interface LogCutiItem {
 export interface CutiMendatangItem {
   nama: string;
   jenis_cuti: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   status: string;
 }
 
@@ -78,6 +75,8 @@ export interface RingkasanKaryawan {
 
 export interface KaryawanItem {
   id_user?: number;
+  username?: string;
+  password?: string;
   nama: string;
   departemen: string;
   jabatan: string;
@@ -110,8 +109,7 @@ export interface DaftarCutiKaryawan {
 
 export interface LogPenambahanKerjaItem {
   nama: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   durasi: number;
   keterangan: string;
   tanggal_pengajuan: string;

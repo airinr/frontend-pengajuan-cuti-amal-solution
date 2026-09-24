@@ -37,8 +37,6 @@ const currentMonth = ref(today.getMonth());
 const currentYear = ref(today.getFullYear());
 
 const form = ref({
-  tanggal_mulai: "",
-  tanggal_selesai: "",
   keterangan_cuti: "",
   pengganti: null as number | null,
   setuju_aturan: false,
@@ -167,7 +165,7 @@ const hasOngoingCuti = computed(() => {
 const hasRejectedCuti = computed(() => {
   const todayStr = formatDate(today);
   return ongoingCuti.value.some(
-    (item) => item.status_sekarang.includes("ditolak") && item.tanggal_selesai >= todayStr,
+    (item) => item.status_sekarang.includes("ditolak") && item.tanggal[item.tanggal.length - 1] >= todayStr,
   );
 });
 
@@ -199,9 +197,7 @@ const handleDateClick = (day: {
     warningMessage.value = "";
   }
 
-  const sorted = [...selectedDates.value].sort();
-  form.value.tanggal_mulai = sorted[0] || "";
-  form.value.tanggal_selesai = sorted[sorted.length - 1] || "";
+  selectedDates.value.sort();
 };
 
 const prevMonth = () => {
@@ -224,12 +220,38 @@ const nextMonth = () => {
 
 const clearDates = () => {
   selectedDates.value = [];
-  form.value.tanggal_mulai = "";
-  form.value.tanggal_selesai = "";
 };
 
 const calculateDuration = () => {
   return selectedDates.value.length;
+};
+
+const formatSelectedDates = (dates: string[]) => {
+  if (dates.length === 0) return "-";
+  
+  const sorted = [...dates].sort();
+  
+  if (sorted.length === 1) {
+    const d = new Date(sorted[0]);
+    return `${d.getDate()} ${monthNamesLong.value[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  
+  const grouped: Record<string, number[]> = {};
+  sorted.forEach(dateStr => {
+    const d = new Date(dateStr);
+    const key = `${d.getMonth()}-${d.getFullYear()}`;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(d.getDate());
+  });
+  
+  const parts = Object.entries(grouped).map(([key, days]) => {
+    const [month] = key.split('-').map(Number);
+    const dayStr = days.join(", ");
+    return `${dayStr} ${monthNamesLong.value[month]}`;
+  });
+  
+  const lastYear = new Date(sorted[sorted.length - 1]).getFullYear();
+  return `${parts.join(", ")} ${lastYear}`;
 };
 
 onMounted(async () => {
@@ -254,16 +276,12 @@ onMounted(async () => {
         const data = JSON.parse(editData);
         editMode.value = true;
         editingItemId.value = data.id;
-        form.value.tanggal_mulai = data.tanggal_mulai || "";
-        form.value.tanggal_selesai = data.tanggal_selesai || "";
         form.value.keterangan_cuti = data.keterangan_cuti || "";
         form.value.pengganti = data.pengganti || null;
 
-        if (form.value.tanggal_mulai) selectedDates.value.push(form.value.tanggal_mulai);
-        if (form.value.tanggal_selesai && form.value.tanggal_selesai !== form.value.tanggal_mulai) {
-          selectedDates.value.push(form.value.tanggal_selesai);
+        if (data.tanggal && Array.isArray(data.tanggal)) {
+          selectedDates.value = [...data.tanggal].sort();
         }
-        selectedDates.value.sort();
         originalDates.value = [...selectedDates.value];
 
         if (form.value.pengganti) {
@@ -300,7 +318,7 @@ const handleSubmit = async () => {
     return;
   }
 
-  if (!form.value.tanggal_mulai || !form.value.tanggal_selesai) {
+  if (selectedDates.value.length === 0) {
     errorMessage.value = t('error.selectDate');
     return;
   }
@@ -319,23 +337,19 @@ const handleSubmit = async () => {
   try {
     if (editMode.value && editingItemId.value) {
       await karyawanApi.updateCuti(editingItemId.value, {
-        tanggal_mulai: form.value.tanggal_mulai,
-        tanggal_selesai: form.value.tanggal_selesai,
+        tanggal: selectedDates.value,
         keterangan_cuti: form.value.keterangan_cuti,
         pengganti: form.value.pengganti,
       });
     } else {
       await karyawanApi.createCuti({
-        tanggal_mulai: form.value.tanggal_mulai,
-        tanggal_selesai: form.value.tanggal_selesai,
+        tanggal: selectedDates.value,
         keterangan_cuti: form.value.keterangan_cuti,
         pengganti: form.value.pengganti,
       });
     }
     showSuccessPopup.value = true;
     form.value = {
-      tanggal_mulai: "",
-      tanggal_selesai: "",
       keterangan_cuti: "",
       pengganti: null,
       setuju_aturan: false,
@@ -614,11 +628,7 @@ const handleSubmit = async () => {
               </h4>
               <p class="text-sm text-gray-600 mb-3">
                 {{ t('leave.declarationText') }}
-                <span class="font-medium">{{ form.tanggal_mulai || "-" }}</span>
-                {{ t('leave.declarationUntil') }}
-                <span class="font-medium">{{
-                  form.tanggal_selesai || "-"
-                }}</span>
+                <span class="font-medium">{{ formatSelectedDates(selectedDates) }}</span>
                 (<span class="font-medium">{{ selectedDaysCount }}</span> {{ t('leave.declarationDays') }}
                 <span class="font-medium">{{ form.keterangan_cuti || "-" }}</span
                 >.

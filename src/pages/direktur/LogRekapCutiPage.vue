@@ -8,11 +8,11 @@ import {
 } from "../../services/direktur.service";
 import { authApi } from "../../services/auth.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
-import { useCalendarNames } from "../../composables/useCalendarNames";
+import { useFormatTanggal } from "../../composables/useFormatTanggal";
 
 const { t } = useI18n();
 const { showError } = useErrorPopup();
-const { monthNamesShort } = useCalendarNames();
+const { formatTanggal } = useFormatTanggal();
 
 const activeTab = ref<"rekapitulasi" | "log">("rekapitulasi");
 const searchQuery = ref("");
@@ -33,15 +33,6 @@ const years = computed(() => {
   return Array.from({ length: current - startYear + 1 }, (_, i) => startYear + i);
 });
 
-const formatDateRange = (start: string, end: string) => {
-  const s = new Date(start);
-  const e = new Date(end);
-  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
-    return `${s.getDate()} - ${e.getDate()} ${monthNamesShort.value[s.getMonth()]} ${s.getFullYear()}`;
-  }
-  return `${s.getDate()} ${monthNamesShort.value[s.getMonth()]} - ${e.getDate()} ${monthNamesShort.value[e.getMonth()]} ${s.getFullYear()}`;
-};
-
 const filteredRekap = computed(() => {
   return rekapList.value.filter((item) => {
     const matchSearch =
@@ -52,16 +43,18 @@ const filteredRekap = computed(() => {
 });
 
 const filteredLog = computed(() => {
-  return logList.value.filter((item) => {
-    const isPending = item.status.includes("menunggu");
-    const matchSearch =
-      !searchQuery.value ||
-      item.nama.toLowerCase().includes(searchQuery.value.toLowerCase());
-    const matchStatus =
-      selectedStatus.value === "semua" ||
-      item.status.includes(selectedStatus.value);
-    return !isPending && matchSearch && matchStatus;
-  });
+  return logList.value
+    .filter((item) => {
+      const isPending = item.status.includes("menunggu");
+      const matchSearch =
+        !searchQuery.value ||
+        item.nama.toLowerCase().includes(searchQuery.value.toLowerCase());
+      const matchStatus =
+        selectedStatus.value === "semua" ||
+        item.status.includes(selectedStatus.value);
+      return !isPending && matchSearch && matchStatus;
+    })
+    .sort((a, b) => new Date(b.tanggal_pengajuan).getTime() - new Date(a.tanggal_pengajuan).getTime());
 });
 
 const currentData = computed(() => {
@@ -177,7 +170,7 @@ const exportLogCsv = async () => {
 };
 
 const canExport = computed(
-  () => userRole.value === "hr" || userRole.value === "direktur",
+  () => userRole.value === "hr_manager" || userRole.value === "direktur",
 );
 
 onMounted(async () => {
@@ -541,7 +534,7 @@ onMounted(async () => {
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600">
                   {{
-                    formatDateRange(item.tanggal_mulai, item.tanggal_selesai)
+                    formatTanggal(item.tanggal)
                   }}
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600 text-center">

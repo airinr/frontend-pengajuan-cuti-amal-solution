@@ -6,9 +6,11 @@ import {
   type PenambahanKerjaQueueItem,
 } from "../../services/approval.service";
 import { useErrorPopup } from "../../composables/useErrorPopup";
+import { useFormatTanggal } from "../../composables/useFormatTanggal";
 
 const { t } = useI18n();
 const { showError } = useErrorPopup();
+const { formatTanggal } = useFormatTanggal();
 
 const pendingList = ref<PenambahanKerjaQueueItem[]>([]);
 const loading = ref(true);
@@ -21,19 +23,6 @@ const showRejectModal = ref(false);
 const rejectTarget = ref<PenambahanKerjaQueueItem | null>(null);
 const rejectAlasan = ref("");
 const rejectLoading = ref(false);
-
-const formatDateRange = (start: string, end: string) => {
-  const s = new Date(start);
-  const e = new Date(end);
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-  ];
-  if (start === end) {
-    return `${s.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
-  }
-  return `${s.getDate()} ${months[s.getMonth()]} ${s.getFullYear()} - ${e.getDate()} ${months[e.getMonth()]} ${e.getFullYear()}`;
-};
 
 const getInitials = (name: string) => {
   return name
@@ -184,7 +173,7 @@ onMounted(async () => {
                   </div>
                   <div>
                     <p class="text-gray-400 mb-0.5">{{ t('approval.dateRange') }}</p>
-                    <p class="font-medium text-gray-700">{{ formatDateRange(item.tanggal_mulai, item.tanggal_selesai) }}</p>
+                    <p class="font-medium text-gray-700">{{ formatTanggal(item.tanggal) }}</p>
                   </div>
                   <div>
                     <p class="text-gray-400 mb-0.5">Tanggal Pengajuan</p>
@@ -194,10 +183,10 @@ onMounted(async () => {
               </div>
 
               <!-- PM Approval Details -->
-              <div v-if="hasMultiplePm(item)" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+              <div v-if="item.approval_pm_detail && item.approval_pm_detail.length > 0" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
                 <div class="flex items-center justify-between mb-2">
-                  <p class="text-xs font-semibold text-blue-800">Project Manager</p>
-                  <span class="text-[10px] text-blue-600 font-medium">({{ getPmApprovalStatus(item).approved }}/{{ getPmApprovalStatus(item).total }})</span>
+                  <p class="text-xs font-semibold text-blue-800">{{ t('status.approvalPM') }}</p>
+                  <span v-if="item.approval_pm_detail.length > 1" class="text-[10px] text-blue-600 font-medium">({{ getPmApprovalStatus(item).approved }}/{{ getPmApprovalStatus(item).total }})</span>
                 </div>
                 <div class="space-y-1.5">
                   <div v-for="(pm, i) in item.approval_pm_detail" :key="i" class="flex items-center justify-between">
@@ -263,7 +252,7 @@ onMounted(async () => {
             </p>
             <div class="bg-gray-50 rounded-lg p-3 mb-4 text-xs text-gray-600">
               <p>Keterangan: {{ approveTarget?.keterangan }}</p>
-              <p>Tanggal: {{ approveTarget ? formatDateRange(approveTarget.tanggal_mulai, approveTarget.tanggal_selesai) : '' }}</p>
+              <p>Tanggal: {{ approveTarget ? formatTanggal(approveTarget.tanggal) : '' }}</p>
             </div>
             <p class="text-sm text-gray-500 mb-6">{{ t('approval.approveQuestion') }}</p>
             <div class="flex justify-end gap-3">

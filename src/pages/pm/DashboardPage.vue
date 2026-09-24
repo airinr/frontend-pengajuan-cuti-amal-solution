@@ -14,9 +14,11 @@ import {
 } from "../../services/karyawan.service";
 import { getNetworkErrorMessage } from "../../lib/api";
 import type { CurrentUser } from "../../types";
+import { useFormatTanggal } from "../../composables/useFormatTanggal";
 
 const { t } = useI18n();
 const router = useRouter();
+const { formatTanggal } = useFormatTanggal();
 
 const user = ref<CurrentUser | null>(null);
 const stats = ref<DashboardStats | null>(null);
@@ -249,7 +251,7 @@ onMounted(fetchData);
                 </div>
                 <div class="text-right">
                   <p class="text-xs text-gray-500">
-                    {{ item.tanggal_mulai }} - {{ item.tanggal_selesai }}
+                    {{ formatTanggal(item.tanggal) }}
                   </p>
                   <span
                     :class="[

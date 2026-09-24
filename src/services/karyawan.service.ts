@@ -6,8 +6,7 @@ import type {
 
 export interface RiwayatCuti {
   jenis_cuti: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   tanggal_pengajuan: string;
   keterangan: string;
   nama_pengganti: string;
@@ -25,8 +24,7 @@ export interface OngoingCuti {
   jenis_cuti: string;
   durasi: number;
   keterangan_cuti: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggal: string[];
   tanggal_pengajuan: string;
   status_sekarang: string;
   id_pengganti: number | null;

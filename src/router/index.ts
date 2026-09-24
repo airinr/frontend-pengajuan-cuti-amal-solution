@@ -125,13 +125,28 @@ const routes: RouteRecordRaw[] = [
         path: 'profil',
         name: 'PmProfil',
         component: () => import('../pages/karyawan/ProfilPage.vue')
+      },
+      {
+        path: 'pengajuan-bekerja',
+        name: 'PmPengajuanBekerja',
+        component: () => import('../pages/karyawan/PengajuanTetapBekerjaPage.vue')
+      },
+      {
+        path: 'status-pengajuan-kerja',
+        name: 'PmStatusPengajuanKerja',
+        component: () => import('../pages/karyawan/StatusPengajuanKerjaPage.vue')
+      },
+      {
+        path: 'riwayat-pengajuan-kerja',
+        name: 'PmRiwayatPengajuanKerja',
+        component: () => import('../pages/karyawan/RiwayatPengajuanKerjaPage.vue')
       }
     ]
   },
   {
     path: '/hr',
     component: () => import('../layouts/HrLayout.vue'),
-    meta: { requiresAuth: true, role: 'hr' },
+    meta: { requiresAuth: true, role: 'hr_manager' },
     children: [
       {
         path: '',
@@ -196,6 +211,21 @@ const routes: RouteRecordRaw[] = [
         path: 'profil',
         name: 'HrProfil',
         component: () => import('../pages/karyawan/ProfilPage.vue')
+      },
+      {
+        path: 'pengajuan-bekerja',
+        name: 'HrPengajuanBekerja',
+        component: () => import('../pages/karyawan/PengajuanTetapBekerjaPage.vue')
+      },
+      {
+        path: 'status-pengajuan-kerja',
+        name: 'HrStatusPengajuanKerja',
+        component: () => import('../pages/karyawan/StatusPengajuanKerjaPage.vue')
+      },
+      {
+        path: 'riwayat-pengajuan-kerja',
+        name: 'HrRiwayatPengajuanKerja',
+        component: () => import('../pages/karyawan/RiwayatPengajuanKerjaPage.vue')
       }
     ]
   },
@@ -267,6 +297,21 @@ const routes: RouteRecordRaw[] = [
         path: 'profil',
         name: 'StaffHrProfil',
         component: () => import('../pages/karyawan/ProfilPage.vue')
+      },
+      {
+        path: 'pengajuan-bekerja',
+        name: 'StaffHrPengajuanBekerja',
+        component: () => import('../pages/karyawan/PengajuanTetapBekerjaPage.vue')
+      },
+      {
+        path: 'status-pengajuan-kerja',
+        name: 'StaffHrStatusPengajuanKerja',
+        component: () => import('../pages/karyawan/StatusPengajuanKerjaPage.vue')
+      },
+      {
+        path: 'riwayat-pengajuan-kerja',
+        name: 'StaffHrRiwayatPengajuanKerja',
+        component: () => import('../pages/karyawan/RiwayatPengajuanKerjaPage.vue')
       }
     ]
   },
