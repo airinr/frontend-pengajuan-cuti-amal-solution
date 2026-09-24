@@ -34,6 +34,7 @@ const editSubmitting = ref(false);
 const showAddPassword = ref(false);
 const showEditPassword = ref(false);
 const showSuccessPopup = ref(false);
+const showEditSuccessPopup = ref(false);
 const addFormError = ref('');
 const editFormError = ref('');
 
@@ -352,6 +353,7 @@ const handleEditSubmit = async () => {
       pm_remove: editPmRemove.value.length > 0 ? editPmRemove.value : undefined,
     });
     closeEditModal();
+    showEditSuccessPopup.value = true;
     await fetchData();
   } catch (err) {
     showError(err);
@@ -927,6 +929,33 @@ onMounted(() => {
             <p class="text-sm text-gray-500 mb-6">{{ t('employee.successMsg') }}</p>
             <button
               @click="showSuccessPopup = false"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+            >
+              {{ t('employee.close') }}
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Edit Success Popup -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showEditSuccessPopup"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="showEditSuccessPopup = false"
+        >
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('employee.editSuccess') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">{{ t('employee.editSuccessMsg') }}</p>
+            <button
+              @click="showEditSuccessPopup = false"
               class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
             >
               {{ t('employee.close') }}

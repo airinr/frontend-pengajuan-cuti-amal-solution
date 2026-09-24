@@ -359,6 +359,8 @@
     "save": "Simpan",
     "success": "Berhasil Ditambahkan!",
     "successMsg": "Karyawan baru telah berhasil didaftarkan oleh HR/Direktur.",
+    "editSuccess": "Perubahan berhasil disimpan",
+    "editSuccessMsg": "Data karyawan telah berhasil diperbarui.",
     "close": "Tutup",
     "showing": "Menampilkan",
     "of": "dari",

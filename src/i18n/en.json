@@ -359,6 +359,8 @@
     "save": "Save",
     "success": "Successfully Added!",
     "successMsg": "New employee has been registered by HR/Director.",
+    "editSuccess": "Changes saved successfully",
+    "editSuccessMsg": "Employee data has been updated.",
     "close": "Close",
     "showing": "Showing",
     "of": "of",
