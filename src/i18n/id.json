@@ -216,7 +216,9 @@
     "logout": "Keluar Akun",
     "saveChanges": "Simpan Perubahan",
     "saving": "Menyimpan...",
-    "updateProfile": "Perbarui Profil"
+    "updateProfile": "Perbarui Profil",
+    "updateSuccess": "Perubahan telah berhasil",
+    "updateSuccessMsg": "Profil Anda telah diperbarui."
   },
   "approval": {
     "leaveApproval": "Persetujuan Cuti",

@@ -43,6 +43,7 @@ const showLanguageModal = ref(false);
 const passwordLoading = ref(false);
 const passwordError = ref("");
 const showPasswordSuccessPopup = ref(false);
+const showProfileSuccessPopup = ref(false);
 const showOldPassword = ref(false);
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);
@@ -171,9 +172,9 @@ const handleSaveProfile = async () => {
   successMessage.value = "";
   try {
     await authApi.updateProfile(profileForm.value);
-    successMessage.value = t("error.profileSaved");
     const res = await authApi.me();
     user.value = res.data;
+    showProfileSuccessPopup.value = true;
   } catch (err: any) {
     errorMessage.value =
       err.response?.data?.detail || t("error.profileSaveFailed");
@@ -802,6 +803,51 @@ const handleSaveProfile = async () => {
                 </svg>
               </button>
             </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Profile Saved Success Popup -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showProfileSuccessPopup"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          @click.self="showProfileSuccessPopup = false"
+        >
+          <div
+            class="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center"
+          >
+            <div
+              class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <svg
+                class="w-8 h-8 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">
+              {{ t("profile.updateSuccess") }}
+            </h3>
+            <p class="text-sm text-gray-500 mb-6">
+              {{ t("profile.updateSuccessMsg") }}
+            </p>
+            <button
+              @click="showProfileSuccessPopup = false"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition cursor-pointer"
+            >
+              OK
+            </button>
           </div>
         </div>
       </Transition>

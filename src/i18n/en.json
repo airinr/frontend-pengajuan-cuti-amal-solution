@@ -216,7 +216,9 @@
     "logout": "Sign Out",
     "saveChanges": "Save Changes",
     "saving": "Saving...",
-    "updateProfile": "Update Profile"
+    "updateProfile": "Update Profile",
+    "updateSuccess": "Changes saved successfully",
+    "updateSuccessMsg": "Your profile has been updated."
   },
   "approval": {
     "leaveApproval": "Leave Approval",
