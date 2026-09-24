@@ -26,6 +26,8 @@ const showRejectModal = ref(false);
 const rejectTarget = ref<ApprovalQueueItem | null>(null);
 const rejectAlasan = ref("");
 const rejectLoading = ref(false);
+const showApproveSuccessPopup = ref(false);
+const showRejectSuccessPopup = ref(false);
 
 const getInitials = (name: string) => {
   return name
@@ -71,6 +73,7 @@ const handleApprove = async () => {
       ringkasan.value.disetujui_bulan_ini += 1;
     }
     closeApproveModal();
+    showApproveSuccessPopup.value = true;
   } catch (err) {
     showError(err);
   } finally {
@@ -103,6 +106,7 @@ const handleReject = async () => {
       ringkasan.value.ditolak_bulan_ini += 1;
     }
     closeRejectModal();
+    showRejectSuccessPopup.value = true;
   } catch (err) {
     showError(err);
   } finally {
@@ -389,6 +393,60 @@ onMounted(async () => {
                 {{ processingId ? t('approval.approving') : t('approval.approve') }}
               </button>
             </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Approve Success Popup -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showApproveSuccessPopup"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="showApproveSuccessPopup = false"
+        >
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('approval.approveSuccess') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">{{ t('approval.approveSuccessMsg') }}</p>
+            <button
+              @click="showApproveSuccessPopup = false"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+            >
+              {{ t('common.close') }}
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Reject Success Popup -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showRejectSuccessPopup"
+          class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          @click.self="showRejectSuccessPopup = false"
+        >
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ t('approval.rejectSuccess') }}</h3>
+            <p class="text-sm text-gray-500 mb-6">{{ t('approval.rejectSuccessMsg') }}</p>
+            <button
+              @click="showRejectSuccessPopup = false"
+              class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+            >
+              {{ t('common.close') }}
+            </button>
           </div>
         </div>
       </Transition>
